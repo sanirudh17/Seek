@@ -1,6 +1,6 @@
 # Seek 1.0.0 - public release verified
 
-2026-10-20. Public release **v1.0.0** is published at https://github.com/sanirudh17/Seek/releases/tag/v1.0.0. The published ZIP is **9,164,598 bytes**; SHA-256 `b21b13215d60d611fee3e021683fecd58424c0e21527c1de21ee32f3ce1fc003`. A fresh download from GitHub matched the local ZIP exactly. The app's Settings > Updates > Check now displayed **“Seek 1.0.0 is up to date.”** for the live public release. The UI uses a circular refresh icon, distinct from the Info panel.
+2026-10-20. Public release **v1.0.0** is published at https://github.com/sanirudh17/Seek/releases/tag/v1.0.0. The published ZIP is **9,164,598 bytes**; SHA-256 `b21b13215d60d611fee3e021683fecd58424c0e21527c1de21ee32f3ce1fc003`. A fresh download from GitHub matched the local ZIP exactly. The app Settings Updates Check now displayed **Seek 1.0.0 is up to date** for the live public release. The UI uses a circular refresh icon, distinct from the Info panel.
 
 The final optimized app (19,824,640 bytes) and helper have 1.0.0 Windows metadata. The existing icon remains unchanged. A clean, separate source checkout built both executables; an owned, ordinary-user profile showed its independent fixture file and closed normally (exit 0). That observed UIA smoke interval was **307 ms**; it includes polling and is not a startup performance benchmark. Binary imports contain no dynamic MSVC CRT, and the app/helper have no personal profile paths.
 

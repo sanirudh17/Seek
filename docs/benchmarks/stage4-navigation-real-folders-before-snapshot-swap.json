@@ -1,0 +1,56 @@
+{
+    "exit_code":  0,
+    "checks":  [
+                   {
+                       "name":  "Real sidebar folders present cached indexed contents",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Catch-up completes with an ordered boundary",
+                       "catch_up_ms":  37600.2468,
+                       "passed":  true
+                   }
+               ],
+    "timings":  [
+                    {
+                        "rows":  488,
+                        "catching_up":  true,
+                        "location":  "Downloads",
+                        "request_to_present_ms":  18.14
+                    },
+                    {
+                        "rows":  17,
+                        "catching_up":  true,
+                        "location":  "Desktop",
+                        "request_to_present_ms":  13.5453
+                    },
+                    {
+                        "rows":  134,
+                        "catching_up":  true,
+                        "location":  "Documents",
+                        "request_to_present_ms":  1401.9759999999999
+                    },
+                    {
+                        "rows":  16,
+                        "catching_up":  true,
+                        "location":  "Pictures",
+                        "request_to_present_ms":  13.1929
+                    },
+                    {
+                        "rows":  8,
+                        "catching_up":  true,
+                        "location":  "Videos",
+                        "request_to_present_ms":  11.7756
+                    },
+                    {
+                        "rows":  488,
+                        "catching_up":  true,
+                        "location":  "Downloads",
+                        "request_to_present_ms":  14.2092
+                    }
+                ],
+    "sha256":  "95A7A457C06D4D8DA6D6A8840E8691685A24ECA7DC3CFC0D6B0A7FBDDA514ED9",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\navigation-639276861508026902",
+    "real_profile_copy":  true,
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe"
+}

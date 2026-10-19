@@ -1,0 +1,40 @@
+{
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-ole-639278539177514656",
+    "close_passed":  true,
+    "target_bounds":  "1220,40,700,700",
+    "passed":  true,
+    "browser_records":  {
+
+                        },
+    "method":  "Fresh UIA row/window bounds; native held-pointer drags (1500 ms target hold). Owned folder moves, Explorer copy, or loopback Chromium input/DataTransfer file-byte SHA256 verification according to target. External COPY only; browser cancellation uses Escape before button release.",
+    "utc":  "2026-10-17T17:12:03.1752213Z",
+    "close_exit_code":  0,
+    "source_preserved":  true,
+    "target":  "Explorer",
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+    "source_bounds":  "0,40,1218,700",
+    "events":  [
+                   {
+                       "interaction":  "ole_start",
+                       "detail":  {
+                                      "files":  1
+                                  },
+                       "entry_ms":  2650.0344999999998
+                   },
+                   {
+                       "interaction":  "ole_result",
+                       "detail":  {
+                                      "hresult":  262400,
+                                      "effect":  1
+                                  },
+                       "entry_ms":  4551.1722
+                   }
+               ],
+    "checks":  [
+                   {
+                       "name":  "Explorer receives identical file copy",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "6ABFC929F433F250F9F0C7DF240A97E6A80DAEB1353F819A0FBD886392802F88"
+}

@@ -1,0 +1,9 @@
+{
+    "run":  1,
+    "completed_samples":  [
+
+                          ],
+    "data":  "%USERPROFILE%\\Seek\\.bench-data\\stage4-drive-639277273626785911",
+    "failure":  "Whole-C: launch did not finish catch-up within five minutes",
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe"
+}

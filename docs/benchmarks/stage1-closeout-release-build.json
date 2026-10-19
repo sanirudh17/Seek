@@ -1,0 +1,6 @@
+﻿{
+    "captured_at":  "2026-10-11T14:12:40.6601605Z",
+    "command":  "cargo build -p seek --release --features benchmarks --locked",
+    "elapsed_seconds":  279.1473555,
+    "exit_code":  0
+}

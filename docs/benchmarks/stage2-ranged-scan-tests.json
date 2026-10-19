@@ -1,0 +1,7 @@
+{
+    "wall_ms":  63673.991,
+    "command":  "cargo fmt --all; cargo test --workspace --all-features --locked",
+    "exit_code":  0,
+    "passed":  56,
+    "ignored":  1
+}

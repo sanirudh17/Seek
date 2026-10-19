@@ -1,0 +1,46 @@
+{
+    "records":  3030016,
+    "wall_ms":  9085.6693,
+    "ranges":  [
+                   {
+                       "start":  0,
+                       "end":  757503,
+                       "ok":  true,
+                       "error":  38,
+                       "records":  735119,
+                       "out_of_range":  false,
+                       "milliseconds":  9080.1289,
+                       "details":  null
+                   },
+                   {
+                       "start":  757504,
+                       "end":  1515007,
+                       "ok":  true,
+                       "error":  38,
+                       "records":  741768,
+                       "out_of_range":  false,
+                       "milliseconds":  7812.3699000000006,
+                       "details":  null
+                   },
+                   {
+                       "start":  1515008,
+                       "end":  2272511,
+                       "ok":  true,
+                       "error":  38,
+                       "records":  749852,
+                       "out_of_range":  false,
+                       "milliseconds":  7390.7484,
+                       "details":  null
+                   },
+                   {
+                       "start":  2272512,
+                       "end":  281474976710655,
+                       "ok":  true,
+                       "error":  38,
+                       "records":  755470,
+                       "out_of_range":  false,
+                       "milliseconds":  6787.3827,
+                       "details":  null
+                   }
+               ]
+}

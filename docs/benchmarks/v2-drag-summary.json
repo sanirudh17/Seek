@@ -1,0 +1,158 @@
+{
+  "date": "2026-10-17",
+  "scope": "Authorized external drag follow-up; no Stage C or packaging",
+  "release_sha256": "6ABFC929F433F250F9F0C7DF240A97E6A80DAEB1353F819A0FBD886392802F88",
+  "release_bytes": 17970176,
+  "final_release_build_seconds": 233,
+  "targeted_release_checks_passed": 7,
+  "close_checks_passed": 3,
+  "results": {
+    "internal": {
+      "passed": true,
+      "checks": [
+        {
+          "name": "Internal folder-row move",
+          "passed": true
+        },
+        {
+          "name": "Internal sidebar move",
+          "passed": true
+        }
+      ],
+      "source_preserved": true,
+      "close_exit_code": 0,
+      "events": []
+    },
+    "explorer": {
+      "passed": true,
+      "checks": [
+        {
+          "name": "Explorer receives identical file copy",
+          "passed": true
+        }
+      ],
+      "source_preserved": true,
+      "close_exit_code": 0,
+      "events": [
+        {
+          "interaction": "ole_start",
+          "detail": {
+            "files": 1
+          },
+          "entry_ms": 2650.0344999999998
+        },
+        {
+          "interaction": "ole_result",
+          "detail": {
+            "hresult": 262400,
+            "effect": 1
+          },
+          "entry_ms": 4551.1722
+        }
+      ]
+    },
+    "browser": {
+      "passed": true,
+      "checks": [
+        {
+          "name": "Browser input receives actual file bytes",
+          "passed": true
+        },
+        {
+          "name": "Browser drop receives actual file bytes",
+          "passed": true
+        },
+        {
+          "name": "Browser multi-selection transfers both actual files",
+          "passed": true
+        },
+        {
+          "name": "Escape cancels without delivering files",
+          "passed": true
+        }
+      ],
+      "source_preserved": true,
+      "close_exit_code": 0,
+      "events": [
+        {
+          "interaction": "ole_start",
+          "detail": {
+            "files": 1
+          },
+          "entry_ms": 2757.8716
+        },
+        {
+          "interaction": "ole_result",
+          "detail": {
+            "hresult": 262400,
+            "effect": 1
+          },
+          "entry_ms": 4475.142199999999
+        },
+        {
+          "interaction": "ole_start",
+          "detail": {
+            "files": 1
+          },
+          "entry_ms": 6415.4369
+        },
+        {
+          "interaction": "ole_result",
+          "detail": {
+            "hresult": 262400,
+            "effect": 1
+          },
+          "entry_ms": 8179.768299999999
+        },
+        {
+          "interaction": "ole_start",
+          "detail": {
+            "files": 2
+          },
+          "entry_ms": 10605.4499
+        },
+        {
+          "interaction": "ole_result",
+          "detail": {
+            "hresult": 262400,
+            "effect": 1
+          },
+          "entry_ms": 12367.794399999999
+        },
+        {
+          "interaction": "ole_start",
+          "detail": {
+            "files": 2
+          },
+          "entry_ms": 14155.3219
+        },
+        {
+          "interaction": "ole_result",
+          "detail": {
+            "hresult": 262401,
+            "effect": 0
+          },
+          "entry_ms": 15907.3675
+        }
+      ]
+    }
+  },
+  "validation": {
+    "strict_all_target_all_feature_clippy": true,
+    "normal_feature_check": true,
+    "format_check": true,
+    "diff_check": true
+  },
+  "framework_changes": false,
+  "external_effect": "COPY only",
+  "enabled_without_experiment_flag": true,
+  "before_report": "v2-drag-followup-before.json",
+  "known_limits": [
+    "Chromium loopback standard upload interfaces tested; individual websites and chat apps not certified",
+    "Mouse at 125% SDR; touch/pen and HDR not tested",
+    "Internal List folder-row/sidebar targets tested; arbitrary manual list reorder not supported",
+    "External handoff occurs on leaving Seek viewport; returning inside does not restore the typed drag",
+    "Unrelated Stage A suites not rerun",
+    "First release installation failed because prior Seek held its executable; clean close and rebuild succeeded"
+  ]
+}

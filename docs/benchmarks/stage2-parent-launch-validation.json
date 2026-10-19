@@ -1,0 +1,7 @@
+﻿{
+    "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/finish-stage2.ps1 -CheckOnly",
+    "exit_code":  0,
+    "wall_ms":  944.806,
+    "tested":  "Native CreateProcessW with ordinary Explorer parent; created child token verified before resuming; actual read-only CLI child exited 0",
+    "elevated_controller":  "Not tested in this ordinary agent session"
+}

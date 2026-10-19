@@ -1,0 +1,55 @@
+{
+  "root": "/%USERPROFILE%/Downloads",
+  "first_chunk_ms": 24658.374,
+  "stream_after_first_chunk_ms": 21.528800000000047,
+  "total_ms": 24679.9028,
+  "frames": 7,
+  "entries": 499,
+  "directories": 6,
+  "skipped": 0,
+  "reconciliations": 0,
+  "cursors": [
+    {
+      "drive": 67,
+      "serial": 475756948759402495,
+      "journal_id": 133973191378566477,
+      "next_usn": 33640460440
+    }
+  ],
+  "scan_profiles": [
+    {
+      "root": [
+        47,
+        67,
+        58,
+        47,
+        85,
+        115,
+        101,
+        114,
+        115,
+        47,
+        115,
+        97,
+        110,
+        105,
+        114,
+        47,
+        68,
+        111,
+        119,
+        110,
+        108,
+        111,
+        97,
+        100,
+        115
+      ],
+      "records": 2976736,
+      "directories": 6,
+      "metadata_ms": 24534.544100000003,
+      "namespace_ms": 122.335
+    }
+  ],
+  "measurement": "Trusted helper baseline only; excludes index construction, persistence, ordinary watcher and independent verification"
+}

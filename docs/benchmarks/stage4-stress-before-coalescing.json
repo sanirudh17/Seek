@@ -1,0 +1,9 @@
+{
+  "status": "stopped_without_acceptance",
+  "command": "seek-cli stress --files 10000 --source walker",
+  "process_id": 29196,
+  "observed_cpu_seconds_before_stop": 177.92,
+  "result": "No completed verification report. The agent stopped only its own fixture-test process after the larger burst failed to finish promptly.",
+  "diagnosis": "The preceding 1000-file diagnostic converged correctly but checkpointing took 7779.357 ms. Directory notifications were relisted individually; queued duplicates caused prolonged work. Added bounded coalescing while preserving checkpoint and control-message ordering.",
+  "next_check": "Repeat the 10000-file burst on the rebuilt release; do not treat this interrupted run as a pass."
+}

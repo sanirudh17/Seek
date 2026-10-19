@@ -1,0 +1,11 @@
+{
+    "checked_utc":  "2026-10-12T13:27:16.7401235Z",
+    "current_seek_kit":  "0.7.1",
+    "latest_kit":  "0.7.3",
+    "published_at":  "2026-10-12T07:27:58Z",
+    "upstream_release":  "https://github.com/longbridge/gpui-kit/releases/tag/v0.7.3",
+    "upstream_tag_commit":  "67265a36e260ffe03c5aaebdcd8d654dbf892eab",
+    "gpui_snapshot":  "0.3.9",
+    "upstream_zed_short_revision":  "93d7456",
+    "decision":  "Keep the verified Stage 2 pin; upgrade and validate Windows backend patches first in Stage 3 when authorized."
+}

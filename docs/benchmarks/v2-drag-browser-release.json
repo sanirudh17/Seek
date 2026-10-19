@@ -1,0 +1,131 @@
+{
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-ole-639278538849369484",
+    "close_passed":  true,
+    "target_bounds":  "1220,40,700,700",
+    "passed":  true,
+    "browser_records":  [
+                            {
+                                "kind":  "input",
+                                "files":  [
+                                              {
+                                                  "name":  "Drag-out.txt",
+                                                  "size":  33,
+                                                  "sha256":  "200d8fb944e4922fc878bbc2719356fc83db7c464a625073c9732df8374f2d14"
+                                              }
+                                          ]
+                            },
+                            {
+                                "kind":  "drop",
+                                "files":  [
+                                              {
+                                                  "name":  "Drag-out.txt",
+                                                  "size":  33,
+                                                  "sha256":  "200d8fb944e4922fc878bbc2719356fc83db7c464a625073c9732df8374f2d14"
+                                              }
+                                          ]
+                            },
+                            {
+                                "kind":  "drop",
+                                "files":  [
+                                              {
+                                                  "name":  "Drag-out.txt",
+                                                  "size":  33,
+                                                  "sha256":  "200d8fb944e4922fc878bbc2719356fc83db7c464a625073c9732df8374f2d14"
+                                              },
+                                              {
+                                                  "name":  "Second.txt",
+                                                  "size":  25,
+                                                  "sha256":  "1127983f0fd908f5384c9ec2839fed32a4d803244b928a5aa0ce797a69369d5a"
+                                              }
+                                          ]
+                            }
+                        ],
+    "method":  "Fresh UIA row/window bounds; native held-pointer drags (1500 ms target hold). Owned folder moves, Explorer copy, or loopback Chromium input/DataTransfer file-byte SHA256 verification according to target. External COPY only; browser cancellation uses Escape before button release.",
+    "utc":  "2026-10-17T17:11:42.5069569Z",
+    "close_exit_code":  0,
+    "source_preserved":  true,
+    "target":  "Browser",
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+    "source_bounds":  "0,40,1218,700",
+    "events":  [
+                   {
+                       "interaction":  "ole_start",
+                       "detail":  {
+                                      "files":  1
+                                  },
+                       "entry_ms":  2757.8716
+                   },
+                   {
+                       "interaction":  "ole_result",
+                       "detail":  {
+                                      "hresult":  262400,
+                                      "effect":  1
+                                  },
+                       "entry_ms":  4475.142199999999
+                   },
+                   {
+                       "interaction":  "ole_start",
+                       "detail":  {
+                                      "files":  1
+                                  },
+                       "entry_ms":  6415.4369
+                   },
+                   {
+                       "interaction":  "ole_result",
+                       "detail":  {
+                                      "hresult":  262400,
+                                      "effect":  1
+                                  },
+                       "entry_ms":  8179.768299999999
+                   },
+                   {
+                       "interaction":  "ole_start",
+                       "detail":  {
+                                      "files":  2
+                                  },
+                       "entry_ms":  10605.4499
+                   },
+                   {
+                       "interaction":  "ole_result",
+                       "detail":  {
+                                      "hresult":  262400,
+                                      "effect":  1
+                                  },
+                       "entry_ms":  12367.794399999999
+                   },
+                   {
+                       "interaction":  "ole_start",
+                       "detail":  {
+                                      "files":  2
+                                  },
+                       "entry_ms":  14155.3219
+                   },
+                   {
+                       "interaction":  "ole_result",
+                       "detail":  {
+                                      "hresult":  262401,
+                                      "effect":  0
+                                  },
+                       "entry_ms":  15907.3675
+                   }
+               ],
+    "checks":  [
+                   {
+                       "name":  "Browser input receives actual file bytes",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Browser drop receives actual file bytes",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Browser multi-selection transfers both actual files",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Escape cancels without delivering files",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "6ABFC929F433F250F9F0C7DF240A97E6A80DAEB1353F819A0FBD886392802F88"
+}

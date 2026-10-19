@@ -1,0 +1,81 @@
+{
+  "accuracy": [
+    {
+      "query": "annual-report-final",
+      "target": "annual-report-final.txt",
+      "top5": true
+    },
+    {
+      "query": "report",
+      "target": "annual-report-final.txt",
+      "top5": true
+    },
+    {
+      "query": "invoce",
+      "target": "invoice-budget.pdf",
+      "top5": true
+    },
+    {
+      "query": "invocie",
+      "target": "invoice-budget.pdf",
+      "top5": true
+    },
+    {
+      "query": "Résumé",
+      "target": "Résumé-🚀.txt",
+      "top5": true
+    },
+    {
+      "query": "casedifference",
+      "target": "CaseDifference.TXT",
+      "top5": true
+    },
+    {
+      "query": "long-path",
+      "target": "long-path-🚀.txt",
+      "top5": true
+    }
+  ],
+  "accuracy_passed": 7,
+  "accuracy_percent": 100.0,
+  "accuracy_total": 7,
+  "closed": {
+    "denied": [],
+    "extra": [],
+    "ground_truth": 3012,
+    "indexed": 3012,
+    "missing": [],
+    "stale": []
+  },
+  "first": {
+    "denied": [],
+    "extra": [],
+    "ground_truth": 3012,
+    "indexed": 3012,
+    "missing": [],
+    "stale": []
+  },
+  "first_status": {
+    "catch_up_ms": 21.1321,
+    "catching_up": false,
+    "dirs": 12,
+    "entries": 3019,
+    "error": null,
+    "index_bytes": 210944,
+    "ready": true,
+    "skipped": 0
+  },
+  "helper_catch_up_ms": null,
+  "live": {
+    "denied": [],
+    "extra": [],
+    "ground_truth": 3012,
+    "indexed": 3012,
+    "missing": [],
+    "stale": []
+  },
+  "live_ms": 119.3416,
+  "root": ".bench-data/correctness-2772\\files",
+  "typo_claim_comparison": "Different workload; no comparison with upstream percentage",
+  "walker_catch_up_ms": 4.2362
+}

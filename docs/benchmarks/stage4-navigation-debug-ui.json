@@ -1,0 +1,38 @@
+{
+    "exit_code":  0,
+    "checks":  [
+                   {
+                       "name":  "Indexed folder expands all direct children",
+                       "rows":  2050,
+                       "passed":  true
+                   },
+                   {
+                       "after":  2030,
+                       "before":  2030,
+                       "name":  "Selected offscreen folder does not pull scrolling back during live updates",
+                       "passed":  true
+                   },
+                   {
+                       "after":  2029,
+                       "before":  2030,
+                       "name":  "Deleting above the viewport retains the scroll anchor",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Hidden-files selector left alignment captured",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Catch-up completes with an ordered boundary",
+                       "catch_up_ms":  57.6166,
+                       "passed":  true
+                   }
+               ],
+    "timings":  [
+
+                ],
+    "sha256":  "A551FA2EF5DCA5E175C65DE5FAD01F27B49423D6B43DD5555A9DB9BB0ACF4233",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\navigation-639276856459189476",
+    "real_profile_copy":  false,
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe"
+}

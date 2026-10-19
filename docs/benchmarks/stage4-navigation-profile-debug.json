@@ -1,0 +1,48 @@
+{
+    "timings":  [
+                    {
+                        "rows":  488,
+                        "catching_up":  true,
+                        "location":  "Downloads",
+                        "request_to_present_ms":  38.5386
+                    },
+                    {
+                        "rows":  17,
+                        "catching_up":  true,
+                        "location":  "Desktop",
+                        "request_to_present_ms":  21.0326
+                    },
+                    {
+                        "rows":  134,
+                        "catching_up":  true,
+                        "location":  "Documents",
+                        "request_to_present_ms":  19.6893
+                    },
+                    {
+                        "rows":  16,
+                        "catching_up":  true,
+                        "location":  "Pictures",
+                        "request_to_present_ms":  16.1963
+                    },
+                    {
+                        "rows":  8,
+                        "catching_up":  true,
+                        "location":  "Videos",
+                        "request_to_present_ms":  15.874300000000002
+                    },
+                    {
+                        "rows":  488,
+                        "catching_up":  true,
+                        "location":  "Downloads",
+                        "request_to_present_ms":  26.089299999999998
+                    }
+                ],
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\navigation-639276864392979732",
+    "failure":  "Timed out waiting for navigation assertion",
+    "checks":  [
+                   {
+                       "name":  "Real sidebar folders present cached indexed contents",
+                       "passed":  true
+                   }
+               ]
+}

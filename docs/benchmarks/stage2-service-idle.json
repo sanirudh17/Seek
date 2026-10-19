@@ -1,0 +1,10 @@
+﻿{
+    "client_connected":  false,
+    "private_commit_bytes":  3178496,
+    "cpu_ms":  0,
+    "service_pid":  26436,
+    "sample_wall_ms":  3143.2586,
+    "private_working_set_bytes":  2072576,
+    "note":  "Installed earlier helper binary, no connected app. Short interval, not certification of journal tailing under activity.",
+    "total_working_set_bytes":  10801152
+}

@@ -1,0 +1,6 @@
+{
+    "pid":  25040,
+    "executable":  "target/x86_64-pc-windows-msvc/debug/seek.exe",
+    "responding":  true,
+    "real_data_directory":  "%USERPROFILE%\\AppData\\Local\\Seek"
+}

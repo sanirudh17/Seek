@@ -1,0 +1,13 @@
+{
+    "real_profile":  true,
+    "data":  "%USERPROFILE%\\AppData\\Local\\Seek",
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+    "index_bytes":  186377752,
+    "utc":  "2026-10-15T13:22:10.9313100Z",
+    "search_control_present":  true,
+    "responding":  true,
+    "sha256":  "25C9ADAD4CDE0EC5D74F612EFB468A4F964E0D7249D03C3DD512299DD8E8376D",
+    "window_visible":  true,
+    "pid":  35452,
+    "note":  "Readiness retry handles the initially empty accessibility tree; this is not a cold-launch timing benchmark."
+}

@@ -1,0 +1,44 @@
+{
+  "catch_up_ms": 53304.0631,
+  "report": {
+    "denied": [],
+    "extra": [],
+    "ground_truth": 9,
+    "indexed": 9,
+    "missing": [],
+    "stale": []
+  },
+  "status": {
+    "catch_up_ms": 53304.0631,
+    "catching_up": false,
+    "dirs": 304318,
+    "entries": 3377755,
+    "error": null,
+    "helper_note": "Conservative USN reconciliation: launch replay exceeded its event budget",
+    "index_bytes": 187321895,
+    "journal_batches": 256,
+    "journal_directories": 420,
+    "journal_reconciliations": 1,
+    "journal_resets": 0,
+    "ntfs_fallbacks": 0,
+    "progress": {
+      "apply_ms": 6045.724899999996,
+      "completed": 167,
+      "connect_ms": 1.248,
+      "full_relist_done": false,
+      "load_ms": 55.433,
+      "phase": "Replaying journal",
+      "plan_ms": 3.4705,
+      "priority_ms": 193.77349999999998,
+      "priority_ready": true,
+      "read_ms": 40387.640900000086,
+      "save_ms": 6735.7414,
+      "total": null
+    },
+    "ready": true,
+    "scan_profiles": [],
+    "skipped": 328,
+    "source": "ntfs + usn"
+  },
+  "verify_ms": 9432.5236
+}

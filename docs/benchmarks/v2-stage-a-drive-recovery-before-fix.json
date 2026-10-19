@@ -1,0 +1,11 @@
+﻿{
+    "working_set_bytes":  2763051008,
+    "source":  "Expired-history recovery on copied real C index",
+    "private_bytes":  3014709248,
+    "case":  "Whole-C helper seed verification",
+    "elapsed_s":  376.35393669999996,
+    "cpu_s":  692.34375,
+    "suspect":  "Large overlay forks for unchanged parent relists",
+    "pid":  11468,
+    "result":  "Stopped diagnostic after sustained high catch-up cost; no truth verdict"
+}

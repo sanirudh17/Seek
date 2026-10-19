@@ -1,0 +1,24 @@
+{
+  "report": {
+    "ground_truth": 499,
+    "indexed": 499,
+    "missing": [],
+    "extra": [],
+    "stale": [],
+    "denied": []
+  },
+  "catch_up_ms": 24564.1872,
+  "verify_ms": 73.1567,
+  "status": {
+    "ready": true,
+    "catching_up": false,
+    "entries": 503,
+    "dirs": 10,
+    "index_bytes": 49653,
+    "skipped": 0,
+    "catch_up_ms": 24564.1872,
+    "error": null,
+    "source": "walker + usn",
+    "helper_note": "Conservative USN reconciliation: torn NTFS file record"
+  }
+}

@@ -1,0 +1,90 @@
+﻿{
+    "launch_smoke_observed_ms":  1591.0242,
+    "checks":  [
+                   {
+                       "name":  "Current-user Installed apps registration, version and target",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Start and optional desktop shortcuts use the installed icon/executable",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "seek.exe has 1.0.0 metadata and Seek product name",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "seek-helper.exe has 1.0.0 metadata and Seek product name",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Installed icon is byte-identical to the packaged icon",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Installed ordinary-user app launches and displays owned file",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Current-account Known Folder sidebar: Pictures",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Current-account Known Folder sidebar: Videos",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Current-account Known Folder sidebar: Music",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Current-account Known Folder sidebar: Documents",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Current-account Known Folder sidebar: Downloads",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Current-account Known Folder sidebar: Desktop",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Installer refuses to overwrite the running app",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Installed app closes normally",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Uninstall Cancel leaves program, registration and saved data",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Default data answer keeps saved index/settings/cache fixtures",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Uninstall removes owned shortcuts",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Desktop shortcut is optional",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Explicit data approval removes only the owned data tree and program",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Existing optional helper service is unchanged",
+                       "passed":  true
+                   }
+               ],
+    "profile_safety":  "Only marked TEMP fixture data and a unique HKCU test registration were written. Real Seek data and helper were untouched.",
+    "known_folders":  6,
+    "alternate_account":  "Unavailable: no second enabled account. Manual standard-account instructions are in README.",
+    "executable_sha256":  "6C15F019083A458F0867E59F0C8123F639CC5FE1E5FA56A24A76700582EF0EA0",
+    "phase":  "Installer mechanism verified on the release candidate; final binary smoke is recorded separately."
+}

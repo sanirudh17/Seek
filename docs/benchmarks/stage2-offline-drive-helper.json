@@ -1,0 +1,8 @@
+{
+  "build_ms": 919.0682999999999,
+  "entries": 2997161,
+  "index_bytes": 173818989,
+  "listings_ms": 339.4997,
+  "load_ms": 6.9544999999999995,
+  "measurement": "Read-only offline index reconstruction; no crawl, helper, watcher or index writes"
+}

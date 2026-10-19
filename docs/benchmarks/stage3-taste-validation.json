@@ -1,0 +1,97 @@
+[
+  {
+    "command": "cargo fmt --all",
+    "exit_code": 0,
+    "seconds": 5.734
+  },
+  {
+    "command": "cargo test --workspace --all-features --locked --offline",
+    "exit_code": 101,
+    "seconds": 9.656
+  },
+  {
+    "command": "cargo fmt --all",
+    "exit_code": 0,
+    "seconds": 4.875
+  },
+  {
+    "command": "cargo test --workspace --all-features --locked --offline",
+    "exit_code": 0,
+    "seconds": 9.094
+  },
+  {
+    "command": "cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings",
+    "exit_code": 0,
+    "seconds": 4.719
+  },
+  {
+    "command": "cargo build --workspace --all-features --locked --offline",
+    "exit_code": 0,
+    "seconds": 10.031
+  },
+  {
+    "command": "cargo fmt --all",
+    "exit_code": 0,
+    "seconds": 5.203
+  },
+  {
+    "command": "cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings",
+    "exit_code": 0,
+    "seconds": 11.641
+  },
+  {
+    "command": "cargo build --workspace --all-features --locked --offline",
+    "exit_code": 0,
+    "seconds": 8.359
+  },
+  {
+    "command": "cargo fmt --all",
+    "exit_code": 0,
+    "seconds": 5.86
+  },
+  {
+    "command": "cargo test --workspace --all-features --locked --offline",
+    "exit_code": 0,
+    "seconds": 15.953
+  },
+  {
+    "command": "cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings",
+    "exit_code": 0,
+    "seconds": 3.781
+  },
+  {
+    "command": "cargo build --workspace --all-features --locked --offline",
+    "exit_code": 0,
+    "seconds": 7.672
+  },
+  {
+    "command": "cargo fmt --all",
+    "exit_code": 0,
+    "seconds": 11.281
+  },
+  {
+    "command": "cargo test --workspace --all-features --locked --offline",
+    "exit_code": 0,
+    "seconds": 17.797
+  },
+  {
+    "command": "cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings",
+    "exit_code": 101,
+    "seconds": 6.797
+  },
+  {
+    "command": "cargo fmt --all",
+    "exit_code": 0,
+    "seconds": 5.141
+  },
+  {
+    "command": "cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings",
+    "exit_code": 0,
+    "seconds": 3.265
+  },
+  {
+    "command": "cargo build --workspace --all-features --locked --offline",
+    "exit_code": 0,
+    "seconds": 8.484
+  }
+]

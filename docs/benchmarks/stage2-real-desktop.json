@@ -1,0 +1,24 @@
+{
+  "report": {
+    "ground_truth": 24,
+    "indexed": 24,
+    "missing": [],
+    "extra": [],
+    "stale": [],
+    "denied": []
+  },
+  "catch_up_ms": 2.1858,
+  "verify_ms": 4.7046,
+  "status": {
+    "ready": true,
+    "catching_up": false,
+    "entries": 29,
+    "dirs": 7,
+    "index_bytes": 11328,
+    "skipped": 0,
+    "catch_up_ms": 2.1858,
+    "error": null,
+    "source": "walker",
+    "helper_note": null
+  }
+}

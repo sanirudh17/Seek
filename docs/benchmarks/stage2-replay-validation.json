@@ -1,0 +1,33 @@
+﻿{
+    "checked_utc":  "2026-10-12T13:53:10.7067212Z",
+    "checks":  [
+                   {
+                       "command":  "cargo test -p seek-helper --locked",
+                       "exit_code":  0,
+                       "wall_ms":  1738.0922
+                   },
+                   {
+                       "command":  "cargo clippy -p seek-helper --all-targets --locked -- -D warnings",
+                       "exit_code":  0,
+                       "wall_ms":  4146.12
+                   },
+                   {
+                       "command":  "cargo build -p seek-helper --release --locked",
+                       "exit_code":  0,
+                       "wall_ms":  42679.8176
+                   }
+               ],
+    "earlier":  {
+                    "checked_utc":  "2026-10-12T13:51:43.3695894Z",
+                    "checks":  [
+                                   {
+                                       "command":  "cargo test -p seek-helper --locked",
+                                       "exit_code":  101,
+                                       "wall_ms":  23729.893
+                                   }
+                               ],
+                    "note":  "Focused helper-only checks after bounded launch-replay coalescing; the previous 39 workspace tests remain unchanged."
+                },
+    "correction":  "Converted directory vectors into the replay set after an initial type mismatch.",
+    "note":  "Focused helper-only checks after bounded launch-replay coalescing; the previous 39 workspace tests remain unchanged."
+}

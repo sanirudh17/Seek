@@ -1,0 +1,871 @@
+{
+    "note":  "WM_DPICHANGED is sent only to disposable Seek windows; Windows display settings are untouched. These are renderer/handler simulations, not physical mixed-DPI or HDR hardware certification.",
+    "checks":  [
+                   {
+                       "passed":  true,
+                       "name":  "light Info panel · Space matches active List fill",
+                       "control_rgb":  "229,236,246",
+                       "reference_rgb":  "229,236,246",
+                       "tolerance":  2,
+                       "max_channel_delta":  0
+                   },
+                   {
+                       "passed":  true,
+                       "name":  "light Show hidden and system files matches active List fill",
+                       "control_rgb":  "229,236,246",
+                       "reference_rgb":  "229,236,246",
+                       "tolerance":  2,
+                       "max_channel_delta":  0
+                   },
+                   {
+                       "passed":  true,
+                       "name":  "light Sort results matches active List fill",
+                       "control_rgb":  "225,232,241",
+                       "reference_rgb":  "224,231,240",
+                       "tolerance":  2,
+                       "max_channel_delta":  1
+                   },
+                   {
+                       "passed":  true,
+                       "name":  "light Settings matches active List fill",
+                       "control_rgb":  "229,236,246",
+                       "reference_rgb":  "229,236,246",
+                       "tolerance":  2,
+                       "max_channel_delta":  0
+                   },
+                   {
+                       "passed":  true,
+                       "name":  "dark Info panel · Space matches active List fill",
+                       "control_rgb":  "36,43,53",
+                       "reference_rgb":  "34,41,51",
+                       "tolerance":  2,
+                       "max_channel_delta":  2
+                   },
+                   {
+                       "passed":  true,
+                       "name":  "dark Show hidden and system files matches active List fill",
+                       "control_rgb":  "35,42,52",
+                       "reference_rgb":  "34,41,51",
+                       "tolerance":  2,
+                       "max_channel_delta":  1
+                   },
+                   {
+                       "passed":  true,
+                       "name":  "dark Sort results matches active List fill",
+                       "control_rgb":  "34,41,51",
+                       "reference_rgb":  "33,40,50",
+                       "tolerance":  2,
+                       "max_channel_delta":  1
+                   },
+                   {
+                       "passed":  true,
+                       "name":  "dark Settings matches active List fill",
+                       "control_rgb":  "36,43,53",
+                       "reference_rgb":  "34,41,51",
+                       "tolerance":  2,
+                       "max_channel_delta":  2
+                   },
+                   {
+                       "name":  "Both themes retain nonoverlapping toolbar targets through 100/125/150/200 percent renderer transitions",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "8AD37A41061F218E4C5A39A2CEFE47FDFA38D8CAD61643835CECB2F6C111FF31",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\toolbar-finish-639277235511234077",
+    "samples":  [
+                    {
+                        "capture":  ".impeccable/review/finish-light-dpi-96.png",
+                        "os_window_dpi":  120,
+                        "simulated_dpi":  96,
+                        "bounds":  [
+                                       {
+                                           "y":  10,
+                                           "width":  32,
+                                           "name":  "Toggle sidebar",
+                                           "height":  30,
+                                           "x":  25
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  32,
+                                           "name":  "Back",
+                                           "height":  30,
+                                           "x":  74
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  32,
+                                           "name":  "Forward",
+                                           "height":  30,
+                                           "x":  106
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  32,
+                                           "name":  "List · Ctrl+1",
+                                           "height":  30,
+                                           "x":  624
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  32,
+                                           "name":  "Icons · Ctrl+2",
+                                           "height":  30,
+                                           "x":  656
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  32,
+                                           "name":  "Gallery · Ctrl+3",
+                                           "height":  30,
+                                           "x":  688
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  30,
+                                           "name":  "Show hidden and system files",
+                                           "height":  30,
+                                           "x":  739
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  30,
+                                           "name":  "Sort results",
+                                           "height":  30,
+                                           "x":  769
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  30,
+                                           "name":  "Info panel · Space",
+                                           "height":  30,
+                                           "x":  799
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  30,
+                                           "name":  "Settings",
+                                           "height":  30,
+                                           "x":  829
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  26,
+                                           "name":  "Minimize",
+                                           "height":  30,
+                                           "x":  878
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  26,
+                                           "name":  "Maximize or restore",
+                                           "height":  30,
+                                           "x":  904
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  26,
+                                           "name":  "Close",
+                                           "height":  30,
+                                           "x":  930
+                                       }
+                                   ],
+                        "theme":  "light"
+                    },
+                    {
+                        "capture":  ".impeccable/review/finish-light-dpi-120.png",
+                        "os_window_dpi":  120,
+                        "simulated_dpi":  120,
+                        "bounds":  [
+                                       {
+                                           "y":  13,
+                                           "width":  40,
+                                           "name":  "Toggle sidebar",
+                                           "height":  37,
+                                           "x":  29
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  40,
+                                           "name":  "Back",
+                                           "height":  37,
+                                           "x":  90
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  40,
+                                           "name":  "Forward",
+                                           "height":  37,
+                                           "x":  130
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  40,
+                                           "name":  "List · Ctrl+1",
+                                           "height":  37,
+                                           "x":  783
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  40,
+                                           "name":  "Icons · Ctrl+2",
+                                           "height":  37,
+                                           "x":  823
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  40,
+                                           "name":  "Gallery · Ctrl+3",
+                                           "height":  37,
+                                           "x":  863
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  36,
+                                           "name":  "Show hidden and system files",
+                                           "height":  37,
+                                           "x":  926
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  37,
+                                           "name":  "Sort results",
+                                           "height":  37,
+                                           "x":  963
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  37,
+                                           "name":  "Info panel · Space",
+                                           "height":  37,
+                                           "x":  1000
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  37,
+                                           "name":  "Settings",
+                                           "height":  37,
+                                           "x":  1037
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  32,
+                                           "name":  "Minimize",
+                                           "height":  37,
+                                           "x":  1097
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  32,
+                                           "name":  "Maximize or restore",
+                                           "height":  37,
+                                           "x":  1129
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  32,
+                                           "name":  "Close",
+                                           "height":  37,
+                                           "x":  1161
+                                       }
+                                   ],
+                        "theme":  "light"
+                    },
+                    {
+                        "capture":  ".impeccable/review/finish-light-dpi-144.png",
+                        "os_window_dpi":  120,
+                        "simulated_dpi":  144,
+                        "bounds":  [
+                                       {
+                                           "y":  16,
+                                           "width":  48,
+                                           "name":  "Toggle sidebar",
+                                           "height":  45,
+                                           "x":  33
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  48,
+                                           "name":  "Back",
+                                           "height":  45,
+                                           "x":  106
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  47,
+                                           "name":  "Forward",
+                                           "height":  45,
+                                           "x":  154
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  48,
+                                           "name":  "List · Ctrl+1",
+                                           "height":  45,
+                                           "x":  935
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  48,
+                                           "name":  "Icons · Ctrl+2",
+                                           "height":  45,
+                                           "x":  983
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  48,
+                                           "name":  "Gallery · Ctrl+3",
+                                           "height":  45,
+                                           "x":  1031
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  45,
+                                           "name":  "Show hidden and system files",
+                                           "height":  45,
+                                           "x":  1106
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  45,
+                                           "name":  "Sort results",
+                                           "height":  45,
+                                           "x":  1151
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  45,
+                                           "name":  "Info panel · Space",
+                                           "height":  45,
+                                           "x":  1196
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  45,
+                                           "name":  "Settings",
+                                           "height":  45,
+                                           "x":  1241
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  39,
+                                           "name":  "Minimize",
+                                           "height":  45,
+                                           "x":  1313
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  39,
+                                           "name":  "Maximize or restore",
+                                           "height":  45,
+                                           "x":  1352
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  39,
+                                           "name":  "Close",
+                                           "height":  45,
+                                           "x":  1391
+                                       }
+                                   ],
+                        "theme":  "light"
+                    },
+                    {
+                        "capture":  ".impeccable/review/finish-light-dpi-192.png",
+                        "os_window_dpi":  120,
+                        "simulated_dpi":  192,
+                        "bounds":  [
+                                       {
+                                           "y":  21,
+                                           "width":  64,
+                                           "name":  "Toggle sidebar",
+                                           "height":  60,
+                                           "x":  41
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  64,
+                                           "name":  "Back",
+                                           "height":  60,
+                                           "x":  139
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  64,
+                                           "name":  "Forward",
+                                           "height":  60,
+                                           "x":  203
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  64,
+                                           "name":  "List · Ctrl+1",
+                                           "height":  60,
+                                           "x":  1239
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  64,
+                                           "name":  "Icons · Ctrl+2",
+                                           "height":  60,
+                                           "x":  1303
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  64,
+                                           "name":  "Gallery · Ctrl+3",
+                                           "height":  60,
+                                           "x":  1367
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  60,
+                                           "name":  "Show hidden and system files",
+                                           "height":  60,
+                                           "x":  1469
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  60,
+                                           "name":  "Sort results",
+                                           "height":  60,
+                                           "x":  1529
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  60,
+                                           "name":  "Info panel · Space",
+                                           "height":  60,
+                                           "x":  1589
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  60,
+                                           "name":  "Settings",
+                                           "height":  60,
+                                           "x":  1649
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  52,
+                                           "name":  "Minimize",
+                                           "height":  60,
+                                           "x":  1747
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  52,
+                                           "name":  "Maximize or restore",
+                                           "height":  60,
+                                           "x":  1799
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  52,
+                                           "name":  "Close",
+                                           "height":  60,
+                                           "x":  1851
+                                       }
+                                   ],
+                        "theme":  "light"
+                    },
+                    {
+                        "capture":  ".impeccable/review/finish-dark-dpi-96.png",
+                        "os_window_dpi":  120,
+                        "simulated_dpi":  96,
+                        "bounds":  [
+                                       {
+                                           "y":  10,
+                                           "width":  32,
+                                           "name":  "Toggle sidebar",
+                                           "height":  30,
+                                           "x":  25
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  32,
+                                           "name":  "Back",
+                                           "height":  30,
+                                           "x":  74
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  32,
+                                           "name":  "Forward",
+                                           "height":  30,
+                                           "x":  106
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  32,
+                                           "name":  "List · Ctrl+1",
+                                           "height":  30,
+                                           "x":  624
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  32,
+                                           "name":  "Icons · Ctrl+2",
+                                           "height":  30,
+                                           "x":  656
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  32,
+                                           "name":  "Gallery · Ctrl+3",
+                                           "height":  30,
+                                           "x":  688
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  30,
+                                           "name":  "Show hidden and system files",
+                                           "height":  30,
+                                           "x":  739
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  30,
+                                           "name":  "Sort results",
+                                           "height":  30,
+                                           "x":  769
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  30,
+                                           "name":  "Info panel · Space",
+                                           "height":  30,
+                                           "x":  799
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  30,
+                                           "name":  "Settings",
+                                           "height":  30,
+                                           "x":  829
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  26,
+                                           "name":  "Minimize",
+                                           "height":  30,
+                                           "x":  878
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  26,
+                                           "name":  "Maximize or restore",
+                                           "height":  30,
+                                           "x":  904
+                                       },
+                                       {
+                                           "y":  10,
+                                           "width":  26,
+                                           "name":  "Close",
+                                           "height":  30,
+                                           "x":  930
+                                       }
+                                   ],
+                        "theme":  "dark"
+                    },
+                    {
+                        "capture":  ".impeccable/review/finish-dark-dpi-120.png",
+                        "os_window_dpi":  120,
+                        "simulated_dpi":  120,
+                        "bounds":  [
+                                       {
+                                           "y":  13,
+                                           "width":  40,
+                                           "name":  "Toggle sidebar",
+                                           "height":  37,
+                                           "x":  29
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  40,
+                                           "name":  "Back",
+                                           "height":  37,
+                                           "x":  90
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  40,
+                                           "name":  "Forward",
+                                           "height":  37,
+                                           "x":  130
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  40,
+                                           "name":  "List · Ctrl+1",
+                                           "height":  37,
+                                           "x":  783
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  40,
+                                           "name":  "Icons · Ctrl+2",
+                                           "height":  37,
+                                           "x":  823
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  40,
+                                           "name":  "Gallery · Ctrl+3",
+                                           "height":  37,
+                                           "x":  863
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  36,
+                                           "name":  "Show hidden and system files",
+                                           "height":  37,
+                                           "x":  926
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  37,
+                                           "name":  "Sort results",
+                                           "height":  37,
+                                           "x":  963
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  37,
+                                           "name":  "Info panel · Space",
+                                           "height":  37,
+                                           "x":  1000
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  37,
+                                           "name":  "Settings",
+                                           "height":  37,
+                                           "x":  1037
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  32,
+                                           "name":  "Minimize",
+                                           "height":  37,
+                                           "x":  1097
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  32,
+                                           "name":  "Maximize or restore",
+                                           "height":  37,
+                                           "x":  1129
+                                       },
+                                       {
+                                           "y":  13,
+                                           "width":  32,
+                                           "name":  "Close",
+                                           "height":  37,
+                                           "x":  1161
+                                       }
+                                   ],
+                        "theme":  "dark"
+                    },
+                    {
+                        "capture":  ".impeccable/review/finish-dark-dpi-144.png",
+                        "os_window_dpi":  120,
+                        "simulated_dpi":  144,
+                        "bounds":  [
+                                       {
+                                           "y":  16,
+                                           "width":  48,
+                                           "name":  "Toggle sidebar",
+                                           "height":  45,
+                                           "x":  33
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  48,
+                                           "name":  "Back",
+                                           "height":  45,
+                                           "x":  106
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  47,
+                                           "name":  "Forward",
+                                           "height":  45,
+                                           "x":  154
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  48,
+                                           "name":  "List · Ctrl+1",
+                                           "height":  45,
+                                           "x":  935
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  48,
+                                           "name":  "Icons · Ctrl+2",
+                                           "height":  45,
+                                           "x":  983
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  48,
+                                           "name":  "Gallery · Ctrl+3",
+                                           "height":  45,
+                                           "x":  1031
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  45,
+                                           "name":  "Show hidden and system files",
+                                           "height":  45,
+                                           "x":  1106
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  45,
+                                           "name":  "Sort results",
+                                           "height":  45,
+                                           "x":  1151
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  45,
+                                           "name":  "Info panel · Space",
+                                           "height":  45,
+                                           "x":  1196
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  45,
+                                           "name":  "Settings",
+                                           "height":  45,
+                                           "x":  1241
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  39,
+                                           "name":  "Minimize",
+                                           "height":  45,
+                                           "x":  1313
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  39,
+                                           "name":  "Maximize or restore",
+                                           "height":  45,
+                                           "x":  1352
+                                       },
+                                       {
+                                           "y":  16,
+                                           "width":  39,
+                                           "name":  "Close",
+                                           "height":  45,
+                                           "x":  1391
+                                       }
+                                   ],
+                        "theme":  "dark"
+                    },
+                    {
+                        "capture":  ".impeccable/review/finish-dark-dpi-192.png",
+                        "os_window_dpi":  120,
+                        "simulated_dpi":  192,
+                        "bounds":  [
+                                       {
+                                           "y":  21,
+                                           "width":  64,
+                                           "name":  "Toggle sidebar",
+                                           "height":  60,
+                                           "x":  41
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  64,
+                                           "name":  "Back",
+                                           "height":  60,
+                                           "x":  139
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  64,
+                                           "name":  "Forward",
+                                           "height":  60,
+                                           "x":  203
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  64,
+                                           "name":  "List · Ctrl+1",
+                                           "height":  60,
+                                           "x":  1239
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  64,
+                                           "name":  "Icons · Ctrl+2",
+                                           "height":  60,
+                                           "x":  1303
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  64,
+                                           "name":  "Gallery · Ctrl+3",
+                                           "height":  60,
+                                           "x":  1367
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  60,
+                                           "name":  "Show hidden and system files",
+                                           "height":  60,
+                                           "x":  1469
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  60,
+                                           "name":  "Sort results",
+                                           "height":  60,
+                                           "x":  1529
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  60,
+                                           "name":  "Info panel · Space",
+                                           "height":  60,
+                                           "x":  1589
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  60,
+                                           "name":  "Settings",
+                                           "height":  60,
+                                           "x":  1649
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  52,
+                                           "name":  "Minimize",
+                                           "height":  60,
+                                           "x":  1747
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  52,
+                                           "name":  "Maximize or restore",
+                                           "height":  60,
+                                           "x":  1799
+                                       },
+                                       {
+                                           "y":  21,
+                                           "width":  52,
+                                           "name":  "Close",
+                                           "height":  60,
+                                           "x":  1851
+                                       }
+                                   ],
+                        "theme":  "dark"
+                    }
+                ],
+    "actual_dpi":  120,
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe"
+}

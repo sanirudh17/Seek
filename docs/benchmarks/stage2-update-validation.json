@@ -1,0 +1,43 @@
+﻿{
+    "checked_utc":  "2026-10-12T14:03:45.2911257Z",
+    "checks":  [
+                   {
+                       "command":  "cargo test -p seek-helper --locked -- --nocapture",
+                       "exit_code":  0,
+                       "wall_ms":  1859.5024
+                   },
+                   {
+                       "command":  "cargo clippy -p seek-helper --all-targets --locked -- -D warnings",
+                       "exit_code":  0,
+                       "wall_ms":  5460.8855
+                   },
+                   {
+                       "command":  "cargo build -p seek-helper --release --locked",
+                       "exit_code":  0,
+                       "wall_ms":  10060.5859
+                   },
+                   {
+                       "command":  "cargo fmt -p seek-helper -- --check",
+                       "exit_code":  0,
+                       "wall_ms":  235.2141
+                   }
+               ],
+    "first_regression_run":  {
+                                 "command":  "cargo test -p seek-helper --offline -- --nocapture",
+                                 "exit_code":  0,
+                                 "wall_ms":  10747.5944,
+                                 "checked_utc":  "2026-10-12T14:01:47.3092781Z"
+                             },
+    "tests_passed":  5,
+    "reproduced_error":  5,
+    "note":  "A mapped executable caused error 5; bounded retries succeeded after unmapping. Permanent denial preserved both files. Actual elevated service replacement remains pending.",
+    "ordinary_install_guard":  {
+                                   "command":  "seek-helper install --sid \u003ccurrent-user SID\u003e (ordinary token)",
+                                   "exit_code":  1,
+                                   "stderr":  "seek-helper.exe : Open service manager for Seek helper update: Access is denied. (os error 5)\r\nAt line:9 char:14\r\n+ ... guardOutput=\u0026 .\\target\\x86_64-pc-windows-msvc\\release\\seek-helper.exe ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (Open service ma...d. (os error 5):String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError",
+                                   "service_unchanged":  true,
+                                   "binary_unchanged":  true,
+                                   "expected_refusal":  true
+                               },
+    "prepared_helper_sha256":  "4ECDE5AFE81AF85F0AD9B9BC31B446BD2D556F74D83EAFDB5FA3A0347C14717D"
+}

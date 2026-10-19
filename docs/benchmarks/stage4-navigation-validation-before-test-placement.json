@@ -1,0 +1,12 @@
+[
+  {
+    "command": "cargo test --workspace --all-features --locked --offline",
+    "exit_code": 0,
+    "seconds": 15.092
+  },
+  {
+    "command": "cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings",
+    "exit_code": 101,
+    "seconds": 8.202
+  }
+]

@@ -1,0 +1,31 @@
+{
+  "fixture": "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-ole-639278952125795148",
+  "close_passed": true,
+  "target_bounds": "1220,40,700,700",
+  "passed": true,
+  "browser_records": {
+    "kind": "paste",
+    "files": [
+      {
+        "name": "Drag-out.txt",
+        "size": 33,
+        "sha256": "200d8fb944e4922fc878bbc2719356fc83db7c464a625073c9732df8374f2d14"
+      }
+    ]
+  },
+  "method": "Fresh UIA selection; GPUI File actions > Copy; native Windows file clipboard checked before browser paste. Chromium loopback HTML paste target reads bytes and reports SHA256. Paste-only run; prior drag checks were not repeated.",
+  "utc": "2026-10-18T04:40:22.7132724Z",
+  "close_exit_code": 0,
+  "source_preserved": true,
+  "target": "Browser",
+  "executable": "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+  "source_bounds": "0,40,1218,700",
+  "events": [],
+  "checks": [
+    {
+      "name": "Seek file clipboard pastes actual bytes into browser paste target",
+      "passed": true
+    }
+  ],
+  "sha256": "D129CA3BC76F4ED28E0E2CD1CAB23C58A16D763D20C0FD3DD158C4D35CB33805"
+}

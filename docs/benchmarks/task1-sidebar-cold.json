@@ -1,0 +1,289 @@
+{
+    "cold_index":  true,
+    "fresh_no_settings":  true,
+    "checks":  [
+                   {
+                       "name":  "Closing quits",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "80253CA8468C1A36A138C93CF23E6D7D7A972149A0FB449F6215E2B39C390587",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\task1-639278968346866052",
+    "folders":  [
+                    {
+                        "expected":  11,
+                        "extra":  0,
+                        "actual":  11,
+                        "index_ready":  true,
+                        "button":  "%USERPROFILE%\\Seek\\target",
+                        "path":  "%USERPROFILE%\\Seek\\target",
+                        "query_to_present_ms":  21.526400000000002,
+                        "missing":  0
+                    },
+                    {
+                        "expected":  539,
+                        "extra":  0,
+                        "actual":  539,
+                        "index_ready":  true,
+                        "button":  "Downloads",
+                        "path":  "%USERPROFILE%\\Downloads",
+                        "query_to_present_ms":  null,
+                        "missing":  0
+                    },
+                    {
+                        "expected":  18,
+                        "extra":  0,
+                        "actual":  18,
+                        "index_ready":  true,
+                        "button":  "Desktop",
+                        "path":  "%USERPROFILE%\\OneDrive\\Desktop",
+                        "query_to_present_ms":  null,
+                        "missing":  0
+                    },
+                    {
+                        "expected":  133,
+                        "extra":  0,
+                        "actual":  133,
+                        "index_ready":  true,
+                        "button":  "Documents",
+                        "path":  "%USERPROFILE%\\OneDrive\\Documents",
+                        "query_to_present_ms":  null,
+                        "missing":  0
+                    },
+                    {
+                        "expected":  15,
+                        "extra":  0,
+                        "actual":  15,
+                        "index_ready":  true,
+                        "button":  "Pictures",
+                        "path":  "%USERPROFILE%\\OneDrive\\Pictures",
+                        "query_to_present_ms":  null,
+                        "missing":  0
+                    },
+                    {
+                        "expected":  7,
+                        "extra":  0,
+                        "actual":  7,
+                        "index_ready":  true,
+                        "button":  "Videos",
+                        "path":  "%USERPROFILE%\\Videos",
+                        "query_to_present_ms":  null,
+                        "missing":  0
+                    },
+                    {
+                        "expected":  1,
+                        "extra":  0,
+                        "actual":  1,
+                        "index_ready":  true,
+                        "button":  "Music",
+                        "path":  "%USERPROFILE%\\Expense Tracker\\Music",
+                        "query_to_present_ms":  null,
+                        "missing":  0
+                    }
+                ],
+    "events":  [
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\Downloads",
+                                      "rows":  540,
+                                      "error":  null,
+                                      "elapsed_ms":  3.3542
+                                  },
+                       "entry_ms":  55.4902
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\OneDrive\\Desktop",
+                                      "rows":  19,
+                                      "error":  null,
+                                      "elapsed_ms":  0.5680000000000001
+                                  },
+                       "entry_ms":  56.2041
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\OneDrive\\Documents",
+                                      "rows":  134,
+                                      "error":  null,
+                                      "elapsed_ms":  1.053
+                                  },
+                       "entry_ms":  57.287699999999994
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\OneDrive\\Pictures",
+                                      "rows":  16,
+                                      "error":  null,
+                                      "elapsed_ms":  0.22010000000000002
+                                  },
+                       "entry_ms":  57.5375
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\Videos",
+                                      "rows":  8,
+                                      "error":  null,
+                                      "elapsed_ms":  0.1753
+                                  },
+                       "entry_ms":  57.7347
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\Expense Tracker\\Music",
+                                      "rows":  2,
+                                      "error":  null,
+                                      "elapsed_ms":  0.1431
+                                  },
+                       "entry_ms":  57.8956
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "\\\\?\\%USERPROFILE%\\Seek\\target",
+                                      "generation":  1,
+                                      "rows":  11,
+                                      "message":  "Folder contents",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  2736.5247
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "%USERPROFILE%\\Downloads",
+                                      "generation":  2,
+                                      "rows":  0,
+                                      "message":  "Indexing this folder...",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  4318.3032
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "%USERPROFILE%\\Downloads",
+                                      "generation":  2,
+                                      "rows":  539,
+                                      "message":  "Folder contents",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  4330.4186
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "%USERPROFILE%\\OneDrive\\Desktop",
+                                      "generation":  3,
+                                      "rows":  0,
+                                      "message":  "Indexing this folder...",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  5862.4408
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "%USERPROFILE%\\OneDrive\\Desktop",
+                                      "generation":  3,
+                                      "rows":  18,
+                                      "message":  "Folder contents",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  5863.8138
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "%USERPROFILE%\\OneDrive\\Documents",
+                                      "generation":  4,
+                                      "rows":  0,
+                                      "message":  "Indexing this folder...",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  7406.270100000001
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "%USERPROFILE%\\OneDrive\\Documents",
+                                      "generation":  4,
+                                      "rows":  133,
+                                      "message":  "Folder contents",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  7409.7215
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "%USERPROFILE%\\OneDrive\\Pictures",
+                                      "generation":  5,
+                                      "rows":  0,
+                                      "message":  "Indexing this folder...",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  8963.8146
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "%USERPROFILE%\\OneDrive\\Pictures",
+                                      "generation":  5,
+                                      "rows":  15,
+                                      "message":  "Folder contents",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  8964.9997
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "%USERPROFILE%\\Videos",
+                                      "generation":  6,
+                                      "rows":  0,
+                                      "message":  "Indexing this folder...",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  10574.0675
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "%USERPROFILE%\\Videos",
+                                      "generation":  6,
+                                      "rows":  7,
+                                      "message":  "Folder contents",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  10574.988899999998
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "%USERPROFILE%\\Expense Tracker\\Music",
+                                      "generation":  7,
+                                      "rows":  0,
+                                      "message":  "Indexing this folder...",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  12054.268399999999
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "%USERPROFILE%\\Expense Tracker\\Music",
+                                      "generation":  7,
+                                      "rows":  1,
+                                      "message":  "Folder contents",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  12055.2309
+                   }
+               ]
+}

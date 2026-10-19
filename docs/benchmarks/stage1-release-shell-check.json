@@ -1,0 +1,115 @@
+{
+    "captured_at":  "2026-10-11T14:15:14.7670439Z",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\stage1-check-639273249037584401",
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+    "checks":  [
+                   "filter chip created; query read back; two filtered rows painted",
+                   "chip removed; three matching rows painted",
+                   "Name sort produced the requested order",
+                   "Down/Down/Up changed selection; Escape cleared query then selection",
+                   "GUI live results reflect create, rename, move and delete",
+                   "GUI relaunch results reflect closed-process create, rename, move and delete",
+                   "window position and size restored within three physical pixels",
+                   "both window closes exit the complete GUI process"
+               ],
+    "verification":  [
+                         {
+                             "phase":  "initial",
+                             "report":  {
+                                            "ground_truth":  6,
+                                            "indexed":  6,
+                                            "missing":  [
+
+                                                        ],
+                                            "extra":  [
+
+                                                      ],
+                                            "stale":  [
+
+                                                      ],
+                                            "denied":  [
+
+                                                       ]
+                                        },
+                             "catch_up_ms":  0.4982
+                         },
+                         {
+                             "phase":  "live",
+                             "report":  {
+                                            "ground_truth":  6,
+                                            "indexed":  6,
+                                            "missing":  [
+
+                                                        ],
+                                            "extra":  [
+
+                                                      ],
+                                            "stale":  [
+
+                                                      ],
+                                            "denied":  [
+
+                                                       ]
+                                        },
+                             "catch_up_ms":  0.5222
+                         },
+                         {
+                             "phase":  "relaunch",
+                             "report":  {
+                                            "ground_truth":  6,
+                                            "indexed":  6,
+                                            "missing":  [
+
+                                                        ],
+                                            "extra":  [
+
+                                                      ],
+                                            "stale":  [
+
+                                                      ],
+                                            "denied":  [
+
+                                                       ]
+                                        },
+                             "catch_up_ms":  0.7846
+                         }
+                     ],
+    "close":  [
+                  {
+                      "close_ms":  56.4519,
+                      "exit_code":  0
+                  },
+                  {
+                      "close_ms":  63.821000000000005,
+                      "exit_code":  0
+                  }
+              ],
+    "shell_actions":  [
+                          "Enter opened the selected folder in its Windows default handler (Explorer); exact fixture location read back",
+                          "Ctrl+Enter revealed the file in Explorer; full location and selected file path read back"
+                      ],
+    "gui_walker_relaunch_catch_up_ms":  1.1924,
+    "saved_geometry":  {
+                           "bounds":  [
+                                          119.19999694824219,
+                                          106.4000015258789,
+                                          945.5999755859375,
+                                          586.4000244140625
+                                      ],
+                           "maximized":  false
+                       },
+    "geometry_before":  {
+                            "Left":  140,
+                            "Top":  110,
+                            "Right":  1340,
+                            "Bottom":  890
+                        },
+    "geometry_after":  {
+                           "Left":  140,
+                           "Top":  110,
+                           "Right":  1340,
+                           "Bottom":  890
+                       },
+    "method":  "Real GUI processes, UI Automation Value/Invoke patterns with readback, native in-window key messages, painted-result trace and independent CLI ground-truth walk. No benchmark reruns.",
+    "limitations":  "No assertion of physical DWM scanout, non-folder default-handler contents, column drag resizing or true cold OS cache. Explorer location/selection was read back. This metadata correction adds no new measurement."
+}

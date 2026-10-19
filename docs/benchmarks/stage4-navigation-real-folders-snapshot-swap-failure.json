@@ -1,0 +1,274 @@
+{
+  "timings": [
+    {
+      "rows": 488,
+      "catching_up": true,
+      "location": "Downloads",
+      "request_to_present_ms": 16.0735
+    },
+    {
+      "rows": 17,
+      "catching_up": true,
+      "location": "Desktop",
+      "request_to_present_ms": 13.0465
+    },
+    {
+      "rows": 134,
+      "catching_up": true,
+      "location": "Documents",
+      "request_to_present_ms": 14.837100000000001
+    },
+    {
+      "rows": 16,
+      "catching_up": true,
+      "location": "Pictures",
+      "request_to_present_ms": 14.3273
+    },
+    {
+      "rows": 8,
+      "catching_up": true,
+      "location": "Videos",
+      "request_to_present_ms": 13.108099999999999
+    },
+    {
+      "rows": 488,
+      "catching_up": true,
+      "location": "Downloads",
+      "request_to_present_ms": 15.67
+    },
+    {
+      "phase": "second sweep",
+      "rows": 488,
+      "catching_up": true,
+      "location": "Downloads",
+      "request_to_present_ms": 17.83
+    },
+    {
+      "phase": "second sweep",
+      "rows": 17,
+      "catching_up": true,
+      "location": "Desktop",
+      "request_to_present_ms": 16.4099
+    },
+    {
+      "phase": "second sweep",
+      "rows": 134,
+      "catching_up": true,
+      "location": "Documents",
+      "request_to_present_ms": 11.0239
+    },
+    {
+      "phase": "second sweep",
+      "rows": 16,
+      "catching_up": true,
+      "location": "Pictures",
+      "request_to_present_ms": 18.0202
+    },
+    {
+      "phase": "second sweep",
+      "rows": 8,
+      "catching_up": true,
+      "location": "Videos",
+      "request_to_present_ms": 10.4013
+    },
+    {
+      "phase": "second sweep",
+      "rows": 488,
+      "catching_up": true,
+      "location": "Downloads",
+      "request_to_present_ms": 2084.6191
+    }
+  ],
+  "profiles": [
+    {
+      "interaction": "browse_profile",
+      "detail": {
+        "folder": "Downloads",
+        "queued_ms": 0.06430000000000001,
+        "stages_ms": [
+          9.999999999999999e-05,
+          0.7663,
+          0.0162
+        ],
+        "rows": 488
+      },
+      "entry_ms": 2234.7547
+    },
+    {
+      "interaction": "browse_profile",
+      "detail": {
+        "folder": "Desktop",
+        "queued_ms": 0.0765,
+        "stages_ms": [
+          0.00019999999999999998,
+          0.0808,
+          0.0053
+        ],
+        "rows": 17
+      },
+      "entry_ms": 4320.8933
+    },
+    {
+      "interaction": "browse_profile",
+      "detail": {
+        "folder": "Documents",
+        "queued_ms": 0.0281,
+        "stages_ms": [
+          9.999999999999999e-05,
+          0.1632,
+          0.0039
+        ],
+        "rows": 134
+      },
+      "entry_ms": 6149.8877
+    },
+    {
+      "interaction": "browse_profile",
+      "detail": {
+        "folder": "Pictures",
+        "queued_ms": 0.0859,
+        "stages_ms": [
+          9.999999999999999e-05,
+          0.0455,
+          0.005699999999999999
+        ],
+        "rows": 16
+      },
+      "entry_ms": 8038.7173999999995
+    },
+    {
+      "interaction": "browse_profile",
+      "detail": {
+        "folder": "Videos",
+        "queued_ms": 0.0821,
+        "stages_ms": [
+          9.999999999999999e-05,
+          0.0436,
+          0.0053
+        ],
+        "rows": 8
+      },
+      "entry_ms": 9955.5386
+    },
+    {
+      "interaction": "browse_profile",
+      "detail": {
+        "folder": "Downloads",
+        "queued_ms": 0.0347,
+        "stages_ms": [
+          0.00019999999999999998,
+          0.7766,
+          0.011300000000000001
+        ],
+        "rows": 488
+      },
+      "entry_ms": 11566.588
+    },
+    {
+      "interaction": "browse_profile",
+      "detail": {
+        "folder": "Downloads",
+        "queued_ms": 0.0253,
+        "stages_ms": [
+          9.999999999999999e-05,
+          0.6891,
+          0.0097
+        ],
+        "rows": 488
+      },
+      "entry_ms": 13314.1964
+    },
+    {
+      "interaction": "browse_profile",
+      "detail": {
+        "folder": "Desktop",
+        "queued_ms": 0.07619999999999999,
+        "stages_ms": [
+          9.999999999999999e-05,
+          0.0696,
+          0.0062
+        ],
+        "rows": 17
+      },
+      "entry_ms": 15015.3309
+    },
+    {
+      "interaction": "browse_profile",
+      "detail": {
+        "folder": "Documents",
+        "queued_ms": 0.0326,
+        "stages_ms": [
+          9.999999999999999e-05,
+          0.2132,
+          0.0047
+        ],
+        "rows": 134
+      },
+      "entry_ms": 16673.1027
+    },
+    {
+      "interaction": "browse_profile",
+      "detail": {
+        "folder": "Pictures",
+        "queued_ms": 0.16119999999999998,
+        "stages_ms": [
+          0.00019999999999999998,
+          0.0663,
+          0.0070999999999999995
+        ],
+        "rows": 16
+      },
+      "entry_ms": 18362.984999999997
+    },
+    {
+      "interaction": "browse_profile",
+      "detail": {
+        "folder": "Videos",
+        "queued_ms": 0.0577,
+        "stages_ms": [
+          9.999999999999999e-05,
+          0.022,
+          0.0031
+        ],
+        "rows": 8
+      },
+      "entry_ms": 20221.5222
+    },
+    {
+      "interaction": "browse_profile",
+      "detail": {
+        "folder": "Downloads",
+        "queued_ms": 0.0337,
+        "stages_ms": [
+          2069.3246,
+          0.0371,
+          1.1877
+        ],
+        "rows": 488
+      },
+      "entry_ms": 23835.1275
+    },
+    {
+      "interaction": "browse_profile",
+      "detail": {
+        "folder": "Downloads",
+        "queued_ms": null,
+        "stages_ms": [
+          0.0,
+          0.0058000000000000005,
+          0.6716
+        ],
+        "rows": 488
+      },
+      "entry_ms": 23846.819799999997
+    }
+  ],
+  "fixture": "%USERPROFILE%\\Seek\\.bench-data\\navigation-639276873375241957",
+  "failure": "Real folder navigation exceeded 100 ms: Downloads 2084.62 ms",
+  "checks": [
+    {
+      "name": "Real sidebar folders present cached indexed contents",
+      "passed": true
+    }
+  ]
+}

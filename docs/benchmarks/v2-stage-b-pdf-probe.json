@@ -1,0 +1,25 @@
+{
+    "utc":  "2026-10-16T15:06:04.4294926Z",
+    "root":  "%USERPROFILE%\\Downloads\\redacted-d970f3c2505a",
+    "service":  "Running",
+    "samples":  [
+                    {
+                        "paths":  [
+                                      "%USERPROFILE%\\Downloads\\redacted-b0d9b93a734a.pdf",
+                                      "%USERPROFILE%\\Downloads\\redacted-a4c25c3a4620.txt"
+                                  ],
+                        "case":  "indexed_fixture",
+                        "count":  2,
+                        "elapsed_ms":  111.9251
+                    },
+                    {
+                        "paths":  [
+                                      "%USERPROFILE%\\Downloads\\redacted-b0d9b93a734a.pdf"
+                                  ],
+                        "case":  "pdf_content",
+                        "count":  1,
+                        "elapsed_ms":  16.291700000000002
+                    }
+                ],
+    "elapsed_ms":  286.09270000000004
+}

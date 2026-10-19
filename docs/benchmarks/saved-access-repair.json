@@ -1,0 +1,41 @@
+{
+  "date": "2026-10-19",
+  "method": "Read-only saved-index copy; all refresh/testing in an owned temporary profile. Independent standard-library directory listing of every recorded failed path and six Known Folders.",
+  "build": "debug",
+  "before": {
+    "stored_count": 1862,
+    "stored_error_codes": { "3": 1614, "5": 248 },
+    "independent_error_codes": { "3": 1620, "5": 242 },
+    "independently_readable": 0
+  },
+  "after": {
+    "source": "ntfs + usn",
+    "helper_note": null,
+    "count": 249,
+    "case_insensitive_distinct_paths": 248,
+    "independent_error_codes": { "5": 249 },
+    "independently_readable": 0,
+    "persisted_count": 249,
+    "persisted_error_codes": { "5": 249 },
+    "priority_ms": 313.7507,
+    "load_ms": 504.352,
+    "catch_up_ms": 19541.1156,
+    "save_ms": 17757.1117,
+    "journal_batches": 136,
+    "journal_directories": 644,
+    "fallbacks": 0,
+    "resets": 0,
+    "reconciliations": 0
+  },
+  "folders": [
+    { "name": "Downloads", "truth": 536, "indexed": 536, "missing": 0, "extra": 0 },
+    { "name": "Desktop", "truth": 18, "indexed": 18, "missing": 0, "extra": 0 },
+    { "name": "Documents", "truth": 134, "indexed": 134, "missing": 0, "extra": 0 },
+    { "name": "Pictures", "truth": 16, "indexed": 16, "missing": 0, "extra": 0 },
+    { "name": "Videos", "truth": 8, "indexed": 8, "missing": 0, "extra": 0 },
+    { "name": "Music", "truth": 2, "indexed": 2, "missing": 0, "extra": 0 }
+  ],
+  "administrator_token": false,
+  "elevation_needed": false,
+  "limits": ["Live drive and point-in-time saved snapshot", "Not a frozen whole-drive file-by-file verification", "No release timing claim", "No inaccessible-location UI added"]
+}

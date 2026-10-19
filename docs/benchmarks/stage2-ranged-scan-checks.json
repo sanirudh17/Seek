@@ -1,0 +1,17 @@
+[
+    {
+        "wall_ms":  11375.0918,
+        "command":  "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+        "exit_code":  0
+    },
+    {
+        "wall_ms":  3607.9212,
+        "command":  "cargo check --workspace --locked",
+        "exit_code":  0
+    },
+    {
+        "wall_ms":  4702.0354000000007,
+        "command":  "cargo fmt --all -- --check",
+        "exit_code":  0
+    }
+]

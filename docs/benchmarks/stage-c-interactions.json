@@ -1,0 +1,61 @@
+{
+    "fixture":  "%USERPROFILE%\\AppData\\Local\\Temp\\seek-stage-c-check-de9f3b4541324d5f9bcf78737e701413",
+    "captured_at":  "2026-10-19T14:48:43.0670920Z",
+    "idle":  {
+                 "quiet_foreground":  true,
+                 "working_set_bytes":  127176704,
+                 "redraws":  0,
+                 "tabs":  3,
+                 "cpu_ms":  0,
+                 "private_commit_bytes":  125759488,
+                 "seconds":  20.0034696
+             },
+    "visual_captures":  [
+                            "tabs-dark",
+                            "delete-dark",
+                            "settings-light",
+                            "delete-light",
+                            "tabs-light"
+                        ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+    "limitations":  "Native SDR at 125%; no physical mixed-DPI/HDR check; no real file deletion.",
+    "checks":  [
+                   {
+                       "name":  "Two searches remain independent; Ctrl+Tab wraps",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "New folder tab equals independent directory listing (120 files)",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "List viewport returns to same row",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Grid view and its scroll offset survive tab switching",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Content search mode, query and Alpha scope survive tab switch",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Modal Cancel preserves all 240 disposable files",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Three-tab foreground idle has no measured CPU/redraws/input",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Close inactive and active tabs without closing remaining window",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Closing final tab quits process",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "4F9AAE190E1132C93F250B34C98226C53AA97D66906B960358BFB61F9E208D1A"
+}

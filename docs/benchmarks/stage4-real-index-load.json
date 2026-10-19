@@ -1,0 +1,6 @@
+{
+  "entries": 3281665,
+  "index_bytes": 186576948,
+  "load_ms": 738.4606,
+  "measurement": "Read-only mmap and structural validation; no index reconstruction or writes"
+}

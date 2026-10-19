@@ -1,0 +1,14 @@
+{
+  "source_preserved": true,
+  "explorer_copy_passed": false,
+  "executable": "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe",
+  "fixture": "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-ole-639277616071989286",
+  "method": "Fresh native UIA row/window bounds. One continuous native pointer drag with 600 ms held over an empty owned Explorer target. Only COPY offered.",
+  "utc": "2026-10-16T15:33:34.9518321Z",
+  "events": [],
+  "sha256": "F1AA1785000E77B741E37E6DEF6F966618A1A63C309EDD8E17ACB05FEAD9D0E0",
+  "target_bounds": "1220,40,700,700",
+  "source_bounds": "0,40,1218,700",
+  "actual_target_hold_ms": 1500,
+  "measurement_note": "The retained method description says 600 ms; the DPI-corrected driver actually held the pointer for 1500 ms. No OLE start event was observed, so this does not qualify a native OLE target test."
+}

@@ -1,0 +1,57 @@
+{
+  "captured_at": "2026-10-11T10:51:05.224172+00:00",
+  "checks": [
+    {
+      "command": "cargo build --workspace --locked",
+      "exit_code": 0,
+      "cargo_reported_duration": "30.37s"
+    },
+    {
+      "command": "cargo build --workspace --all-features",
+      "exit_code": 0,
+      "cargo_reported_duration": "4.37s"
+    },
+    {
+      "command": "cargo test --workspace --all-features",
+      "exit_code": 0,
+      "cargo_reported_duration": "2.68s",
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "command": "cargo clippy --workspace --all-targets --all-features -- -D warnings",
+      "exit_code": 0,
+      "cargo_reported_duration": "1.86s"
+    },
+    {
+      "command": "cargo build -p seek --release --features benchmarks",
+      "exit_code": 0,
+      "cargo_reported_duration": "5m 20s"
+    },
+    {
+      "command": "cargo fmt --all -- --check",
+      "exit_code": 0
+    },
+    {
+      "command": "rustc --test vendor/gpui-windows/src/frame_demand.rs -o target/frame-demand-tests.exe; target/frame-demand-tests.exe",
+      "exit_code": 0,
+      "passed": 2,
+      "failed": 0
+    }
+  ],
+  "stage1_complete": false,
+  "stage2_started": false,
+  "launch_gate": "FAIL: warm-cache first cached presentation 474.070ms (10k), 572.675ms (1M)",
+  "foreground_idle": "UNVERIFIED: explicit repeat flags were false; background zero-CPU samples and one unattributed nonzero sample retained",
+  "final_release_run": {
+    "captured_at": "2026-10-11T10:46:04.9672325Z",
+    "executable": "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+    "dataset": 10000,
+    "window_title": "Seek",
+    "close_to_exit_ms": 166.6063,
+    "exit_code": 0,
+    "closed_process": true,
+    "launch_until_exit_ms": 511.30310000000003,
+    "timing_note": "Total from after Start-Process through window close; this is not first-paint timing"
+  }
+}

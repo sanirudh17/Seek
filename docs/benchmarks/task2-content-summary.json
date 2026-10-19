@@ -1,0 +1,359 @@
+{
+  "profile": "debug",
+  "queries": [
+    {
+      "query": "note",
+      "before": {
+        "first_result_ms": 146.068,
+        "elapsed_ms": 3007.7686,
+        "checked": 149,
+        "limited": true,
+        "matches": 46
+      },
+      "after": {
+        "first_result_ms": 459.6395,
+        "elapsed_ms": 34791.117399999996,
+        "checked": 437,
+        "total": 437,
+        "skipped": 539,
+        "unreadable": 2,
+        "finished": true,
+        "formats": {
+          "": [
+            1,
+            0.2153
+          ],
+          "csv": [
+            1,
+            0.2455
+          ],
+          "docx": [
+            86,
+            412.9383
+          ],
+          "ini": [
+            4,
+            1.5091999999999999
+          ],
+          "json": [
+            3,
+            0.8798
+          ],
+          "log": [
+            2,
+            0.3989
+          ],
+          "md": [
+            10,
+            3.5073000000000003
+          ],
+          "pdf": [
+            280,
+            34169.264900000024
+          ],
+          "ps1": [
+            2,
+            0.5279
+          ],
+          "py": [
+            8,
+            1.6746
+          ],
+          "txt": [
+            40,
+            13.401800000000003
+          ]
+        },
+        "matches": 150
+      },
+      "catalog": {
+        "eligible": 437,
+        "samples": [
+          {
+            "label": "coverage",
+            "count": 437,
+            "elapsed_ms": 975.7560000000001,
+            "batches": 14
+          },
+          {
+            "label": "content",
+            "count": 122,
+            "elapsed_ms": 840.9819,
+            "batches": 14
+          }
+        ]
+      }
+    },
+    {
+      "query": "invoice",
+      "before": {
+        "first_result_ms": 276.03929999999997,
+        "elapsed_ms": 3005.634,
+        "checked": 164,
+        "limited": true,
+        "matches": 1
+      },
+      "after": {
+        "first_result_ms": 20755.9942,
+        "elapsed_ms": 39818.2538,
+        "checked": 437,
+        "total": 437,
+        "skipped": 539,
+        "unreadable": 2,
+        "finished": true,
+        "formats": {
+          "": [
+            1,
+            0.2668
+          ],
+          "csv": [
+            1,
+            0.177
+          ],
+          "docx": [
+            86,
+            593.5195000000001
+          ],
+          "ini": [
+            4,
+            1.2139
+          ],
+          "json": [
+            3,
+            0.9871
+          ],
+          "log": [
+            2,
+            0.5232
+          ],
+          "md": [
+            10,
+            4.498899999999999
+          ],
+          "pdf": [
+            280,
+            39025.425600000024
+          ],
+          "ps1": [
+            2,
+            0.8264
+          ],
+          "py": [
+            8,
+            1.6078999999999999
+          ],
+          "txt": [
+            40,
+            12.840900000000001
+          ]
+        },
+        "matches": 2
+      },
+      "catalog": {
+        "eligible": 437,
+        "samples": [
+          {
+            "label": "coverage",
+            "count": 437,
+            "elapsed_ms": 934.9729000000001,
+            "batches": 14
+          },
+          {
+            "label": "content",
+            "count": 2,
+            "elapsed_ms": 118.3632,
+            "batches": 14
+          }
+        ]
+      }
+    }
+  ],
+  "ui_checks": [
+    {
+      "name": "Fixture is ready",
+      "passed": true
+    },
+    {
+      "name": "Content still finds Markdown, code, UTF16 and DOCX",
+      "passed": true
+    },
+    {
+      "name": "Content has a partial presentation before final scan completion",
+      "passed": true
+    },
+    {
+      "name": "New content query rejects earlier rows",
+      "passed": true
+    },
+    {
+      "name": "Complete progress has real denominator and no 200-result cutoff",
+      "passed": true
+    },
+    {
+      "name": "Explicit cancellation preserves partial scan without restart",
+      "passed": true
+    },
+    {
+      "name": "Cancelled status is visible in the UI",
+      "passed": true
+    },
+    {
+      "name": "Cancel publishes a final update without restarting",
+      "passed": true
+    },
+    {
+      "name": "Closing quits after content worker use",
+      "passed": true
+    }
+  ],
+  "accuracy_cases_passed": 10,
+  "rust_checks_passed": 7,
+  "limits": "4 MiB input, 8 MiB expanded; PDF 1 second; unsupported/protected/offline skipped; 2 unreadable",
+  "catalog_open_ms": 24.1935,
+  "ui_fixture_result": [
+    {
+      "checked": 0,
+      "skipped": 0,
+      "errors": 0,
+      "total": 0,
+      "finished": false,
+      "cancelled": false,
+      "elapsed_ms": 0.0,
+      "matches": 0,
+      "first_result_ms": null,
+      "formats": {}
+    },
+    {
+      "checked": 292,
+      "skipped": 2,
+      "errors": 0,
+      "total": 292,
+      "finished": true,
+      "cancelled": false,
+      "elapsed_ms": 3243.5071,
+      "matches": 290,
+      "first_result_ms": 20.063399999999998,
+      "formats": {
+        "docx": [
+          1,
+          0.3695
+        ],
+        "md": [
+          1,
+          0.1437
+        ],
+        "pdf": [
+          36,
+          3156.1490000000003
+        ],
+        "rs": [
+          1,
+          0.1873
+        ],
+        "txt": [
+          253,
+          42.92990000000003
+        ]
+      }
+    },
+    {
+      "checked": 264,
+      "skipped": 2,
+      "errors": 1,
+      "total": 292,
+      "finished": false,
+      "cancelled": true,
+      "elapsed_ms": 700.2929,
+      "matches": 1,
+      "first_result_ms": 58.7673,
+      "formats": {
+        "docx": [
+          1,
+          0.2584
+        ],
+        "md": [
+          1,
+          0.1513
+        ],
+        "pdf": [
+          8,
+          640.0874
+        ],
+        "rs": [
+          1,
+          0.15330000000000002
+        ],
+        "txt": [
+          253,
+          37.14869999999999
+        ]
+      }
+    },
+    {
+      "checked": 273,
+      "skipped": 2,
+      "errors": 1,
+      "total": 292,
+      "finished": false,
+      "cancelled": true,
+      "elapsed_ms": 1412.0566000000001,
+      "matches": 270,
+      "first_result_ms": 16.7693,
+      "formats": {
+        "docx": [
+          1,
+          0.2257
+        ],
+        "md": [
+          1,
+          0.1262
+        ],
+        "pdf": [
+          17,
+          1352.2894999999999
+        ],
+        "rs": [
+          1,
+          0.14550000000000002
+        ],
+        "txt": [
+          253,
+          33.99229999999996
+        ]
+      }
+    },
+    {
+      "checked": 273,
+      "skipped": 2,
+      "errors": 1,
+      "total": 292,
+      "finished": false,
+      "cancelled": true,
+      "elapsed_ms": 1384.3974,
+      "matches": 0,
+      "first_result_ms": null,
+      "formats": {
+        "docx": [
+          1,
+          0.1851
+        ],
+        "md": [
+          1,
+          0.12079999999999999
+        ],
+        "pdf": [
+          17,
+          1329.5578999999998
+        ],
+        "rs": [
+          1,
+          0.1275
+        ],
+        "txt": [
+          253,
+          33.334599999999966
+        ]
+      }
+    }
+  ]
+}

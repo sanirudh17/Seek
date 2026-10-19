@@ -1,0 +1,150 @@
+{
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-ole-639278558601232402",
+    "close_passed":  true,
+    "target_bounds":  "1220,40,700,700",
+    "passed":  true,
+    "browser_records":  [
+                            {
+                                "kind":  "input",
+                                "files":  [
+                                              {
+                                                  "name":  "Drag-out.txt",
+                                                  "size":  33,
+                                                  "sha256":  "200d8fb944e4922fc878bbc2719356fc83db7c464a625073c9732df8374f2d14"
+                                              }
+                                          ]
+                            },
+                            {
+                                "kind":  "drop",
+                                "files":  [
+                                              {
+                                                  "name":  "Drag-out.txt",
+                                                  "size":  33,
+                                                  "sha256":  "200d8fb944e4922fc878bbc2719356fc83db7c464a625073c9732df8374f2d14"
+                                              }
+                                          ]
+                            },
+                            {
+                                "kind":  "drop",
+                                "files":  [
+                                              {
+                                                  "name":  "Second.txt",
+                                                  "size":  25,
+                                                  "sha256":  "1127983f0fd908f5384c9ec2839fed32a4d803244b928a5aa0ce797a69369d5a"
+                                              },
+                                              {
+                                                  "name":  "Drag-out.txt",
+                                                  "size":  33,
+                                                  "sha256":  "200d8fb944e4922fc878bbc2719356fc83db7c464a625073c9732df8374f2d14"
+                                              }
+                                          ]
+                            },
+                            {
+                                "kind":  "paste",
+                                "files":  [
+                                              {
+                                                  "name":  "Drag-out.txt",
+                                                  "size":  33,
+                                                  "sha256":  "200d8fb944e4922fc878bbc2719356fc83db7c464a625073c9732df8374f2d14"
+                                              },
+                                              {
+                                                  "name":  "Second.txt",
+                                                  "size":  25,
+                                                  "sha256":  "1127983f0fd908f5384c9ec2839fed32a4d803244b928a5aa0ce797a69369d5a"
+                                              }
+                                          ]
+                            }
+                        ],
+    "method":  "Fresh UIA row/window bounds; native held-pointer drags (1500 ms target hold). Owned folder moves, Explorer copy, or loopback Chromium input/DataTransfer file-byte SHA256 verification according to target. External COPY only; browser cancellation uses Escape before button release.",
+    "utc":  "2026-10-17T17:44:40.6892252Z",
+    "close_exit_code":  0,
+    "source_preserved":  true,
+    "target":  "Browser",
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe",
+    "source_bounds":  "0,40,1218,700",
+    "events":  [
+                   {
+                       "interaction":  "ole_start",
+                       "detail":  {
+                                      "files":  1
+                                  },
+                       "entry_ms":  4059.8729999999996
+                   },
+                   {
+                       "interaction":  "ole_result",
+                       "detail":  {
+                                      "hresult":  262400,
+                                      "effect":  1
+                                  },
+                       "entry_ms":  5822.2476
+                   },
+                   {
+                       "interaction":  "ole_start",
+                       "detail":  {
+                                      "files":  1
+                                  },
+                       "entry_ms":  7918.4302
+                   },
+                   {
+                       "interaction":  "ole_result",
+                       "detail":  {
+                                      "hresult":  262400,
+                                      "effect":  1
+                                  },
+                       "entry_ms":  9682.3429
+                   },
+                   {
+                       "interaction":  "ole_start",
+                       "detail":  {
+                                      "files":  2
+                                  },
+                       "entry_ms":  12240.0711
+                   },
+                   {
+                       "interaction":  "ole_result",
+                       "detail":  {
+                                      "hresult":  262400,
+                                      "effect":  1
+                                  },
+                       "entry_ms":  13997.819599999999
+                   },
+                   {
+                       "interaction":  "ole_start",
+                       "detail":  {
+                                      "files":  2
+                                  },
+                       "entry_ms":  15880.292000000001
+                   },
+                   {
+                       "interaction":  "ole_result",
+                       "detail":  {
+                                      "hresult":  262401,
+                                      "effect":  0
+                                  },
+                       "entry_ms":  17635.4414
+                   }
+               ],
+    "checks":  [
+                   {
+                       "name":  "Browser input receives actual file bytes",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Browser drop receives actual file bytes",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Browser multi-selection transfers both actual files",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Escape cancels without delivering files",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Seek file clipboard pastes actual bytes into browser paste target",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "939A8E690C42340E07DC469461598F5B463ACBF6BC626B122E7DF15524F27390"
+}

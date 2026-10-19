@@ -1,0 +1,16 @@
+{
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe",
+    "settings_button_opened":  true,
+    "helper_button":  "Uninstall helper",
+    "helper_button_enabled":  true,
+    "escape_closed_sheet":  true,
+    "close_button_closed_sheet":  true,
+    "installation_triggered":  false,
+    "close_ms":  86.2651,
+    "exit_code":  0,
+    "private_working_set_bytes":  32358400,
+    "total_working_set_bytes":  79294464,
+    "private_commit_bytes":  79593472,
+    "screenshot":  "docs/benchmarks/stage2-helper-sheet.png",
+    "note":  "Actual Downloads, isolated app data, --walker. New helper controls only; no UAC or installation action. Not an idle CPU/launch/latency benchmark."
+}

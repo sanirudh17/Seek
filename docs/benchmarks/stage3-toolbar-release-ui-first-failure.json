@@ -1,0 +1,8 @@
+{
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\stage3-targeted-639276640286631068",
+    "failure":  "Selected item missing",
+    "checks":  [
+
+               ],
+    "executable":  "target/x86_64-pc-windows-msvc/release/seek.exe"
+}

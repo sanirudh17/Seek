@@ -1,0 +1,42 @@
+{
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+    "sha256":  "6726F971AF32C115AC16CC222DB02C8A8080690D1D339A38A2547D42403CBB3E",
+    "pid":  12780,
+    "trace":  "%USERPROFILE%\\Seek\\.bench-data\\stage3-check-639274989063327599\\restart-639275002192152226.ndjson",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\stage3-check-639274989063327599",
+    "saved_preferences_restored":  true,
+    "indexed_locations_restored":  true,
+    "exclusions_restored":  true,
+    "default_icons_restored":  true,
+    "explicit_rebuild_completed":  true,
+    "rebuild_catch_up_ms":  6.1516,
+    "settings_clicks_preserve_selection":  true,
+    "helper_modified":  false,
+    "entry_to_correct_present_ms":  202.45669999999998,
+    "catch_up_ms":  11.861099999999999,
+    "private_working_set_bytes":  53915648,
+    "private_commit_bytes":  105558016,
+    "close":  null,
+    "settings":  {
+                     "theme":  "light",
+                     "glass":  true,
+                     "accent":  "#006fe5",
+                     "show_hidden":  true,
+                     "default_view":  "icons",
+                     "indexed_locations":  [
+                                               "%USERPROFILE%\\Seek\\.bench-data\\stage3-check-639274989063327599\\files"
+                                           ],
+                     "exclusions":  [
+                                        "%USERPROFILE%\\Seek\\.bench-data\\stage3-check-639274989063327599\\files\\Expansion\\Nested"
+                                    ],
+                     "window":  {
+                                    "bounds":  [
+                                                   218.3999938964844,
+                                                   58.400001525878906,
+                                                   1100.0,
+                                                   700.0
+                                               ],
+                                    "maximized":  false
+                                }
+                 }
+}

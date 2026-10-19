@@ -1,0 +1,9 @@
+{
+    "run":  1,
+    "completed_samples":  [
+
+                          ],
+    "data":  "%USERPROFILE%\\Seek\\.bench-data\\stage4-drive-639276812522094244",
+    "failure":  "Seek exited before correct results: -1073740791; stderr: %USERPROFILE%\\Seek\\.bench-data\\stage4-drive-639276812522094244\\stderr-0.log",
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe"
+}

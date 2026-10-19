@@ -1,0 +1,11 @@
+{
+    "command":  "cargo build --workspace --release --all-features --locked",
+    "exit_code":  0,
+    "wall_ms":  328284.7597,
+    "finished_utc":  "2026-10-12T13:39:49.7216942Z",
+    "earlier_build":  {
+                          "exit_code":  101,
+                          "wall_ms":  116817.73240000001,
+                          "reason":  "Agent stopped only its own app compiler to include the final reserved-root metadata guard; not a compiler defect."
+                      }
+}

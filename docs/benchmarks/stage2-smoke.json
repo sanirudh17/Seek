@@ -1,0 +1,74 @@
+{
+    "elevated":  false,
+    "ntfs":  {
+                 "available":  false,
+                 "error":  "Access is denied. (os error 5)",
+                 "windows_error":  5
+             },
+    "installed_service":  {
+                              "available":  false,
+                              "reason":  "Helper is not installed/running"
+                          },
+    "forced_helper_exit":  1,
+    "forced_helper_message":  "seek-cli.exe : Seek helper is not installed/running; opt in from settings\r\nAt %USERPROFILE%\\Seek\\scripts\\check-stage2.ps1:22 char:1\r\n+ \u0026 $seekCli verify --source helper --root $seekRoot --data .bench-data ...\r\n+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (Seek helper is ...n from settings:String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError",
+    "console_ping":  {
+                         "available":  true,
+                         "server_pid":  24344,
+                         "trusted_installed_service":  false,
+                         "response":  {
+                                          "Pong":  {
+                                                       "version":  1
+                                                   }
+                                      }
+                     },
+    "console_sync":  [
+                         {
+                             "Fallback":  {
+                                              "root":  [
+                                                           47,
+                                                           67,
+                                                           58,
+                                                           47,
+                                                           85,
+                                                           115,
+                                                           101,
+                                                           114,
+                                                           115,
+                                                           47,
+                                                           115,
+                                                           97,
+                                                           110,
+                                                           105,
+                                                           114,
+                                                           47,
+                                                           68,
+                                                           111,
+                                                           119,
+                                                           110,
+                                                           108,
+                                                           111,
+                                                           97,
+                                                           100,
+                                                           115
+                                                       ],
+                                              "reason":  "NTFS unavailable; walker used: Access is denied. (os error 5)"
+                                          }
+                         },
+                         {
+                             "Ready":  {
+                                           "cursors":  [
+
+                                                       ]
+                                       }
+                         }
+                     ],
+    "reconnect_after_disconnect":  true,
+    "production_ignored_unregistered_server":  true,
+    "console_idle_wall_ms":  5191.7012,
+    "console_idle_cpu_ms":  0,
+    "console_private_working_set_bytes":  921600,
+    "console_total_working_set_bytes":  9404416,
+    "console_private_commit_bytes":  1339392,
+    "note":  "Temporary unelevated console server; not an installed service or raw-NTFS performance measurement. No UAC, installation or user-file mutation.",
+    "console_idle_interval_note":  "CPU measured over configured 3-second sleep plus Refresh; console_idle_wall_ms includes subsequent counter-collection latency. Do not treat them as matching measurement endpoints."
+}

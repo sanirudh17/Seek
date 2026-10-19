@@ -1,0 +1,87 @@
+﻿[
+    {
+        "command":  "cargo fmt --all",
+        "exit_code":  0,
+        "wall_ms":  3940.1821
+    },
+    {
+        "command":  "cargo test --workspace --all-features --locked --offline",
+        "exit_code":  0,
+        "wall_ms":  9861.9081
+    },
+    {
+        "command":  "cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings",
+        "exit_code":  0,
+        "wall_ms":  4675.9269
+    },
+    {
+        "command":  "cargo check --workspace --locked --offline",
+        "exit_code":  0,
+        "wall_ms":  45866.939600000005
+    },
+    {
+        "command":  "cargo fmt --all -- --check",
+        "exit_code":  0,
+        "wall_ms":  4039.3678
+    },
+    {
+        "command":  "cargo build --workspace --release --all-features --locked --offline",
+        "exit_code":  0,
+        "wall_ms":  338032.87090000004
+    },
+    {
+        "command":  "cargo fmt --all (bounded settings writer)",
+        "exit_code":  0,
+        "wall_ms":  4579.6447
+    },
+    {
+        "command":  "cargo test -p seek --all-features --locked --offline (bounded settings writer)",
+        "exit_code":  0,
+        "wall_ms":  16930.3165
+    },
+    {
+        "command":  "cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings (final)",
+        "exit_code":  0,
+        "wall_ms":  3762.4182
+    },
+    {
+        "command":  "cargo build --workspace --release --all-features --locked --offline (final)",
+        "exit_code":  0,
+        "wall_ms":  215920.5436
+    },
+    {
+        "command":  "cargo fmt --all (sheet hit testing)",
+        "exit_code":  0,
+        "wall_ms":  4183.2409
+    },
+    {
+        "command":  "cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings (sheet hit testing)",
+        "exit_code":  0,
+        "wall_ms":  9321.3561
+    },
+    {
+        "command":  "cargo build -p seek --release --all-features --locked --offline (sheet hit testing)",
+        "exit_code":  0,
+        "wall_ms":  314644.9185
+    },
+    {
+        "command":  "cargo fmt --all -- --check (final UI fix)",
+        "exit_code":  0,
+        "wall_ms":  4110.2549
+    },
+    {
+        "command":  "cargo test --workspace --all-features --locked --offline (final UI fix)",
+        "exit_code":  0,
+        "wall_ms":  10405.2455
+    },
+    {
+        "command":  "cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings (final UI fix)",
+        "exit_code":  0,
+        "wall_ms":  2583.7438
+    },
+    {
+        "command":  "cargo build -p seek --release --all-features --locked --offline (final UI fix)",
+        "exit_code":  0,
+        "wall_ms":  272700.96770000004
+    }
+]

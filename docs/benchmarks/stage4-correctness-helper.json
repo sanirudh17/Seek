@@ -1,0 +1,217 @@
+{
+  "accuracy": [
+    {
+      "query": "annual-report-final",
+      "target": "annual-report-final.txt",
+      "top5": true
+    },
+    {
+      "query": "report",
+      "target": "annual-report-final.txt",
+      "top5": true
+    },
+    {
+      "query": "invoce",
+      "target": "invoice-budget.pdf",
+      "top5": true
+    },
+    {
+      "query": "invocie",
+      "target": "invoice-budget.pdf",
+      "top5": true
+    },
+    {
+      "query": "Résumé",
+      "target": "Résumé-🚀.txt",
+      "top5": true
+    },
+    {
+      "query": "casedifference",
+      "target": "CaseDifference.TXT",
+      "top5": true
+    },
+    {
+      "query": "long-path",
+      "target": "long-path-🚀.txt",
+      "top5": true
+    },
+    {
+      "query": "'annual-report-final.txt",
+      "target": "annual-report-final.txt",
+      "top5": true
+    },
+    {
+      "query": "^annual",
+      "target": "annual-report-final.txt",
+      "top5": true
+    },
+    {
+      "query": "report in:\"%USERPROFILE%\\Seek\\.bench-data\\correctness-28792-1792083681092067700\\files\\Downloads\"",
+      "target": "annual-report-final.txt",
+      "top5": true
+    }
+  ],
+  "accuracy_passed": 10,
+  "accuracy_percent": 100.0,
+  "accuracy_total": 10,
+  "closed": {
+    "denied": [],
+    "extra": [],
+    "ground_truth": 3015,
+    "indexed": 3015,
+    "missing": [],
+    "stale": []
+  },
+  "first": {
+    "denied": [],
+    "extra": [],
+    "ground_truth": 3015,
+    "indexed": 3015,
+    "missing": [],
+    "stale": []
+  },
+  "first_status": {
+    "catch_up_ms": 16103.9096,
+    "catching_up": false,
+    "dirs": 12,
+    "entries": 3022,
+    "error": null,
+    "helper_note": null,
+    "index_bytes": 211433,
+    "journal_batches": 6,
+    "journal_directories": 0,
+    "journal_reconciliations": 0,
+    "journal_resets": 0,
+    "ntfs_fallbacks": 0,
+    "ready": true,
+    "scan_profiles": [
+      {
+        "directories": 5,
+        "metadata_ms": 15897.2279,
+        "namespace_ms": 117.5195,
+        "records": 3212831,
+        "root": [
+          47,
+          67,
+          58,
+          47,
+          85,
+          115,
+          101,
+          114,
+          115,
+          47,
+          115,
+          97,
+          110,
+          105,
+          114,
+          47,
+          83,
+          101,
+          101,
+          107,
+          47,
+          46,
+          98,
+          101,
+          110,
+          99,
+          104,
+          45,
+          100,
+          97,
+          116,
+          97,
+          47,
+          99,
+          111,
+          114,
+          114,
+          101,
+          99,
+          116,
+          110,
+          101,
+          115,
+          115,
+          45,
+          50,
+          56,
+          55,
+          57,
+          50,
+          45,
+          49,
+          55,
+          57,
+          50,
+          48,
+          56,
+          51,
+          54,
+          56,
+          49,
+          48,
+          57,
+          50,
+          48,
+          54,
+          55,
+          55,
+          48,
+          48,
+          47,
+          102,
+          105,
+          108,
+          101,
+          115
+        ]
+      }
+    ],
+    "skipped": 0,
+    "source": "ntfs + usn"
+  },
+  "fixtures": [
+    "3000-file folder",
+    "emoji",
+    "Unicode",
+    "long path",
+    "unpaired surrogate on disk",
+    "hard link",
+    "junction loop skipped",
+    "live and closed case-only rename"
+  ],
+  "helper_catch_up_ms": 30.8106,
+  "live": {
+    "denied": [],
+    "extra": [],
+    "ground_truth": 3015,
+    "indexed": 3015,
+    "missing": [],
+    "stale": []
+  },
+  "live_ms": 284.54659999999996,
+  "relaunch_status": {
+    "catch_up_ms": 30.8106,
+    "catching_up": false,
+    "dirs": 12,
+    "entries": 3022,
+    "error": null,
+    "helper_note": null,
+    "index_bytes": 211433,
+    "journal_batches": 5,
+    "journal_directories": 3,
+    "journal_reconciliations": 0,
+    "journal_resets": 0,
+    "ntfs_fallbacks": 0,
+    "ready": true,
+    "scan_profiles": [],
+    "skipped": 0,
+    "source": "ntfs + usn"
+  },
+  "root": ".bench-data/correctness-28792-1792083681092067700\\files",
+  "typo_claim_comparison": "Different workload; no comparison with upstream percentage",
+  "walker_catch_up_ms": null
+}

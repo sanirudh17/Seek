@@ -1,0 +1,16 @@
+{
+    "scope":  "Owned fixtures only. Fake media extensions test filters and menus, not real media decoding.",
+    "checks":  [
+                   {
+                       "name":  "Unknown flag --button for command: computer click",
+                       "passed":  false
+                   }
+               ],
+    "sha256":  "72E87F24117DE1F3494EB117CD10C9F52F8A666E5C110C7A16E6738DA2205217",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-a-check-639277402072470621",
+    "keyboard":  "WScript native keyboard delivery; every action verified independently. Orca hotkey delivery of Ctrl+C was unasserted.",
+    "captures":  [
+
+                 ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe"
+}

@@ -1,0 +1,45 @@
+{
+  "sha256": "3DDF92DA8ABEB129E32CB9A11AFF2F953C3844D0BAB200F48914C29319FB9535",
+  "runs": [
+    {
+      "checked": 437,
+      "total": 437,
+      "unreadable": 2,
+      "retried": 2,
+      "recovered": 0,
+      "first_result_ms": 769.4259,
+      "elapsed_ms": 44112.3407,
+      "matches": 150,
+      "first_failures": 2,
+      "document_candidates": 366
+    },
+    {
+      "checked": 437,
+      "total": 437,
+      "unreadable": 2,
+      "retried": 2,
+      "recovered": 0,
+      "first_result_ms": 378.4211,
+      "elapsed_ms": 25355.0856,
+      "matches": 150,
+      "first_failures": 2,
+      "document_candidates": 366
+    },
+    {
+      "checked": 437,
+      "total": 437,
+      "unreadable": 2,
+      "retried": 2,
+      "recovered": 0,
+      "first_result_ms": 334.39619999999996,
+      "elapsed_ms": 23346.4348,
+      "matches": 150,
+      "first_failures": 2,
+      "document_candidates": 366
+    }
+  ],
+  "first_failures": 6,
+  "document_candidates": 1098,
+  "recovered": 0,
+  "all_150_and_equal_paths": true
+}

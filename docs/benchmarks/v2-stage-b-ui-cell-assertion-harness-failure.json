@@ -1,0 +1,42 @@
+{
+    "checks":  [
+                   {
+                       "name":  "Fixture is ready",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Name and Content suggestions coexist",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Content mode shows only in-scope body matches",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Matching line is exposed in the content results: Timed out waiting for assertion",
+                       "passed":  false
+                   }
+               ],
+    "sha256":  "BAF1B8C03EE3E33BE33715B1F7503D1745F6E86569E722A6F790A33D1616EB3C",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-check-639277628076195201",
+    "captures":  [
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-suggestions-dark.png",
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-content-dark.png"
+                 ],
+    "content_observations":  [
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  218.38150000000002,
+                                                    "matches":  5
+                                                },
+                                     "entry_ms":  13261.2464
+                                 }
+                             ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe"
+}

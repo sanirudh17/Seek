@@ -1,0 +1,34 @@
+{
+    "exit_code":  0,
+    "close_ms":  250.0685,
+    "checks":  [
+                   {
+                       "name":  "Default Icons applies immediately to the already-open app",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Default Gallery applies immediately to the already-open app",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Default List applies immediately to the already-open app",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Light custom pale accent and stronger settings selections captured",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Dark custom pale accent and stronger settings selections captured",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Black and white custom accents keep the active view identifiable",
+                       "verification":  "Captured for visual review; active view also verified through the native toggle state.",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "6F07B9F048CCDDC9192DB9F2ACF9300137D3A144A033250DAC133135A6BBD8D7",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\stage4-ui-639276833078990093",
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe"
+}

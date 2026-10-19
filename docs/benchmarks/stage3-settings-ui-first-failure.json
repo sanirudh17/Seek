@@ -1,0 +1,34 @@
+{
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\settings-check-639276661146056355",
+    "failure":  "Saved Graphite did not restore",
+    "checks":  [
+                   {
+                       "accent":  "#db2626",
+                       "name":  "Working color picker persists a palette selection",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Custom hex, softened Graphite and glass switch persist",
+                       "passed":  true
+                   },
+                   {
+                       "group_width":  302,
+                       "name":  "Hidden menu and all views persist; frame ends at Gallery",
+                       "trailing_gap_px":  1,
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Custom locations and exclusions persist",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Helper status displayed without install or uninstall",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "All four redesigned sections captured in Light and Dark",
+                       "passed":  true
+                   }
+               ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe"
+}

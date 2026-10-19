@@ -1,0 +1,117 @@
+{
+    "scope":  "Owned fixtures only. Preview.png is a real bundled image; other media extensions are filter/menu fixtures. Native regression separately verifies a large real bitmap and folder artwork.",
+    "checks":  [
+                   {
+                       "name":  "Folder scope lists indexed folders and files",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "One JPEG suggestion, with a separate Name option",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "JPEG filter matches both jpg and jpeg",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Chip dropdown removes the type filter",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Largest folders has an explicit return control",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Largest files can return through the actions menu",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "All items restores the ordinary view",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "GPUI row menu exposes file actions",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "List Ctrl+C writes Windows file clipboard",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "F2 opens Rename",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Rename input and both buttons fit the restored window",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Rename updates the file and list",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "New folder updates the file and list",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Copy after rename uses the new path",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Paste copies into the current folder",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Collision source is on the file clipboard",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Windows asks before replacing an existing file",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Skipping the collision preserves both files",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Windows collision dialog returns to Seek",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Cut writes the selected file to the clipboard",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Cut and paste move the file",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Typed row drag moves to the folder row",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Typed row drag moves to the sidebar location",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Delete moves the owned file to the Recycle Bin and updates the list",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Search Ctrl+C acts on text",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Missing Gallery Â· Ctrl+3",
+                       "passed":  false
+                   }
+               ],
+    "sha256":  "2FF0B0C13B2E36DF0ED861468F3D8596CD98FD3973EF2D7A959FBDE51B378BC3",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-a-check-639277583417455303",
+    "keyboard":  "WScript native keyboard delivery; every action verified independently. Orca hotkey delivery of Ctrl+C was unasserted.",
+    "captures":  [
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-a-type-dark.png",
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-a-rename-restored.png"
+                 ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe"
+}

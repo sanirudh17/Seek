@@ -1,0 +1,682 @@
+{
+  "release_sha256": "8691609826B7E9013BEA441088BAFA1939630D047842AF7EC852D3B0F62986A7",
+  "release_bytes": 19076608,
+  "release_host_audit": [
+    {
+      "name": "Structured.pdf",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 289.6306,
+      "source": "PDF",
+      "dimensions": [
+        576,
+        768
+      ],
+      "pages": 2,
+      "text_chars": null,
+      "sheet": null,
+      "error": null
+    },
+    {
+      "name": "Structured.pdf",
+      "page": 1,
+      "passed": true,
+      "elapsed_ms": 235.65130000000002,
+      "source": "PDF",
+      "dimensions": [
+        576,
+        768
+      ],
+      "pages": 2,
+      "text_chars": null,
+      "sheet": null,
+      "error": null
+    },
+    {
+      "name": "Structured.pdf",
+      "page": 2,
+      "passed": true,
+      "elapsed_ms": 60.195100000000004,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "Unsupported, broken, encrypted or over-limit document"
+    },
+    {
+      "name": "NoText.pdf",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 227.7056,
+      "source": "PDF",
+      "dimensions": [
+        576,
+        768
+      ],
+      "pages": 1,
+      "text_chars": null,
+      "sheet": null,
+      "error": null
+    },
+    {
+      "name": "Table.xlsx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 63.86899999999999,
+      "source": "sheet",
+      "dimensions": [
+        0,
+        0
+      ],
+      "pages": 0,
+      "text_chars": null,
+      "sheet": {
+        "name": "First sheet",
+        "shown_rows": 3,
+        "total_rows": 3,
+        "total_cols": 3
+      },
+      "error": null
+    },
+    {
+      "name": "Large.xlsx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 70.05359999999999,
+      "source": "sheet",
+      "dimensions": [
+        0,
+        0
+      ],
+      "pages": 0,
+      "text_chars": null,
+      "sheet": {
+        "name": "Sheet",
+        "shown_rows": 100,
+        "total_rows": 200,
+        "total_cols": 15
+      },
+      "error": null
+    },
+    {
+      "name": "Empty.xlsx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 62.7977,
+      "source": "sheet",
+      "dimensions": [
+        0,
+        0
+      ],
+      "pages": 0,
+      "text_chars": null,
+      "sheet": {
+        "name": "Sheet",
+        "shown_rows": 0,
+        "total_rows": 0,
+        "total_cols": 0
+      },
+      "error": null
+    },
+    {
+      "name": "Structured.docx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 216.8881,
+      "source": "Word text",
+      "dimensions": [
+        0,
+        0
+      ],
+      "pages": 0,
+      "text_chars": 114,
+      "sheet": null,
+      "error": null
+    },
+    {
+      "name": "Broken.docx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 64.315,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "Unsupported, broken, encrypted or over-limit document"
+    },
+    {
+      "name": "TextOnly.docx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 271.4945,
+      "source": "Word text",
+      "dimensions": [
+        0,
+        0
+      ],
+      "pages": 0,
+      "text_chars": 114,
+      "sheet": null,
+      "error": null
+    },
+    {
+      "name": "Thumbnail.docx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 208.02970000000002,
+      "source": "Word thumbnail",
+      "dimensions": [
+        394,
+        512
+      ],
+      "pages": 0,
+      "text_chars": null,
+      "sheet": null,
+      "error": null
+    },
+    {
+      "name": "Broken.pdf",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 94.7064,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "Unsupported, broken, encrypted or over-limit document"
+    },
+    {
+      "name": "Broken.xlsx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 52.420300000000005,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "Unsupported, broken, encrypted or over-limit document"
+    },
+    {
+      "name": "Encrypted.pdf",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 85.0889,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "Unsupported, broken, encrypted or over-limit document"
+    },
+    {
+      "name": "OverLimit.pdf",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 0.0070999999999999995,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "File exceeds the 32 MiB preview limit"
+    },
+    {
+      "name": "Structured.pdf",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 13.261800000000001,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "Cancelled"
+    }
+  ],
+  "content_known_answer_accuracy": {
+    "passed": 10,
+    "cases": 10
+  },
+  "release_smoke": [
+    {
+      "name": "Fixture index ready",
+      "passed": true
+    },
+    {
+      "name": "Production PDF preview",
+      "passed": true
+    },
+    {
+      "name": "Production Excel data table",
+      "passed": true
+    },
+    {
+      "name": "Production Word text fallback",
+      "passed": true
+    },
+    {
+      "name": "Production close quits",
+      "passed": true
+    }
+  ],
+  "dark_ui": [
+    {
+      "name": "Fixture index ready",
+      "passed": true
+    },
+    {
+      "name": "Windows PDF first page rendered",
+      "passed": true
+    },
+    {
+      "name": "Next PDF page rendered",
+      "passed": true
+    },
+    {
+      "name": "Previous PDF page returns",
+      "passed": true
+    },
+    {
+      "name": "First Excel sheet data table rendered",
+      "passed": true
+    },
+    {
+      "name": "Word thumbnail or text fallback rendered",
+      "passed": true
+    },
+    {
+      "name": "Word without thumbnail uses document text",
+      "passed": true
+    },
+    {
+      "name": "Real nonblank shell thumbnail is used for Word",
+      "passed": true
+    },
+    {
+      "name": "Broken PDF clearly unavailable",
+      "passed": true
+    },
+    {
+      "name": "Encrypted PDF clearly unavailable",
+      "passed": true
+    },
+    {
+      "name": "Reselecting a document renders again",
+      "passed": true
+    },
+    {
+      "name": "Closing panel clears selected document state",
+      "passed": true
+    },
+    {
+      "name": "No preview child remains after panel closes",
+      "passed": true
+    },
+    {
+      "name": "Closing quits",
+      "passed": true
+    }
+  ],
+  "light_ui": [
+    {
+      "name": "Fixture index ready",
+      "passed": true
+    },
+    {
+      "name": "Windows PDF first page rendered",
+      "passed": true
+    },
+    {
+      "name": "Next PDF page rendered",
+      "passed": true
+    },
+    {
+      "name": "Previous PDF page returns",
+      "passed": true
+    },
+    {
+      "name": "First Excel sheet data table rendered",
+      "passed": true
+    },
+    {
+      "name": "Word thumbnail or text fallback rendered",
+      "passed": true
+    },
+    {
+      "name": "Word without thumbnail uses document text",
+      "passed": true
+    },
+    {
+      "name": "Broken PDF clearly unavailable",
+      "passed": true
+    },
+    {
+      "name": "Encrypted PDF clearly unavailable",
+      "passed": true
+    },
+    {
+      "name": "Reselecting a document renders again",
+      "passed": true
+    },
+    {
+      "name": "Closing panel clears selected document state",
+      "passed": true
+    },
+    {
+      "name": "No preview child remains after panel closes",
+      "passed": true
+    },
+    {
+      "name": "Closing quits",
+      "passed": true
+    }
+  ],
+  "debug_host_audit": [
+    {
+      "name": "Structured.pdf",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 258.1839,
+      "source": "PDF",
+      "dimensions": [
+        576,
+        768
+      ],
+      "pages": 2,
+      "text_chars": null,
+      "sheet": null,
+      "error": null
+    },
+    {
+      "name": "Structured.pdf",
+      "page": 1,
+      "passed": true,
+      "elapsed_ms": 287.2013,
+      "source": "PDF",
+      "dimensions": [
+        576,
+        768
+      ],
+      "pages": 2,
+      "text_chars": null,
+      "sheet": null,
+      "error": null
+    },
+    {
+      "name": "Structured.pdf",
+      "page": 2,
+      "passed": true,
+      "elapsed_ms": 71.4428,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "Unsupported, broken, encrypted or over-limit document"
+    },
+    {
+      "name": "NoText.pdf",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 300.4754,
+      "source": "PDF",
+      "dimensions": [
+        576,
+        768
+      ],
+      "pages": 1,
+      "text_chars": null,
+      "sheet": null,
+      "error": null
+    },
+    {
+      "name": "Table.xlsx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 70.7485,
+      "source": "sheet",
+      "dimensions": [
+        0,
+        0
+      ],
+      "pages": 0,
+      "text_chars": null,
+      "sheet": {
+        "name": "First sheet",
+        "shown_rows": 3,
+        "total_rows": 3,
+        "total_cols": 3
+      },
+      "error": null
+    },
+    {
+      "name": "Large.xlsx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 73.33539999999999,
+      "source": "sheet",
+      "dimensions": [
+        0,
+        0
+      ],
+      "pages": 0,
+      "text_chars": null,
+      "sheet": {
+        "name": "Sheet",
+        "shown_rows": 100,
+        "total_rows": 200,
+        "total_cols": 15
+      },
+      "error": null
+    },
+    {
+      "name": "Empty.xlsx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 70.8622,
+      "source": "sheet",
+      "dimensions": [
+        0,
+        0
+      ],
+      "pages": 0,
+      "text_chars": null,
+      "sheet": {
+        "name": "Sheet",
+        "shown_rows": 0,
+        "total_rows": 0,
+        "total_cols": 0
+      },
+      "error": null
+    },
+    {
+      "name": "Structured.docx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 299.46070000000003,
+      "source": "Word text",
+      "dimensions": [
+        0,
+        0
+      ],
+      "pages": 0,
+      "text_chars": 114,
+      "sheet": null,
+      "error": null
+    },
+    {
+      "name": "Broken.docx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 51.0904,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "Unsupported, broken, encrypted or over-limit document"
+    },
+    {
+      "name": "TextOnly.docx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 227.0211,
+      "source": "Word text",
+      "dimensions": [
+        0,
+        0
+      ],
+      "pages": 0,
+      "text_chars": 114,
+      "sheet": null,
+      "error": null
+    },
+    {
+      "name": "Thumbnail.docx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 248.7163,
+      "source": "Word thumbnail",
+      "dimensions": [
+        394,
+        512
+      ],
+      "pages": 0,
+      "text_chars": null,
+      "sheet": null,
+      "error": null
+    },
+    {
+      "name": "Broken.pdf",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 73.7904,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "Unsupported, broken, encrypted or over-limit document"
+    },
+    {
+      "name": "Broken.xlsx",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 63.3155,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "Unsupported, broken, encrypted or over-limit document"
+    },
+    {
+      "name": "Encrypted.pdf",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 72.2125,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "Unsupported, broken, encrypted or over-limit document"
+    },
+    {
+      "name": "OverLimit.pdf",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 0.0066,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "File exceeds the 32 MiB preview limit"
+    },
+    {
+      "name": "Structured.pdf",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 13.5653,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "Cancelled"
+    }
+  ],
+  "forced_timeout_debug": [
+    {
+      "name": "Structured.pdf",
+      "page": 0,
+      "passed": true,
+      "elapsed_ms": 4015.2292,
+      "source": null,
+      "dimensions": null,
+      "pages": null,
+      "text_chars": null,
+      "sheet": null,
+      "error": "Preview timed out"
+    }
+  ],
+  "idle_debug": {
+    "settle_seconds": 45,
+    "foreground_wall_ms": 30078.8655,
+    "cpu_ms": 0,
+    "redraws": 0,
+    "native_activity_events": 2,
+    "longest_strict_quiet_foreground": {
+      "kind": "quiet-foreground",
+      "start_ms": 68.48400000000001,
+      "wall_ms": 19671.2562,
+      "cpu_ms": 0,
+      "frames": 0
+    },
+    "historical_harness_20s_strict_quiet_gate": false,
+    "note": "All intervals remained foreground with zero CPU/redraws. Two native events split the strict quiet interval. No uninterrupted 30-second claim; no idle rerun. Windows CPU counter resolution applies. Optimized compilation was running concurrently.",
+    "private_working_set_bytes": 40861696,
+    "private_commit_bytes": 93204480,
+    "segments": [
+      {
+        "kind": "quiet-foreground",
+        "start_ms": 68.48400000000001,
+        "wall_ms": 19671.2562,
+        "cpu_ms": 0,
+        "frames": 0
+      },
+      {
+        "kind": "activity-or-focus-change",
+        "start_ms": 19739.7402,
+        "wall_ms": 617.262200000001,
+        "cpu_ms": 0,
+        "frames": 0
+      },
+      {
+        "kind": "quiet-foreground",
+        "start_ms": 20357.0024,
+        "wall_ms": 9790.347099999999,
+        "cpu_ms": 0,
+        "frames": 0
+      }
+    ]
+  },
+  "visual_review": {
+    "disposition": "ship",
+    "scope": "Seven final 125% SDR desktop captures plus new preview source; design system preserved"
+  },
+  "not_verified": [
+    "Physical HDR or mixed-DPI monitor moves",
+    "A separate physical non-C volume (Task 1 used a SUBST drive-letter alias)",
+    "A machine with Office uninstalled",
+    "Genuine encrypted Word/Excel files (encrypted PDF and broken DOCX/XLSX were tested)",
+    "Universal document/provider compatibility or general PDF/Word content recall",
+    "An uninterrupted 30-second quiet foreground interval"
+  ],
+  "real_seek_profile_used": false
+}

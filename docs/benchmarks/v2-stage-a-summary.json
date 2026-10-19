@@ -1,0 +1,93 @@
+{
+  "stage": "A",
+  "status": "closed",
+  "date": "2026-10-16",
+  "closeout": "User requested no further repetitive testing; existing results retained.",
+  "report": "docs/STAGE_A.md",
+  "release_sha256": "607503F85EA19235D2BD73D916B36A2598CE41452E0862841481511F6178704E",
+  "release_bytes": 17784832,
+  "validation": {
+    "rust_tests_passed": 91,
+    "ignored_existing_benchmarks": 1,
+    "release_desktop_passed": 30,
+    "release_desktop_total": 30,
+    "formatting": "passed",
+    "strict_clippy": "passed",
+    "normal_feature_check": "passed",
+    "optimized_workspace_build": "passed",
+    "release_ui_report": "v2-stage-a-ui.json",
+    "explorer_clipboard_report": "v2-stage-a-explorer-clipboard.json"
+  },
+  "real_c_startup_ms": {
+    "before_helper": {
+      "cached": 354.2837,
+      "caught_up": 2833.058
+    },
+    "before_walker": {
+      "cached": 300.7048,
+      "caught_up": 57720.7239
+    },
+    "after_helper": [
+      {
+        "cached": 319.0017,
+        "priority_present": 355.6123,
+        "caught_up": 32651.4688,
+        "reconciliations": 1
+      },
+      {
+        "cached": 347.1982,
+        "priority_present": 372.9397,
+        "caught_up": 2291.3704,
+        "reconciliations": 0
+      },
+      {
+        "cached": 315.9868,
+        "priority_present": 315.9868,
+        "caught_up": 2142.7048,
+        "reconciliations": 0
+      }
+    ],
+    "after_walker": {
+      "cached": 541.018,
+      "priority_present": 880.8113,
+      "caught_up": 140523.7515
+    },
+    "scope": "Warm saved-profile sequential real-C samples; no OS cache flush. Startup measurements precede final UI-only refinements. Full walker remains slower than baseline."
+  },
+  "correctness": {
+    "owned_real_c_subtree_expected": 11,
+    "missing": 0,
+    "extra": 0,
+    "stale": 0,
+    "denied": 0,
+    "sources": [
+      "helper",
+      "walker"
+    ],
+    "synthetic_live_operations_each": 4932,
+    "synthetic_closed_operations_each": 20,
+    "synthetic_before_after_discrepancies": 0,
+    "whole_c_independent_truth": false
+  },
+  "largest": {
+    "entries": 1001008,
+    "samples_each": 30,
+    "top": 200,
+    "files_median_ms": 48.8059,
+    "files_p95_ms": 57.7499,
+    "folders_median_ms": 5.774,
+    "folders_p95_ms": 6.4792,
+    "size_limit": "At least 2 GiB: indexed size rounds down less than 2 MiB per file; UI discloses approximation."
+  },
+  "remaining_limits": [
+    "Full no-helper C catch-up measured 140.524 s, versus earlier 57.721 s.",
+    "Fresh sustained foreground idle not rerun at user request; v1 zero-CPU result is historical.",
+    "Physical HDR, mixed-DPI and true cold-cache launch unverified.",
+    "Browser/chat clipboard paste unverified; actual Explorer paste passed.",
+    "Popup frosting uses whole-window acrylic plus translucent surfaces."
+  ],
+  "next_stage": "B on next authorized run",
+  "stage_b_started": false,
+  "stage_c_started": false,
+  "packaging_started": false
+}

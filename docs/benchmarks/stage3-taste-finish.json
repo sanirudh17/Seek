@@ -1,0 +1,31 @@
+{
+    "private_commit_bytes":  92102656,
+    "checks":  [
+                   {
+                       "name":  "List selected image and single inspector",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Icons selected image and single inspector",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Gallery selected image and single inspector",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Appearance controls, square swatches, glass off/on and light theme",
+                       "passed":  true
+                   },
+                   {
+                       "ms":  109.9116,
+                       "exit":  0,
+                       "name":  "Close exits process",
+                       "passed":  true
+                   }
+               ],
+    "trace":  "%USERPROFILE%\\Seek\\.bench-data\\stage3-taste-visual\\finish-639276498382906706.ndjson",
+    "note":  "Focused 21-entry fixture, not real drive or idle certification.",
+    "private_working_set_bytes":  39559168,
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe"
+}

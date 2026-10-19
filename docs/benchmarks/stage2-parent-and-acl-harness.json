@@ -1,0 +1,70 @@
+{
+    "started_utc":  "2026-10-12T14:42:48.4679872Z",
+    "parent_launch":  "Actual ordinary parent child SID/elevation check passed",
+    "elevated_launch_verified":  false,
+    "checks":  [
+                   {
+                       "details":  {
+                                       "name":  "Fixture ACL and independent verifier harness",
+                                       "arguments":  [
+                                                         "verify",
+                                                         "--source",
+                                                         "walker",
+                                                         "--root",
+                                                         "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\acl-check-639274129684716324",
+                                                         "--data",
+                                                         "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\acl-check-639274129684716324-index"
+                                                     ],
+                                       "exit_code":  0,
+                                       "wall_ms":  53.4333,
+                                       "peak_total_working_set_bytes":  null,
+                                       "report":  {
+                                                      "catch_up_ms":  15.0105,
+                                                      "report":  {
+                                                                     "denied":  [
+                                                                                    "\\\\?\\%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\acl-check-639274129684716324\\denied-fixture: Access is denied. (os error 5)"
+                                                                                ],
+                                                                     "extra":  [
+
+                                                                               ],
+                                                                     "ground_truth":  3,
+                                                                     "indexed":  3,
+                                                                     "missing":  [
+
+                                                                                 ],
+                                                                     "stale":  [
+
+                                                                               ]
+                                                                 },
+                                                      "status":  {
+                                                                     "catch_up_ms":  15.0105,
+                                                                     "catching_up":  false,
+                                                                     "dirs":  9,
+                                                                     "entries":  10,
+                                                                     "error":  null,
+                                                                     "helper_note":  null,
+                                                                     "index_bytes":  10688,
+                                                                     "journal_batches":  0,
+                                                                     "journal_directories":  0,
+                                                                     "journal_reconciliations":  0,
+                                                                     "journal_resets":  0,
+                                                                     "ntfs_fallbacks":  0,
+                                                                     "ready":  true,
+                                                                     "skipped":  1,
+                                                                     "source":  "walker"
+                                                                 },
+                                                      "verify_ms":  10.4807
+                                                  },
+                                       "stdout":  "{\n  \"catch_up_ms\": 15.0105,\n  \"report\": {\n    \"denied\": [\n      \"\\\\\\\\?\\\\%USERPROFILE%\\\\Seek\\\\.bench-data\\\\stage2-final\\\\acl-check-639274129684716324\\\\denied-fixture: Access is denied. (os error 5)\"\n    ],\n    \"extra\": [],\n    \"ground_truth\": 3,\n    \"indexed\": 3,\n    \"missing\": [],\n    \"stale\": []\n  },\n  \"status\": {\n    \"catch_up_ms\": 15.0105,\n    \"catching_up\": false,\n    \"dirs\": 9,\n    \"entries\": 10,\n    \"error\": null,\n    \"helper_note\": null,\n    \"index_bytes\": 10688,\n    \"journal_batches\": 0,\n    \"journal_directories\": 0,\n    \"journal_reconciliations\": 0,\n    \"journal_resets\": 0,\n    \"ntfs_fallbacks\": 0,\n    \"ready\": true,\n    \"skipped\": 1,\n    \"source\": \"walker\"\n  },\n  \"verify_ms\": 10.4807\n}\n",
+                                       "stderr":  ""
+                                   },
+                       "name":  "Fixture ACL and independent verifier harness",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Owned fixture permissions restored",
+                       "passed":  true
+                   }
+               ],
+    "finished_utc":  "2026-10-12T14:42:48.5901020Z"
+}

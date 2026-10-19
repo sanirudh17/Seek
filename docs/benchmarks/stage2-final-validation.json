@@ -1,0 +1,42 @@
+﻿{
+    "started_utc":  "2026-10-11T17:24:36.3919709Z",
+    "commands":  [
+                     {
+                         "wall_ms":  39343.1241,
+                         "command":  "cargo test --workspace --all-features --locked",
+                         "exit_code":  0
+                     },
+                     {
+                         "wall_ms":  7602.3789000000006,
+                         "command":  "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+                         "exit_code":  0
+                     },
+                     {
+                         "wall_ms":  3779.3117,
+                         "command":  "cargo fmt --all -- --check",
+                         "exit_code":  0
+                     },
+                     {
+                         "wall_ms":  6503.3518,
+                         "command":  "cargo build --workspace --locked",
+                         "exit_code":  0
+                     }
+                 ],
+    "metrics_pipe_checks":  [
+                                {
+                                    "wall_ms":  2967.7069,
+                                    "command":  "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+                                    "exit_code":  0
+                                },
+                                {
+                                    "wall_ms":  3952.1035,
+                                    "command":  "cargo fmt --all -- --check",
+                                    "exit_code":  0
+                                }
+                            ],
+    "final_app_tests":  {
+                            "wall_ms":  3396.7821000000004,
+                            "command":  "cargo test -p seek --all-features --locked",
+                            "exit_code":  0
+                        }
+}

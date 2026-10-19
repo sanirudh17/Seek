@@ -1,0 +1,14 @@
+{
+    "timings":  [
+
+                ],
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\navigation-639276852601215766",
+    "failure":  "Timed out waiting for navigation assertion",
+    "checks":  [
+                   {
+                       "name":  "Indexed folder expands all direct children",
+                       "rows":  2050,
+                       "passed":  true
+                   }
+               ]
+}

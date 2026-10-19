@@ -1,0 +1,75 @@
+{
+    "checks":  [
+                   {
+                       "name":  "Two searches remain independent; Ctrl+Tab wraps",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "New folder tab equals independent directory listing (120 files)",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "List viewport returns to same row",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Grid view and its scroll offset survive tab switching",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Content search mode, query and Alpha scope survive tab switch",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Modal Cancel preserves all 240 disposable files",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Close inactive and active tabs without closing remaining window",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Closing final tab quits process",
+                       "passed":  true
+                   }
+               ],
+    "executable":  "%USERPROFILE%\\Seek\\.references\\seek-polish-before.exe",
+    "fixture":  "%USERPROFILE%\\AppData\\Local\\Temp\\seek-stage-c-check-aebce9ba0ac64a2c8c6ef64c945bf6d6",
+    "idle":  null,
+    "captured_at":  "2026-10-19T18:04:20.3858332Z",
+    "memory":  [
+                   {
+                       "media_cache":  null,
+                       "working_set_bytes":  136273920,
+                       "name":  "one-tab-warm-preview",
+                       "private_commit_bytes":  128110592
+                   },
+                   {
+                       "media_cache":  null,
+                       "working_set_bytes":  161804288,
+                       "name":  "three-tabs-warm-preview",
+                       "private_commit_bytes":  151408640
+                   },
+                   {
+                       "media_cache":  null,
+                       "working_set_bytes":  233394176,
+                       "name":  "three-tabs-after-12-previews",
+                       "private_commit_bytes":  228655104
+                   },
+                   {
+                       "media_cache":  null,
+                       "working_set_bytes":  235827200,
+                       "name":  "one-tab-after-close",
+                       "private_commit_bytes":  230715392
+                   }
+               ],
+    "sha256":  "4F9AAE190E1132C93F250B34C98226C53AA97D66906B960358BFB61F9E208D1A",
+    "visual_captures":  [
+                            "tabs-dark",
+                            "delete-dark",
+                            "settings-light",
+                            "delete-light",
+                            "tabs-light"
+                        ],
+    "limitations":  "Native SDR at 125%; no physical mixed-DPI/HDR check; no real file deletion."
+}

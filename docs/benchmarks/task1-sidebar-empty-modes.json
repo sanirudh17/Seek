@@ -1,0 +1,145 @@
+{
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\task1-639278970860687629",
+    "drive_alias":  false,
+    "cold_index":  false,
+    "fresh_no_settings":  true,
+    "folders":  [
+
+                ],
+    "events":  [
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\Downloads",
+                                      "rows":  540,
+                                      "error":  null,
+                                      "elapsed_ms":  3.2401
+                                  },
+                       "entry_ms":  55.964600000000004
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\OneDrive\\Desktop",
+                                      "rows":  19,
+                                      "error":  null,
+                                      "elapsed_ms":  0.40650000000000003
+                                  },
+                       "entry_ms":  56.407
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\OneDrive\\Documents",
+                                      "rows":  134,
+                                      "error":  null,
+                                      "elapsed_ms":  1.0852
+                                  },
+                       "entry_ms":  57.550700000000006
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\OneDrive\\Pictures",
+                                      "rows":  16,
+                                      "error":  null,
+                                      "elapsed_ms":  0.4372
+                                  },
+                       "entry_ms":  58.1525
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\Videos",
+                                      "rows":  8,
+                                      "error":  null,
+                                      "elapsed_ms":  0.2473
+                                  },
+                       "entry_ms":  58.429500000000004
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\Expense Tracker\\Music",
+                                      "rows":  2,
+                                      "error":  null,
+                                      "elapsed_ms":  0.2029
+                                  },
+                       "entry_ms":  58.6587
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "\\\\?\\%USERPROFILE%\\Seek\\.bench-data\\task1-639278970860687629\\files",
+                                      "generation":  1,
+                                      "rows":  4,
+                                      "message":  "Folder contents",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  2160.6555
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "%USERPROFILE%\\Seek\\.bench-data\\task1-639278970860687629\\files\\Empty",
+                                      "generation":  2,
+                                      "rows":  0,
+                                      "message":  "This folder has no visible items.",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  7468.2148
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "\\\\?\\%USERPROFILE%\\Seek\\.bench-data\\task1-639278970860687629\\files",
+                                      "generation":  4,
+                                      "rows":  4,
+                                      "message":  "Folder contents",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  12074.624699999998
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "\\\\?\\%USERPROFILE%\\Seek\\.bench-data\\task1-639278970860687629\\files",
+                                      "generation":  5,
+                                      "rows":  2,
+                                      "message":  null,
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  15698.3516
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "\\\\?\\%USERPROFILE%\\Seek\\.bench-data\\task1-639278970860687629\\files",
+                                      "generation":  6,
+                                      "rows":  4,
+                                      "message":  "Folder contents",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  16968.5704
+                   }
+               ],
+    "checks":  [
+                   {
+                       "name":  "Genuinely empty folder is distinguished from loading",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Sidebar exits Content mode and restores directory rows",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Sidebar exits Largest mode and restores folders",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Closing quits",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "31C770A811F8414CC921FDAFD1953ACFBFB034C5F71F28155A8C81040D1C7C46"
+}

@@ -1,0 +1,18 @@
+{
+    "captured_at":  "2026-10-11T10:07:25.3109884Z",
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe",
+    "mode":  "Blurred/Acrylic",
+    "pid":  12736,
+    "window_handle_ms":  1374.2348000000002,
+    "private_working_set_bytes":  35987456,
+    "working_set_bytes":  78118912,
+    "private_commit_bytes":  81154048,
+    "idle_sample_wall_ms":  11726.197,
+    "idle_cpu_ms":  0,
+    "idle_cpu_percent_one_core":  0,
+    "os":  "Microsoft Windows 11 Home",
+    "cpu":  "AMD Ryzen 7 7445HS w/ Radeon 740M Graphics     ",
+    "logical_processors":  12,
+    "close_exited":  true,
+    "exit_code":  0
+}

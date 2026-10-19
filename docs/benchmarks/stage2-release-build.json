@@ -1,0 +1,11 @@
+﻿{
+    "command":  "cargo build --workspace --release --all-features --locked",
+    "earlier_build_seconds":  [
+                                  451.5415283,
+                                  325.2308147
+                              ],
+    "seconds":  305.7481206,
+    "exit_code":  0,
+    "final_benchmark_mode_rebuild_seconds":  37.2841707,
+    "final_benchmark_mode_rebuild_exit":  0
+}

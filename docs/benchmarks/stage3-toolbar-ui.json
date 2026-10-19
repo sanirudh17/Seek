@@ -1,0 +1,155 @@
+{
+    "private_working_set_bytes":  39854080,
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\stage3-targeted-639276635256758866",
+    "private_commit_bytes":  91680768,
+    "checks":  [
+                   {
+                       "name":  "All 14 toolbar controls have separate visible targets",
+                       "targets":  [
+                                       {
+                                           "y":  82,
+                                           "width":  40,
+                                           "name":  "Toggle sidebar",
+                                           "height":  37,
+                                           "x":  293
+                                       },
+                                       {
+                                           "y":  82,
+                                           "width":  40,
+                                           "name":  "Back",
+                                           "height":  37,
+                                           "x":  354
+                                       },
+                                       {
+                                           "y":  82,
+                                           "width":  40,
+                                           "name":  "Forward",
+                                           "height":  37,
+                                           "x":  394
+                                       },
+                                       {
+                                           "y":  89,
+                                           "width":  679,
+                                           "name":  "Search files and folders",
+                                           "height":  24,
+                                           "x":  512
+                                       },
+                                       {
+                                           "y":  82,
+                                           "width":  40,
+                                           "name":  "List · Ctrl+1",
+                                           "height":  37,
+                                           "x":  1222
+                                       },
+                                       {
+                                           "y":  82,
+                                           "width":  40,
+                                           "name":  "Icons · Ctrl+2",
+                                           "height":  37,
+                                           "x":  1262
+                                       },
+                                       {
+                                           "y":  82,
+                                           "width":  40,
+                                           "name":  "Gallery · Ctrl+3",
+                                           "height":  37,
+                                           "x":  1302
+                                       },
+                                       {
+                                           "y":  82,
+                                           "width":  37,
+                                           "name":  "Show hidden and system files",
+                                           "height":  37,
+                                           "x":  1365
+                                       },
+                                       {
+                                           "y":  82,
+                                           "width":  37,
+                                           "name":  "Sort results",
+                                           "height":  37,
+                                           "x":  1402
+                                       },
+                                       {
+                                           "y":  82,
+                                           "width":  37,
+                                           "name":  "Info panel · Space",
+                                           "height":  37,
+                                           "x":  1439
+                                       },
+                                       {
+                                           "y":  82,
+                                           "width":  37,
+                                           "name":  "Settings",
+                                           "height":  37,
+                                           "x":  1476
+                                       },
+                                       {
+                                           "y":  82,
+                                           "width":  32,
+                                           "name":  "Minimize",
+                                           "height":  37,
+                                           "x":  1536
+                                       },
+                                       {
+                                           "y":  82,
+                                           "width":  32,
+                                           "name":  "Maximize or restore",
+                                           "height":  37,
+                                           "x":  1568
+                                       },
+                                       {
+                                           "y":  82,
+                                           "width":  32,
+                                           "name":  "Close",
+                                           "height":  37,
+                                           "x":  1600
+                                       }
+                                   ],
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Info panel opens and closes from its toolbar button",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Populated dark List, uniform yellow folders and selected PNG",
+                       "rows":  6,
+                       "passed":  true
+                   },
+                   {
+                       "start":  817,
+                       "samples":  [
+                                       794,
+                                       681,
+                                       603,
+                                       563,
+                                       562,
+                                       562,
+                                       562,
+                                       562,
+                                       562,
+                                       562,
+                                       562,
+                                       562
+                                   ],
+                       "name":  "160 ms sidebar transition has intermediate widths and restores",
+                       "restored":  817,
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Icons/Gallery retain selected item",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Light Graphite selection, centered small Settings controls",
+                       "passed":  true
+                   },
+                   {
+                       "ms":  143.4178,
+                       "exit":  0,
+                       "name":  "Window close exits",
+                       "passed":  true
+                   }
+               ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe"
+}

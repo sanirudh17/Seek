@@ -1,0 +1,29 @@
+{
+    "started_utc":  "2026-10-12T14:40:12.5333010Z",
+    "commands":  [
+                     {
+                         "command":  "cargo fmt --all -- --check",
+                         "exit_code":  0,
+                         "wall_ms":  10029.8543
+                     },
+                     {
+                         "command":  "cargo test --workspace --all-features --locked",
+                         "exit_code":  0,
+                         "wall_ms":  164975.44280000002
+                     },
+                     {
+                         "command":  "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+                         "exit_code":  0,
+                         "wall_ms":  41598.6281
+                     },
+                     {
+                         "command":  "cargo check --workspace --locked",
+                         "exit_code":  0,
+                         "wall_ms":  3423.4318000000003
+                     }
+                 ],
+    "finished_utc":  "2026-10-12T14:43:52.5681236Z",
+    "passed_tests":  48,
+    "ignored_tests":  1,
+    "ignored_reason":  "Unchanged explicit real-pipe transfer benchmark retained from earlier verified run"
+}

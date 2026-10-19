@@ -1,0 +1,124 @@
+{
+    "checked_utc":  "2026-10-12T13:33:45.3689181Z",
+    "checks":  [
+                   {
+                       "name":  "Pictures",
+                       "path":  "%USERPROFILE%\\OneDrive\\Pictures",
+                       "passed":  true,
+                       "result":  {
+                                      "name":  "Real Pictures walker verification",
+                                      "arguments":  [
+                                                        "verify",
+                                                        "--source",
+                                                        "walker",
+                                                        "--root",
+                                                        "%USERPROFILE%\\OneDrive\\Pictures",
+                                                        "--data",
+                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\sidebar-639274088243692504\\Pictures"
+                                                    ],
+                                      "exit_code":  0,
+                                      "wall_ms":  841.08570000000009,
+                                      "peak_total_working_set_bytes":  null,
+                                      "report":  {
+                                                     "report":  {
+                                                                    "ground_truth":  873,
+                                                                    "indexed":  873,
+                                                                    "missing":  [
+
+                                                                                ],
+                                                                    "extra":  [
+
+                                                                              ],
+                                                                    "stale":  [
+
+                                                                              ],
+                                                                    "denied":  [
+
+                                                                               ]
+                                                                },
+                                                     "catch_up_ms":  147.5205,
+                                                     "verify_ms":  632.7179000000001,
+                                                     "status":  {
+                                                                    "ready":  true,
+                                                                    "catching_up":  false,
+                                                                    "entries":  878,
+                                                                    "dirs":  14,
+                                                                    "index_bytes":  82624,
+                                                                    "skipped":  0,
+                                                                    "catch_up_ms":  147.5205,
+                                                                    "error":  null,
+                                                                    "source":  "walker",
+                                                                    "helper_note":  null,
+                                                                    "journal_batches":  0,
+                                                                    "journal_directories":  0,
+                                                                    "journal_resets":  0,
+                                                                    "journal_reconciliations":  0,
+                                                                    "ntfs_fallbacks":  0
+                                                                }
+                                                 },
+                                      "stdout":  "{\n  \"report\": {\n    \"ground_truth\": 873,\n    \"indexed\": 873,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": []\n  },\n  \"catch_up_ms\": 147.5205,\n  \"verify_ms\": 632.7179000000001,\n  \"status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 878,\n    \"dirs\": 14,\n    \"index_bytes\": 82624,\n    \"skipped\": 0,\n    \"catch_up_ms\": 147.5205,\n    \"error\": null,\n    \"source\": \"walker\",\n    \"helper_note\": null,\n    \"journal_batches\": 0,\n    \"journal_directories\": 0,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0\n  }\n}\n",
+                                      "stderr":  ""
+                                  }
+                   },
+                   {
+                       "name":  "Videos",
+                       "path":  "%USERPROFILE%\\Videos",
+                       "passed":  true,
+                       "result":  {
+                                      "name":  "Real Videos walker verification",
+                                      "arguments":  [
+                                                        "verify",
+                                                        "--source",
+                                                        "walker",
+                                                        "--root",
+                                                        "%USERPROFILE%\\Videos",
+                                                        "--data",
+                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\sidebar-639274088243692504\\Videos"
+                                                    ],
+                                      "exit_code":  0,
+                                      "wall_ms":  98.947,
+                                      "peak_total_working_set_bytes":  null,
+                                      "report":  {
+                                                     "report":  {
+                                                                    "ground_truth":  40,
+                                                                    "indexed":  40,
+                                                                    "missing":  [
+
+                                                                                ],
+                                                                    "extra":  [
+
+                                                                              ],
+                                                                    "stale":  [
+
+                                                                              ],
+                                                                    "denied":  [
+
+                                                                               ]
+                                                                },
+                                                     "catch_up_ms":  20.688399999999998,
+                                                     "verify_ms":  30.6303,
+                                                     "status":  {
+                                                                    "ready":  true,
+                                                                    "catching_up":  false,
+                                                                    "entries":  44,
+                                                                    "dirs":  12,
+                                                                    "index_bytes":  12736,
+                                                                    "skipped":  0,
+                                                                    "catch_up_ms":  20.688399999999998,
+                                                                    "error":  null,
+                                                                    "source":  "walker",
+                                                                    "helper_note":  null,
+                                                                    "journal_batches":  0,
+                                                                    "journal_directories":  0,
+                                                                    "journal_resets":  0,
+                                                                    "journal_reconciliations":  0,
+                                                                    "ntfs_fallbacks":  0
+                                                                }
+                                                 },
+                                      "stdout":  "{\n  \"report\": {\n    \"ground_truth\": 40,\n    \"indexed\": 40,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": []\n  },\n  \"catch_up_ms\": 20.688399999999998,\n  \"verify_ms\": 30.6303,\n  \"status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 44,\n    \"dirs\": 12,\n    \"index_bytes\": 12736,\n    \"skipped\": 0,\n    \"catch_up_ms\": 20.688399999999998,\n    \"error\": null,\n    \"source\": \"walker\",\n    \"helper_note\": null,\n    \"journal_batches\": 0,\n    \"journal_directories\": 0,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0\n  }\n}\n",
+                                      "stderr":  ""
+                                  }
+                   }
+               ],
+    "scope":  "Actual Known Folders, forced walker, isolated checkout indexes; no user files changed. Not a whole-drive helper acceptance run."
+}

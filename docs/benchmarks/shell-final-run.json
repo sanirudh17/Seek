@@ -1,0 +1,11 @@
+﻿{
+    "pid":  9296,
+    "profile":  "debug",
+    "dataset_files":  10000,
+    "window_title_before_close":  "Seek",
+    "window_handle_before_close":  2296418,
+    "window_opened":  true,
+    "close_requested":  true,
+    "close_exited":  true,
+    "exit_code":  0
+}

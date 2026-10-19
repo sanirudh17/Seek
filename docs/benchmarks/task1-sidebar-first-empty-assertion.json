@@ -1,0 +1,145 @@
+{
+    "fresh_no_settings":  true,
+    "checks":  [
+                   {
+                       "name":  "Timed out waiting for assertion",
+                       "passed":  false
+                   }
+               ],
+    "sha256":  "AFA4E9F4A60A5DA5CC6717B2366099FAA79273913B54A883F7998B970A84B366",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\task1-639278965115787247",
+    "folders":  [
+                    {
+                        "expected":  4,
+                        "extra":  0,
+                        "actual":  4,
+                        "index_ready":  true,
+                        "button":  "%USERPROFILE%\\Seek\\.bench-data\\task1-639278965115787247\\files",
+                        "path":  "%USERPROFILE%\\Seek\\.bench-data\\task1-639278965115787247\\files",
+                        "query_to_present_ms":  76.03150000000001,
+                        "missing":  0
+                    },
+                    {
+                        "expected":  539,
+                        "extra":  0,
+                        "actual":  539,
+                        "index_ready":  true,
+                        "button":  "Downloads",
+                        "path":  "%USERPROFILE%\\Downloads",
+                        "query_to_present_ms":  null,
+                        "missing":  0
+                    },
+                    {
+                        "expected":  18,
+                        "extra":  0,
+                        "actual":  18,
+                        "index_ready":  true,
+                        "button":  "Desktop",
+                        "path":  "%USERPROFILE%\\OneDrive\\Desktop",
+                        "query_to_present_ms":  null,
+                        "missing":  0
+                    },
+                    {
+                        "expected":  133,
+                        "extra":  0,
+                        "actual":  133,
+                        "index_ready":  true,
+                        "button":  "Documents",
+                        "path":  "%USERPROFILE%\\OneDrive\\Documents",
+                        "query_to_present_ms":  null,
+                        "missing":  0
+                    },
+                    {
+                        "expected":  15,
+                        "extra":  0,
+                        "actual":  15,
+                        "index_ready":  true,
+                        "button":  "Pictures",
+                        "path":  "%USERPROFILE%\\OneDrive\\Pictures",
+                        "query_to_present_ms":  null,
+                        "missing":  0
+                    },
+                    {
+                        "expected":  7,
+                        "extra":  0,
+                        "actual":  7,
+                        "index_ready":  true,
+                        "button":  "Videos",
+                        "path":  "%USERPROFILE%\\Videos",
+                        "query_to_present_ms":  null,
+                        "missing":  0
+                    },
+                    {
+                        "expected":  1,
+                        "extra":  0,
+                        "actual":  1,
+                        "index_ready":  true,
+                        "button":  "Music",
+                        "path":  "%USERPROFILE%\\Expense Tracker\\Music",
+                        "query_to_present_ms":  null,
+                        "missing":  0
+                    }
+                ],
+    "events":  [
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\Downloads",
+                                      "rows":  540,
+                                      "error":  null,
+                                      "elapsed_ms":  8.621
+                                  },
+                       "entry_ms":  63.322900000000004
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\OneDrive\\Desktop",
+                                      "rows":  19,
+                                      "error":  null,
+                                      "elapsed_ms":  0.5085
+                                  },
+                       "entry_ms":  64.0069
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\OneDrive\\Documents",
+                                      "rows":  134,
+                                      "error":  null,
+                                      "elapsed_ms":  2.6713999999999998
+                                  },
+                       "entry_ms":  66.8737
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\OneDrive\\Pictures",
+                                      "rows":  16,
+                                      "error":  null,
+                                      "elapsed_ms":  1.0439
+                                  },
+                       "entry_ms":  67.9519
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\Videos",
+                                      "rows":  8,
+                                      "error":  null,
+                                      "elapsed_ms":  0.2827
+                                  },
+                       "entry_ms":  68.2701
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\Expense Tracker\\Music",
+                                      "rows":  2,
+                                      "error":  null,
+                                      "elapsed_ms":  0.2356
+                                  },
+                       "entry_ms":  68.5329
+                   }
+               ]
+}

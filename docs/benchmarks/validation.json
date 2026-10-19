@@ -1,0 +1,30 @@
+﻿{
+    "date_utc":  "2026-10-11T09:52:33.3803322Z",
+    "toolchain":  "1.96.0-x86_64-pc-windows-msvc",
+    "build":  {
+                  "cargo_reported_seconds":  4.65,
+                  "command":  "cargo build --workspace",
+                  "exit_code":  0
+              },
+    "tests":  {
+                  "passed":  9,
+                  "command":  "cargo test --workspace",
+                  "cargo_build_seconds":  24.62,
+                  "failed":  0,
+                  "exit_code":  0
+              },
+    "clippy":  {
+                   "cargo_reported_seconds":  1.76,
+                   "command":  "cargo clippy --workspace --all-targets -- -D warnings",
+                   "exit_code":  0
+               },
+    "format":  {
+                   "exit_code":  0,
+                   "command":  "cargo fmt --all -- --check"
+               },
+    "gate":  {
+                 "stage2_started":  false,
+                 "stage1_complete":  false,
+                 "event_driven_idle":  "FAIL"
+             }
+}

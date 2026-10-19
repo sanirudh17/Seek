@@ -1,0 +1,22 @@
+[
+  {
+    "command": "cargo fmt --all",
+    "exit_code": 0,
+    "seconds": 5.785
+  },
+  {
+    "command": "cargo test --workspace --all-features --locked --offline",
+    "exit_code": 0,
+    "seconds": 26.807
+  },
+  {
+    "command": "cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings",
+    "exit_code": 0,
+    "seconds": 6.289
+  },
+  {
+    "command": "cargo build --workspace --all-features --locked --offline",
+    "exit_code": 0,
+    "seconds": 25.061
+  }
+]

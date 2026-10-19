@@ -1,0 +1,440 @@
+{
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\navigation-639277217601337500",
+    "real_profile_copy":  true,
+    "exit_code":  0,
+    "timings":  [
+                    {
+                        "rows":  488,
+                        "catching_up":  true,
+                        "location":  "Downloads",
+                        "request_to_present_ms":  14.0488
+                    },
+                    {
+                        "rows":  17,
+                        "catching_up":  true,
+                        "location":  "Desktop",
+                        "request_to_present_ms":  14.418000000000001
+                    },
+                    {
+                        "rows":  134,
+                        "catching_up":  true,
+                        "location":  "Documents",
+                        "request_to_present_ms":  16.5694
+                    },
+                    {
+                        "rows":  16,
+                        "catching_up":  true,
+                        "location":  "Pictures",
+                        "request_to_present_ms":  12.974
+                    },
+                    {
+                        "rows":  8,
+                        "catching_up":  true,
+                        "location":  "Videos",
+                        "request_to_present_ms":  12.2334
+                    },
+                    {
+                        "rows":  488,
+                        "catching_up":  true,
+                        "location":  "Downloads",
+                        "request_to_present_ms":  18.5014
+                    },
+                    {
+                        "phase":  "second sweep",
+                        "rows":  488,
+                        "catching_up":  true,
+                        "location":  "Downloads",
+                        "request_to_present_ms":  10.836
+                    },
+                    {
+                        "phase":  "second sweep",
+                        "rows":  17,
+                        "catching_up":  true,
+                        "location":  "Desktop",
+                        "request_to_present_ms":  13.082699999999999
+                    },
+                    {
+                        "phase":  "second sweep",
+                        "rows":  134,
+                        "catching_up":  true,
+                        "location":  "Documents",
+                        "request_to_present_ms":  16.713700000000003
+                    },
+                    {
+                        "phase":  "second sweep",
+                        "rows":  16,
+                        "catching_up":  true,
+                        "location":  "Pictures",
+                        "request_to_present_ms":  14.6332
+                    },
+                    {
+                        "phase":  "second sweep",
+                        "rows":  8,
+                        "catching_up":  true,
+                        "location":  "Videos",
+                        "request_to_present_ms":  10.8247
+                    },
+                    {
+                        "phase":  "second sweep",
+                        "rows":  488,
+                        "catching_up":  true,
+                        "location":  "Downloads",
+                        "request_to_present_ms":  18.3879
+                    }
+                ],
+    "profiles":  [
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  0.0673,
+                                        "stages_ms":  [
+                                                          0.00019999999999999998,
+                                                          0.6930000000000001,
+                                                          0.0063
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  1872.1784000000002
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Desktop",
+                                        "queued_ms":  0.07940000000000001,
+                                        "stages_ms":  [
+                                                          0.00019999999999999998,
+                                                          0.0941,
+                                                          0.0055
+                                                      ],
+                                        "rows":  17
+                                    },
+                         "entry_ms":  3849.4704
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Documents",
+                                        "queued_ms":  0.0359,
+                                        "stages_ms":  [
+                                                          0.00009999999999999999,
+                                                          0.2109,
+                                                          0.0038
+                                                      ],
+                                        "rows":  134
+                                    },
+                         "entry_ms":  5695.9682
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Pictures",
+                                        "queued_ms":  0.12589999999999998,
+                                        "stages_ms":  [
+                                                          0.00009999999999999999,
+                                                          0.0368,
+                                                          0.0027
+                                                      ],
+                                        "rows":  16
+                                    },
+                         "entry_ms":  7677.361
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Videos",
+                                        "queued_ms":  0.0557,
+                                        "stages_ms":  [
+                                                          0.00009999999999999999,
+                                                          0.0419,
+                                                          0.0029000000000000002
+                                                      ],
+                                        "rows":  8
+                                    },
+                         "entry_ms":  9872.3802
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  0.027,
+                                        "stages_ms":  [
+                                                          0.00019999999999999998,
+                                                          0.4621,
+                                                          0.0037
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  12026.707699999999
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  0.0324,
+                                        "stages_ms":  [
+                                                          0.0003,
+                                                          0.5643999999999999,
+                                                          0.005699999999999999
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  14086.2316
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Desktop",
+                                        "queued_ms":  0.0828,
+                                        "stages_ms":  [
+                                                          0.00019999999999999998,
+                                                          0.056499999999999995,
+                                                          0.0042
+                                                      ],
+                                        "rows":  17
+                                    },
+                         "entry_ms":  16051.028699999999
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Documents",
+                                        "queued_ms":  0.0296,
+                                        "stages_ms":  [
+                                                          0.00019999999999999998,
+                                                          0.2339,
+                                                          0.0045000000000000005
+                                                      ],
+                                        "rows":  134
+                                    },
+                         "entry_ms":  17916.7581
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Pictures",
+                                        "queued_ms":  0.13699999999999998,
+                                        "stages_ms":  [
+                                                          0.00019999999999999998,
+                                                          0.0428,
+                                                          0.0033
+                                                      ],
+                                        "rows":  16
+                                    },
+                         "entry_ms":  19759.1446
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Videos",
+                                        "queued_ms":  0.0574,
+                                        "stages_ms":  [
+                                                          0.00019999999999999998,
+                                                          0.029,
+                                                          0.0031999999999999997
+                                                      ],
+                                        "rows":  8
+                                    },
+                         "entry_ms":  21924.4976
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  0.031099999999999996,
+                                        "stages_ms":  [
+                                                          0.00009999999999999999,
+                                                          0.5297999999999999,
+                                                          0.0043
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  23596.0526
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  null,
+                                        "stages_ms":  [
+                                                          0.0,
+                                                          0.0087,
+                                                          1.0795
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  30676.271
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  null,
+                                        "stages_ms":  [
+                                                          0.0,
+                                                          0.7797000000000001,
+                                                          0.0046
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  33825.1946
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  null,
+                                        "stages_ms":  [
+                                                          0.00009999999999999999,
+                                                          0.6822,
+                                                          0.015000000000000001
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  33878.7711
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  null,
+                                        "stages_ms":  [
+                                                          0.00009999999999999999,
+                                                          0.8455999999999999,
+                                                          0.0037
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  33893.7566
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  null,
+                                        "stages_ms":  [
+                                                          0.0,
+                                                          0.46030000000000004,
+                                                          0.0035
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  33899.683899999996
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  null,
+                                        "stages_ms":  [
+                                                          0.00009999999999999999,
+                                                          0.4874,
+                                                          0.0034000000000000002
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  33931.282400000004
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  null,
+                                        "stages_ms":  [
+                                                          0.00009999999999999999,
+                                                          0.4436,
+                                                          0.0045000000000000005
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  33945.2435
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  null,
+                                        "stages_ms":  [
+                                                          0.0,
+                                                          0.8385,
+                                                          0.0055
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  34010.1858
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  null,
+                                        "stages_ms":  [
+                                                          0.0,
+                                                          0.6925,
+                                                          0.0056
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  34016.8952
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  null,
+                                        "stages_ms":  [
+                                                          0.00009999999999999999,
+                                                          0.5458000000000001,
+                                                          0.0042
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  34024.9711
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  null,
+                                        "stages_ms":  [
+                                                          0.0,
+                                                          0.455,
+                                                          0.0033
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  34032.001299999996
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  null,
+                                        "stages_ms":  [
+                                                          0.00009999999999999999,
+                                                          0.5062000000000001,
+                                                          0.0035
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  34034.405900000005
+                     }
+                 ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+    "checks":  [
+                   {
+                       "name":  "Real sidebar folders present cached indexed contents",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "All measured real-folder presentations finish within 100 ms",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Catch-up completes with an ordered boundary",
+                       "catch_up_ms":  33751.9982,
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "AED4DAC8897E283BEC4F7DC05D54313DDB060E1664FCA4E58B84B062884CB3C4"
+}

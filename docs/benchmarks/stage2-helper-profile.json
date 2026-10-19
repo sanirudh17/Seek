@@ -1,0 +1,20 @@
+{
+  "cursors": [
+    {
+      "drive": 67,
+      "journal_id": 133973191378566477,
+      "next_usn": 33615709792,
+      "serial": 475756948759402495
+    }
+  ],
+  "directories": 278735,
+  "entries": 2987304,
+  "first_chunk_ms": 45670.1269,
+  "frames": 284627,
+  "measurement": "Trusted helper baseline only; excludes index construction, persistence, ordinary watcher and independent verification",
+  "reconciliations": 0,
+  "root": "/C:",
+  "skipped": 184,
+  "stream_after_first_chunk_ms": 318.9657999999981,
+  "total_ms": 45989.0927
+}

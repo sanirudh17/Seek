@@ -1,0 +1,30 @@
+{
+  "report": {
+    "ground_truth": 1001001,
+    "indexed": 1001001,
+    "missing": [],
+    "extra": [],
+    "stale": [],
+    "denied": []
+  },
+  "catch_up_ms": 6697.048900000001,
+  "verify_ms": 194988.4773,
+  "status": {
+    "ready": true,
+    "catching_up": false,
+    "entries": 1001008,
+    "dirs": 1008,
+    "index_bytes": 76176256,
+    "skipped": 0,
+    "catch_up_ms": 6697.048900000001,
+    "error": null,
+    "source": "walker",
+    "helper_note": null,
+    "journal_batches": 0,
+    "journal_directories": 0,
+    "journal_resets": 0,
+    "journal_reconciliations": 0,
+    "ntfs_fallbacks": 0,
+    "scan_profiles": []
+  }
+}

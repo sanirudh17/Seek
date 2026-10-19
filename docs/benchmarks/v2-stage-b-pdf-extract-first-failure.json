@@ -1,0 +1,8 @@
+{
+  "method": "Registered Windows PDF IFilter, IPersistStream over bounded in-memory bytes; no Windows Search catalog needed",
+  "exit_code": 2,
+  "elapsed_ms": 788.8060999684967,
+  "known_text_matched": false,
+  "text": "",
+  "stderr": "The parameter is incorrect. (0x80070057)\n"
+}

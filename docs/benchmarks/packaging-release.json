@@ -1,0 +1,87 @@
+{
+  "version": "1.0.0",
+  "final_smoke": {
+    "observed_smoke_ms": 306.9124,
+    "owned_profile": true,
+    "bytes": 19824640,
+    "passed": true,
+    "sha256": "696AA55FB716447DA69F6184E41ED12CCDC86405B662FB718A7EA9BEEA183C79",
+    "ordinary_user": true,
+    "file_version": "1.0.0",
+    "exit_code": 0,
+    "startup_benchmark": false
+  },
+  "binaries": [
+    {
+      "file": "seek.exe",
+      "bytes": 19824640,
+      "imports": [
+        "ADVAPI32.dll",
+        "CRYPT32.dll",
+        "KERNEL32.dll",
+        "WINHTTP.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "api-ms-win-core-winrt-error-l1-1-0.dll",
+        "api-ms-win-core-winrt-l1-1-0.dll",
+        "api-ms-win-shcore-scaling-l1-1-1.dll",
+        "bcryptprimitives.dll",
+        "combase.dll",
+        "comctl32.dll",
+        "d3d11.dll",
+        "dcomp.dll",
+        "dwmapi.dll",
+        "dwrite.dll",
+        "dxgi.dll",
+        "gdi32.dll",
+        "gdiplus.dll",
+        "icuuc.dll",
+        "imm32.dll",
+        "ntdll.dll",
+        "ole32.dll",
+        "oleaut32.dll",
+        "propsys.dll",
+        "shell32.dll",
+        "shlwapi.dll",
+        "uiautomationcore.dll",
+        "user32.dll",
+        "userenv.dll",
+        "winmm.dll"
+      ],
+      "dynamic_msvc_crt": [],
+      "personal_profile_path_found": false
+    },
+    {
+      "file": "seek-helper.exe",
+      "bytes": 798208,
+      "imports": [
+        "KERNEL32.dll",
+        "advapi32.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "bcryptprimitives.dll",
+        "combase.dll",
+        "kernel32.dll",
+        "ntdll.dll",
+        "shell32.dll"
+      ],
+      "dynamic_msvc_crt": [],
+      "personal_profile_path_found": false
+    }
+  ],
+  "source_privacy": {
+    "public_source_files": 2962,
+    "personal_profile_path_files": [],
+    "credential_pattern_files": []
+  },
+  "archive_bytes": 9164598,
+  "archive_sha256": "b21b13215d60d611fee3e021683fecd58424c0e21527c1de21ee32f3ce1fc003",
+  "clean_source_build": true,
+  "release_build_seconds": 445,
+  "test_profile": "Owned TEMP profiles only; no real Seek data/helper changed.",
+  "install_checks": 20,
+  "update_worker_checks": 7,
+  "app_tests_passed": 54,
+  "live_release_test": "Pending publication",
+  "alternate_user_test": "Not performed: only one enabled local account; manual instructions in README.",
+  "publication": "Pending final tag and upload",
+  "old_personal_screenshots": "Two preserved privately and excluded from public snapshot."
+}

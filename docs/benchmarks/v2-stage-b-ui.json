@@ -1,0 +1,119 @@
+{
+    "checks":  [
+                   {
+                       "name":  "Fixture is ready",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Name and Content suggestions coexist",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Content mode shows only in-scope body matches",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "PDF direct extraction returns the owned PDF",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "A newer query replaces earlier content results",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Removing Content restores filename search",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Content locations save through Settings",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Changed scope applies immediately",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Closing quits after content worker use",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "BAF1B8C03EE3E33BE33715B1F7503D1745F6E86569E722A6F790A33D1616EB3C",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-check-639277629325890001",
+    "captures":  [
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-suggestions-dark.png",
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-content-dark.png",
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-content-settings.png",
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-actions-light.png",
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-suggestions-light.png",
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-info-light.png",
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-context-light.png"
+                 ],
+    "content_observations":  [
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  151.0138,
+                                                    "matches":  5
+                                                },
+                                     "entry_ms":  5816.6084
+                                 },
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  90.5715,
+                                                    "matches":  1
+                                                },
+                                     "entry_ms":  8238.337899999999
+                                 },
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  94.2333,
+                                                    "matches":  1
+                                                },
+                                     "entry_ms":  9536.5648
+                                 },
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  93.81190000000001,
+                                                    "matches":  5
+                                                },
+                                     "entry_ms":  10113.0622
+                                 },
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  1,
+                                                    "skipped":  0,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  1.5186,
+                                                    "matches":  1
+                                                },
+                                     "entry_ms":  24772.068199999998
+                                 }
+                             ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe"
+}

@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-19",
+  "build": "debug",
+  "method": "Fresh owned temporary full-C index per source, then independent ordinary-user directory enumeration of every recorded inaccessible path. Live drive; not a frozen file-by-file truth comparison.",
+  "helper_service": { "installed": true, "running": true, "start_type": "Automatic" },
+  "auto": {
+    "source": "ntfs + usn",
+    "helper_note": null,
+    "entries": 3453656,
+    "directories": 323417,
+    "catch_up_ms": 59486.5913,
+    "unique_inaccessible": 221,
+    "error_codes": { "5": 221 },
+    "independently_unreadable": 221,
+    "independently_readable": 0,
+    "readable_paths_with_missing_children": 0,
+    "journal_batches": 158,
+    "journal_directories": 250,
+    "ntfs_fallbacks": 0,
+    "journal_resets": 0,
+    "journal_reconciliations": 0
+  },
+  "walker": {
+    "source": "walker",
+    "entries": 3453874,
+    "directories": 323419,
+    "catch_up_ms": 55366.1375,
+    "unique_inaccessible": 211,
+    "error_codes": { "3": 2, "5": 209 },
+    "independently_unreadable": 211,
+    "independently_readable": 0,
+    "readable_paths_with_missing_children": 0
+  },
+  "historical_1859_reproduced": false,
+  "historical_attribution": "Not established; production data folder deliberately not inspected.",
+  "limitations": ["Live sequential scans, not one frozen snapshot", "No release speed claim", "Checks cover recorded inaccessible paths, not every file on C:", "No inaccessible-path listing UI added"]
+}

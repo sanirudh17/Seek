@@ -1,0 +1,33 @@
+{
+    "samples":  [
+
+                ],
+    "failure":  "Settings active fill differs from List: 190,195,203 / 192,198,206",
+    "checks":  [
+                   {
+                       "passed":  true,
+                       "name":  "light Info panel · Space matches active List fill",
+                       "control_rgb":  "229,236,246",
+                       "reference_rgb":  "229,236,246",
+                       "tolerance":  2,
+                       "max_channel_delta":  0
+                   },
+                   {
+                       "passed":  true,
+                       "name":  "light Show hidden and system files matches active List fill",
+                       "control_rgb":  "229,236,246",
+                       "reference_rgb":  "229,236,246",
+                       "tolerance":  2,
+                       "max_channel_delta":  0
+                   },
+                   {
+                       "passed":  true,
+                       "name":  "light Sort results matches active List fill",
+                       "control_rgb":  "225,232,241",
+                       "reference_rgb":  "224,231,240",
+                       "tolerance":  2,
+                       "max_channel_delta":  1
+                   }
+               ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe"
+}

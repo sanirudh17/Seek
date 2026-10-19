@@ -1,0 +1,50 @@
+{
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\settings-check-639276833811614899",
+    "private_commit_bytes":  97824768,
+    "close":  {
+                  "ms":  135.7084,
+                  "exit":  0
+              },
+    "helper_modified":  false,
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+    "private_working_set_bytes":  36302848,
+    "checks":  [
+                   {
+                       "accent":  "#db2626",
+                       "name":  "Working color picker persists a palette selection",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Custom hex, softened Graphite and glass switch persist",
+                       "passed":  true
+                   },
+                   {
+                       "group_width":  302,
+                       "name":  "Hidden menu and all views persist; frame ends at Gallery",
+                       "trailing_gap_px":  1,
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Custom locations and exclusions persist",
+                       "passed":  true
+                   },
+                   {
+                       "button_width":  200,
+                       "name":  "Compact helper action displayed without install or uninstall",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "All four redesigned sections captured in Light and Dark",
+                       "passed":  true
+                   },
+                   {
+                       "close":  {
+                                     "ms":  135.7084,
+                                     "exit":  0
+                                 },
+                       "name":  "Saved preferences restore after complete process exit",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "6F07B9F048CCDDC9192DB9F2ACF9300137D3A144A033250DAC133135A6BBD8D7"
+}

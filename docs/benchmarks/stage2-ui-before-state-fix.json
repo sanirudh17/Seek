@@ -1,0 +1,6 @@
+﻿{
+    "second_ui_automation_failed":  true,
+    "message":  "Expected Install optional helper, but the service had become installed during interactive testing. It showed Uninstall helper. Final check handles actual service state and passes.",
+    "first_ui_automation_failed":  true,
+    "final_report":  "stage2-ui.json"
+}

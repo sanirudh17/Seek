@@ -1,0 +1,12 @@
+﻿[
+    {
+        "passed":  true,
+        "helper_button_physical_width":  200,
+        "theme":  "Light"
+    },
+    {
+        "passed":  true,
+        "helper_button_physical_width":  200,
+        "theme":  "Dark"
+    }
+]

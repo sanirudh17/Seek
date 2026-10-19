@@ -1,0 +1,52 @@
+{
+    "scope":  "Owned fixtures only. Preview.png is a real bundled image; other media extensions are filter/menu fixtures. Native regression separately verifies a large real bitmap and folder artwork.",
+    "checks":  [
+                   {
+                       "name":  "Folder scope lists indexed folders and files",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "One JPEG suggestion, with a separate Name option",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "JPEG filter matches both jpg and jpeg",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Chip dropdown removes the type filter",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Largest folders has an explicit return control",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Largest files can return through the actions menu",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "All items restores the ordinary view",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "GPUI row menu exposes file actions",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "List Ctrl+C writes Windows file clipboard",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "The interface is unknown. (Exception from HRESULT: 0x800706B5)",
+                       "passed":  false
+                   }
+               ],
+    "sha256":  "607503F85EA19235D2BD73D916B36A2598CE41452E0862841481511F6178704E",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-a-check-639277587151739428",
+    "keyboard":  "WScript native keyboard delivery; every action verified independently. Orca hotkey delivery of Ctrl+C was unasserted.",
+    "captures":  [
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-a-type-dark.png"
+                 ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe"
+}

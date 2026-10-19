@@ -1,0 +1,79 @@
+[
+  {
+    "name": "fmt",
+    "command": [
+      "cargo",
+      "fmt",
+      "--all",
+      "--",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 4.798
+  },
+  {
+    "name": "tests",
+    "command": [
+      "cargo",
+      "test",
+      "--workspace",
+      "--all-features",
+      "--locked",
+      "--offline"
+    ],
+    "exit_code": 0,
+    "seconds": 22.607
+  },
+  {
+    "name": "clippy",
+    "command": [
+      "cargo",
+      "clippy",
+      "--workspace",
+      "--all-targets",
+      "--all-features",
+      "--locked",
+      "--offline",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "seconds": 6.463
+  },
+  {
+    "name": "release-ui",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/check-stage4-navigation.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-Output",
+      "docs/benchmarks/stage4-navigation-release-ui.json"
+    ],
+    "exit_code": 0,
+    "seconds": 17.089
+  },
+  {
+    "name": "real-folders",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/check-stage4-navigation.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-RealProfile",
+      "-Output",
+      "docs/benchmarks/stage4-navigation-real-folders.json"
+    ],
+    "exit_code": 0,
+    "seconds": 39.176
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "catch_up_ms": 31.8123,
+  "report": {
+    "denied": [],
+    "extra": [],
+    "ground_truth": 499,
+    "indexed": 499,
+    "missing": [],
+    "stale": []
+  },
+  "status": {
+    "catch_up_ms": 31.8123,
+    "catching_up": false,
+    "dirs": 10,
+    "entries": 503,
+    "error": null,
+    "index_bytes": 49408,
+    "ready": true,
+    "skipped": 0
+  },
+  "verify_ms": 31.372200000000003
+}

@@ -1,0 +1,221 @@
+{
+  "date": "2026-10-19",
+  "build": {
+    "profile": "optimized release, benchmarks feature",
+    "bytes": 19746816,
+    "sha256": "C4F00ED7878E962C05D567910ADAEE15B96397197BF0F87D105D1C53A6D8ADDA"
+  },
+  "scope": "Current-user Known Folder Downloads and redirected Documents, read-only; isolated temporary profile/cache",
+  "samples": {
+    "empty": {
+      "queries": [
+        {
+          "query": "note",
+          "first_result_ms": 468.92220000000003,
+          "elapsed_ms": 42537.521400000005,
+          "checked": 437,
+          "total": 437,
+          "skipped": 535,
+          "unreadable": 2,
+          "cache": {
+            "hits": 0,
+            "misses": 366,
+            "writes": 364,
+            "invalidated": 0,
+            "error": null
+          },
+          "matches": 150
+        },
+        {
+          "query": "rudkin",
+          "first_result_ms": 1339.0693,
+          "elapsed_ms": 1439.5158000000001,
+          "checked": 437,
+          "total": 437,
+          "skipped": 535,
+          "unreadable": 2,
+          "cache": {
+            "hits": 364,
+            "misses": 2,
+            "writes": 0,
+            "invalidated": 0,
+            "error": null
+          },
+          "matches": 1
+        }
+      ],
+      "parent_peak_private_bytes_sampled": 13000704,
+      "parent_peak_working_set_bytes": 23453696,
+      "reused_control": false
+    },
+    "full-restart": {
+      "queries": [
+        {
+          "query": "note",
+          "first_result_ms": 108.36659999999999,
+          "elapsed_ms": 1017.8077999999999,
+          "checked": 437,
+          "total": 437,
+          "skipped": 535,
+          "unreadable": 2,
+          "cache": {
+            "hits": 364,
+            "misses": 2,
+            "writes": 0,
+            "invalidated": 0,
+            "error": null
+          },
+          "matches": 150
+        },
+        {
+          "query": "rudkin",
+          "first_result_ms": 940.3583,
+          "elapsed_ms": 1038.5938999999998,
+          "checked": 437,
+          "total": 437,
+          "skipped": 535,
+          "unreadable": 2,
+          "cache": {
+            "hits": 364,
+            "misses": 2,
+            "writes": 0,
+            "invalidated": 0,
+            "error": null
+          },
+          "matches": 1
+        }
+      ],
+      "parent_peak_private_bytes_sampled": 10547200,
+      "parent_peak_working_set_bytes": 19931136,
+      "reused_control": false
+    },
+    "uncached-control": {
+      "queries": [
+        {
+          "query": "note",
+          "first_result_ms": 412.9071,
+          "elapsed_ms": 28611.970400000002,
+          "checked": 437,
+          "total": 437,
+          "skipped": 535,
+          "unreadable": 2,
+          "cache": {
+            "hits": 0,
+            "misses": 0,
+            "writes": 0,
+            "invalidated": 0,
+            "error": null
+          },
+          "matches": 150
+        },
+        {
+          "query": "rudkin",
+          "first_result_ms": 27433.297,
+          "elapsed_ms": 28062.8569,
+          "checked": 437,
+          "total": 437,
+          "skipped": 535,
+          "unreadable": 2,
+          "cache": {
+            "hits": 0,
+            "misses": 0,
+            "writes": 0,
+            "invalidated": 0,
+            "error": null
+          },
+          "matches": 1
+        }
+      ],
+      "parent_peak_private_bytes_sampled": null,
+      "parent_peak_working_set_bytes": null,
+      "reused_control": true
+    }
+  },
+  "initial_postbuild_sample": {
+    "queries": [
+      {
+        "query": "note",
+        "first_result_ms": 1230.6525,
+        "elapsed_ms": 58271.718,
+        "checked": 437,
+        "total": 437,
+        "skipped": 535,
+        "unreadable": 6,
+        "cache": {
+          "hits": 0,
+          "misses": 364,
+          "writes": 360,
+          "invalidated": 0,
+          "error": null
+        },
+        "matches": 146
+      },
+      {
+        "query": "rudkin",
+        "first_result_ms": 2731.3238,
+        "elapsed_ms": 2806.1816999999996,
+        "checked": 437,
+        "total": 437,
+        "skipped": 535,
+        "unreadable": 2,
+        "cache": {
+          "hits": 360,
+          "misses": 6,
+          "writes": 4,
+          "invalidated": 0,
+          "error": null
+        },
+        "matches": 1
+      }
+    ],
+    "path_equality_passed": false,
+    "note": "Four additional PDFs unreadable in the first note scan; later fresh-cache and uncached scans read them. Cause not isolated. Do not use this as a passing correctness sample."
+  },
+  "final_path_sets_equal": true,
+  "disk": {
+    "only_current_account": true,
+    "protected_root": true,
+    "allocated_bytes": 3178496,
+    "files": 365,
+    "logical_bytes": 2380558
+  },
+  "gui_release": {
+    "matches": 150,
+    "checked": 437,
+    "cache": {
+      "hits": 364,
+      "misses": 2,
+      "writes": 0,
+      "invalidated": 0,
+      "error": null
+    },
+    "idle": {
+      "foreground": true,
+      "private_bytes": 94949376,
+      "elapsed_ms": 20026.8761,
+      "working_set_bytes": 87703552,
+      "input_quiet": true,
+      "cpu_ms": 0,
+      "frames": 0
+    },
+    "exit_code": 0
+  },
+  "verification": {
+    "rust_cache_tests": 4,
+    "accuracy_queries": 10,
+    "accuracy_modes": 3,
+    "restart_pdf_word_hits": 5,
+    "owned_mutation_and_scope_checks": 6,
+    "gui_checks": "Default On, Clear, persisted Off/restart, Off no writes, On fills, Light/Dark, account ACLs, release Complete, text focus, small confirmation and cancel; debug native Recycle/permanent OK",
+    "clippy": "pass",
+    "normal_feature_check": "pass",
+    "format": "pass"
+  },
+  "limits": [
+    "Two real PDFs remain unreadable; existing visible skips/size/scope limits remain",
+    "First post-build sample had four transient additional unreadable PDFs, cause not isolated",
+    "Parent memory measurements exclude short-lived PDF filter hosts",
+    "GUI memory uses a small owned index with real content scopes, not a full C index",
+    "No other-account login, physical HDR/mixed-DPI or other-machine check"
+  ]
+}

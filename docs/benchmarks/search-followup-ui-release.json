@@ -1,0 +1,176 @@
+{
+    "checks":  [
+                   {
+                       "name":  "Fixture is ready",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Plain t3 ranks exact filename first",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Enter on Name contains keeps exact t3 first",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Content still finds Markdown, code, UTF16 and DOCX",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Content has a partial presentation before final scan completion",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "New content query rejects earlier rows",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Closing quits after content worker use",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "D129CA3BC76F4ED28E0E2CD1CAB23C58A16D763D20C0FD3DD158C4D35CB33805",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-check-639278949408045223",
+    "captures":  [
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-name-contains-fixed.png",
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-progressive-content.png"
+                 ],
+    "content_observations":  [
+                                 {
+                                     "interaction":  "content_partial",
+                                     "detail":  {
+                                                    "matches":  1,
+                                                    "checked":  1,
+                                                    "elapsed_ms":  0.8465
+                                                },
+                                     "entry_ms":  16970.612500000003
+                                 },
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  73.2067,
+                                                    "matches":  5,
+                                                    "first_result_ms":  0.8194,
+                                                    "formats":  {
+                                                                    "docx":  [
+                                                                                 1,
+                                                                                 0.3202
+                                                                             ],
+                                                                    "md":  [
+                                                                               1,
+                                                                               0.1773
+                                                                           ],
+                                                                    "pdf":  [
+                                                                                1,
+                                                                                70.6681
+                                                                            ],
+                                                                    "rs":  [
+                                                                               1,
+                                                                               0.174
+                                                                           ],
+                                                                    "txt":  [
+                                                                                3,
+                                                                                0.4792
+                                                                            ]
+                                                                }
+                                                },
+                                     "entry_ms":  17043.0146
+                                 },
+                                 {
+                                     "interaction":  "content_partial",
+                                     "detail":  {
+                                                    "matches":  1,
+                                                    "checked":  4,
+                                                    "elapsed_ms":  1.9388999999999998
+                                                },
+                                     "entry_ms":  19141.6023
+                                 },
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  67.56429999999999,
+                                                    "matches":  1,
+                                                    "first_result_ms":  1.8825999999999998,
+                                                    "formats":  {
+                                                                    "docx":  [
+                                                                                 1,
+                                                                                 0.2589
+                                                                             ],
+                                                                    "md":  [
+                                                                               1,
+                                                                               0.14229999999999998
+                                                                           ],
+                                                                    "pdf":  [
+                                                                                1,
+                                                                                64.51469999999999
+                                                                            ],
+                                                                    "rs":  [
+                                                                               1,
+                                                                               0.1733
+                                                                           ],
+                                                                    "txt":  [
+                                                                                3,
+                                                                                0.7878000000000001
+                                                                            ]
+                                                                }
+                                                },
+                                     "entry_ms":  19207.3025
+                                 },
+                                 {
+                                     "interaction":  "content_partial",
+                                     "detail":  {
+                                                    "matches":  1,
+                                                    "checked":  1,
+                                                    "elapsed_ms":  0.9493
+                                                },
+                                     "entry_ms":  19812.3309
+                                 },
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  66.32589999999999,
+                                                    "matches":  5,
+                                                    "first_result_ms":  0.9268,
+                                                    "formats":  {
+                                                                    "docx":  [
+                                                                                 1,
+                                                                                 0.1429
+                                                                             ],
+                                                                    "md":  [
+                                                                               1,
+                                                                               0.1137
+                                                                           ],
+                                                                    "pdf":  [
+                                                                                1,
+                                                                                64.3415
+                                                                            ],
+                                                                    "rs":  [
+                                                                               1,
+                                                                               0.1651
+                                                                           ],
+                                                                    "txt":  [
+                                                                                3,
+                                                                                0.2939
+                                                                            ]
+                                                                }
+                                                },
+                                     "entry_ms":  19877.7444
+                                 }
+                             ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe"
+}

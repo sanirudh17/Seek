@@ -1,0 +1,270 @@
+[
+  {
+    "name": "toolbar",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/check-stage4-toolbar.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-Output",
+      "docs/benchmarks/stage4-closeout-toolbar.json"
+    ],
+    "exit_code": 0,
+    "seconds": 49.294,
+    "app_sha256": "8ad37a41061f218e4c5a39a2cefe47fdfa38d8cad61643835cecb2f6c111ff31",
+    "cli_sha256": "54d4d15e4869a3667d37153dbf10824a2d06dc89dbc3e397f2836432077f02be"
+  },
+  {
+    "name": "startup-before-quiet",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/measure-startup.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\.references\\seek-before-closeout.exe",
+      "-Runs",
+      "5",
+      "-IdleSeconds",
+      "0",
+      "-Walker",
+      "-Output",
+      "docs/benchmarks/stage4-closeout-startup-before-quiet.json"
+    ],
+    "exit_code": 0,
+    "seconds": 3.549,
+    "app_sha256": "8ad37a41061f218e4c5a39a2cefe47fdfa38d8cad61643835cecb2f6c111ff31",
+    "cli_sha256": "54d4d15e4869a3667d37153dbf10824a2d06dc89dbc3e397f2836432077f02be"
+  },
+  {
+    "name": "startup-10000",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/measure-startup.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-Files",
+      "10000",
+      "-Runs",
+      "5",
+      "-IdleSeconds",
+      "0",
+      "-Walker",
+      "-Output",
+      "docs/benchmarks/stage4-closeout-startup-10000.json"
+    ],
+    "exit_code": 0,
+    "seconds": 3.032,
+    "app_sha256": "8ad37a41061f218e4c5a39a2cefe47fdfa38d8cad61643835cecb2f6c111ff31",
+    "cli_sha256": "54d4d15e4869a3667d37153dbf10824a2d06dc89dbc3e397f2836432077f02be"
+  },
+  {
+    "name": "startup-1000000",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/measure-startup.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-Files",
+      "1000000",
+      "-Runs",
+      "5",
+      "-IdleSeconds",
+      "0",
+      "-Walker",
+      "-Output",
+      "docs/benchmarks/stage4-closeout-startup-1000000.json"
+    ],
+    "exit_code": 0,
+    "seconds": 9.132,
+    "app_sha256": "8ad37a41061f218e4c5a39a2cefe47fdfa38d8cad61643835cecb2f6c111ff31",
+    "cli_sha256": "54d4d15e4869a3667d37153dbf10824a2d06dc89dbc3e397f2836432077f02be"
+  },
+  {
+    "name": "bench-10000",
+    "command": [
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek-cli.exe",
+      "bench",
+      "--files",
+      "10000",
+      "--runs",
+      "30",
+      "--extended",
+      "--reuse-dataset",
+      "--source",
+      "walker",
+      "--ui-executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "--output",
+      "docs/benchmarks/stage4-closeout-bench-10000.json"
+    ],
+    "exit_code": 0,
+    "seconds": 49.632,
+    "app_sha256": "8ad37a41061f218e4c5a39a2cefe47fdfa38d8cad61643835cecb2f6c111ff31",
+    "cli_sha256": "54d4d15e4869a3667d37153dbf10824a2d06dc89dbc3e397f2836432077f02be"
+  },
+  {
+    "name": "bench-1000000",
+    "command": [
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek-cli.exe",
+      "bench",
+      "--files",
+      "1000000",
+      "--runs",
+      "30",
+      "--extended",
+      "--reuse-dataset",
+      "--source",
+      "walker",
+      "--ui-executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "--output",
+      "docs/benchmarks/stage4-closeout-bench-1000000.json"
+    ],
+    "exit_code": 0,
+    "seconds": 52.944,
+    "app_sha256": "8ad37a41061f218e4c5a39a2cefe47fdfa38d8cad61643835cecb2f6c111ff31",
+    "cli_sha256": "54d4d15e4869a3667d37153dbf10824a2d06dc89dbc3e397f2836432077f02be"
+  },
+  {
+    "name": "ui",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/check-stage4-ui.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-Output",
+      "docs/benchmarks/stage4-closeout-ui.json"
+    ],
+    "exit_code": 0,
+    "seconds": 71.439,
+    "app_sha256": "8ad37a41061f218e4c5a39a2cefe47fdfa38d8cad61643835cecb2f6c111ff31",
+    "cli_sha256": "54d4d15e4869a3667d37153dbf10824a2d06dc89dbc3e397f2836432077f02be"
+  },
+  {
+    "name": "settings",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/check-stage3-settings.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-Output",
+      "docs/benchmarks/stage4-closeout-settings.json"
+    ],
+    "exit_code": 0,
+    "seconds": 72.389,
+    "app_sha256": "8ad37a41061f218e4c5a39a2cefe47fdfa38d8cad61643835cecb2f6c111ff31",
+    "cli_sha256": "54d4d15e4869a3667d37153dbf10824a2d06dc89dbc3e397f2836432077f02be"
+  },
+  {
+    "name": "navigation",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/check-stage4-navigation.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-Output",
+      "docs/benchmarks/stage4-closeout-navigation.json"
+    ],
+    "exit_code": 0,
+    "seconds": 19.359,
+    "app_sha256": "8ad37a41061f218e4c5a39a2cefe47fdfa38d8cad61643835cecb2f6c111ff31",
+    "cli_sha256": "54d4d15e4869a3667d37153dbf10824a2d06dc89dbc3e397f2836432077f02be"
+  },
+  {
+    "name": "real-navigation",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/check-stage4-navigation.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-RealProfile",
+      "-Output",
+      "docs/benchmarks/stage4-closeout-real-navigation.json"
+    ],
+    "exit_code": 0,
+    "seconds": 36.592,
+    "app_sha256": "8ad37a41061f218e4c5a39a2cefe47fdfa38d8cad61643835cecb2f6c111ff31",
+    "cli_sha256": "54d4d15e4869a3667d37153dbf10824a2d06dc89dbc3e397f2836432077f02be"
+  },
+  {
+    "name": "drive-startup",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/measure-drive-startup.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-Runs",
+      "3",
+      "-Output",
+      "docs/benchmarks/stage4-closeout-drive-startup.json"
+    ],
+    "exit_code": 0,
+    "seconds": 57.735,
+    "app_sha256": "8ad37a41061f218e4c5a39a2cefe47fdfa38d8cad61643835cecb2f6c111ff31",
+    "cli_sha256": "54d4d15e4869a3667d37153dbf10824a2d06dc89dbc3e397f2836432077f02be"
+  },
+  {
+    "name": "format",
+    "command": [
+      "cargo",
+      "fmt",
+      "--all",
+      "--",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 20.269,
+    "app_sha256": "8ad37a41061f218e4c5a39a2cefe47fdfa38d8cad61643835cecb2f6c111ff31",
+    "cli_sha256": "54d4d15e4869a3667d37153dbf10824a2d06dc89dbc3e397f2836432077f02be"
+  },
+  {
+    "name": "normal-features",
+    "command": [
+      "cargo",
+      "check",
+      "-p",
+      "seek",
+      "--locked",
+      "--offline"
+    ],
+    "exit_code": 0,
+    "seconds": 45.612,
+    "app_sha256": "8ad37a41061f218e4c5a39a2cefe47fdfa38d8cad61643835cecb2f6c111ff31",
+    "cli_sha256": "54d4d15e4869a3667d37153dbf10824a2d06dc89dbc3e397f2836432077f02be"
+  }
+]

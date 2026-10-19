@@ -1,0 +1,18 @@
+{
+  "scope": "Final Stage 3 Settings follow-up against the user-provided four-page mockups",
+  "initial_disposition": "fix",
+  "material_fixes": [
+    "Helper action stretched across its card instead of using the compact left-aligned reference layout."
+  ],
+  "resolution": "Constrained the existing action to 160 logical pixels. Fresh Light and Dark captures and accessibility bounds confirm 200 physical pixels at 125% scaling. No service action was invoked.",
+  "final_disposition": "ship",
+  "evidence": "stage3-settings-helper-width.json",
+  "preserved": [
+    "Fixed 16px thin System, Light and Dark artwork",
+    "Rounded default-view frame ending at Gallery",
+    "Neutral glass secondary controls",
+    "Graphite #909090 and actual color picker",
+    "Preference persistence and existing helper behavior"
+  ],
+  "limits": "Review covers captured laptop Light/Dark states; it does not certify Mica fallback, other DPI/HDR displays or arbitrary wallpapers."
+}

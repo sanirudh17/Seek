@@ -1,0 +1,1026 @@
+{
+    "utc":  "2026-10-16T05:09:33.5404532Z",
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+    "sha256":  "8AD37A41061F218E4C5A39A2CEFE47FDFA38D8CAD61643835CECB2F6C111FF31",
+    "files":  10000,
+    "seconds":  30,
+    "settle_seconds":  8,
+    "trace":  "%USERPROFILE%\\Seek\\.bench-data\\10000\\quiet-639277241333845547.ndjson",
+    "method":  "250 ms harness intervals qualified only by unchanged native activity, applied query/status updates and foreground identity. CPU and presentations are outcomes, never exclusion criteria. Focus is requested once, never locked; raw intervals are retained. Windows process CPU counter resolution applies; this is a saved fixture with no writes.",
+    "longest_quiet_foreground":  {
+                                     "kind":  "quiet-foreground",
+                                     "start_ms":  62.486000000000004,
+                                     "wall_ms":  297.17530000000005,
+                                     "cpu_ms":  0,
+                                     "frames":  0
+                                 },
+    "longest_quiet_background":  {
+                                     "kind":  "quiet-background",
+                                     "start_ms":  710.6676,
+                                     "wall_ms":  29482.6267,
+                                     "cpu_ms":  0,
+                                     "frames":  0
+                                 },
+    "sustained_foreground_idle_passed":  false,
+    "private_working_set_bytes":  37138432,
+    "private_commit_bytes":  87810048,
+    "close_ms":  368.99490000000003,
+    "exit_code":  0,
+    "segments":  [
+                     {
+                         "kind":  "quiet-foreground",
+                         "start_ms":  62.486000000000004,
+                         "wall_ms":  297.17530000000005,
+                         "cpu_ms":  0,
+                         "frames":  0
+                     },
+                     {
+                         "kind":  "activity-or-focus-change",
+                         "start_ms":  359.66130000000004,
+                         "wall_ms":  351.00629999999995,
+                         "cpu_ms":  15.625,
+                         "frames":  1
+                     },
+                     {
+                         "kind":  "quiet-background",
+                         "start_ms":  710.6676,
+                         "wall_ms":  29482.6267,
+                         "cpu_ms":  0,
+                         "frames":  0
+                     }
+                 ],
+    "intervals":  [
+                      {
+                          "start_ms":  62.486000000000004,
+                          "wall_ms":  297.17530000000005,
+                          "kind":  "quiet-foreground",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  359.66130000000004,
+                          "wall_ms":  351.00629999999995,
+                          "kind":  "activity-or-focus-change",
+                          "cpu_ms":  15.625,
+                          "frames":  1,
+                          "native_activity":  3,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  710.6676,
+                          "wall_ms":  289.80850000000009,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  1000.4761000000001,
+                          "wall_ms":  280.15419999999995,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  1280.6303,
+                          "wall_ms":  280.32920000000013,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  1560.9595000000002,
+                          "wall_ms":  267.76559999999995,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  1828.7251,
+                          "wall_ms":  295.7138,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  2124.4389,
+                          "wall_ms":  286.7831000000001,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  2411.222,
+                          "wall_ms":  291.3062,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  2702.5282,
+                          "wall_ms":  284.33930000000009,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  2986.8675000000003,
+                          "wall_ms":  281.75019999999995,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  3268.6177000000002,
+                          "wall_ms":  283.10489999999982,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  3551.7226,
+                          "wall_ms":  288.5023000000001,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  3840.2249,
+                          "wall_ms":  276.87899999999991,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  4117.1039,
+                          "wall_ms":  282.16139999999996,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  4399.2653,
+                          "wall_ms":  281.19120000000021,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  4680.4565,
+                          "wall_ms":  283.76730000000043,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  4964.2238000000007,
+                          "wall_ms":  278.9973,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  5243.2211000000007,
+                          "wall_ms":  288.99199999999928,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  5532.2131,
+                          "wall_ms":  290.59680000000026,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  5822.8099,
+                          "wall_ms":  294.39969999999994,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  6117.2096,
+                          "wall_ms":  280.95650000000023,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  6398.1661,
+                          "wall_ms":  278.71500000000015,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  6676.8811000000005,
+                          "wall_ms":  283.38249999999971,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  6960.2636,
+                          "wall_ms":  285.17990000000009,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  7245.4435,
+                          "wall_ms":  278.67020000000048,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  7524.1137000000008,
+                          "wall_ms":  276.84679999999935,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  7800.9605,
+                          "wall_ms":  270.22890000000007,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  8071.1894,
+                          "wall_ms":  275.07390000000032,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  8346.2633,
+                          "wall_ms":  269.92770000000019,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  8616.191,
+                          "wall_ms":  281.5059999999994,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  8897.697,
+                          "wall_ms":  328.96800000000076,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  9226.665,
+                          "wall_ms":  264.72669999999925,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  9491.3917,
+                          "wall_ms":  268.74430000000029,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  9760.136,
+                          "wall_ms":  280.3734000000004,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  10040.5094,
+                          "wall_ms":  277.46969999999965,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  10317.9791,
+                          "wall_ms":  283.09289999999964,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  10601.072,
+                          "wall_ms":  285.72969999999987,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  10886.8017,
+                          "wall_ms":  272.02460000000065,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  11158.8263,
+                          "wall_ms":  282.77829999999994,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  11441.6046,
+                          "wall_ms":  281.69679999999971,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  11723.3014,
+                          "wall_ms":  281.98390000000109,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  12005.285300000001,
+                          "wall_ms":  275.18269999999939,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  12280.468,
+                          "wall_ms":  272.3109000000004,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  12552.778900000001,
+                          "wall_ms":  275.20099999999911,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  12827.9799,
+                          "wall_ms":  269.15899999999965,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  13097.1389,
+                          "wall_ms":  273.78319999999985,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  13370.9221,
+                          "wall_ms":  274.89810000000034,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  13645.8202,
+                          "wall_ms":  282.33300000000054,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  13928.1532,
+                          "wall_ms":  276.7549999999992,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  14204.9082,
+                          "wall_ms":  283.8663000000015,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  14488.774500000001,
+                          "wall_ms":  280.02980000000025,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  14768.804300000002,
+                          "wall_ms":  278.24939999999879,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  15047.0537,
+                          "wall_ms":  275.15250000000015,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  15322.2062,
+                          "wall_ms":  283.01729999999952,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  15605.2235,
+                          "wall_ms":  271.70910000000003,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  15876.9326,
+                          "wall_ms":  269.69020000000091,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  16146.622800000001,
+                          "wall_ms":  280.30340000000069,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  16426.9262,
+                          "wall_ms":  275.4542999999976,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  16702.3805,
+                          "wall_ms":  281.9897000000019,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  16984.3702,
+                          "wall_ms":  275.79360000000088,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  17260.163800000002,
+                          "wall_ms":  277.10649999999805,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  17537.2703,
+                          "wall_ms":  271.15320000000065,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  17808.4235,
+                          "wall_ms":  275.35290000000168,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  18083.776400000002,
+                          "wall_ms":  275.3888999999981,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  18359.1653,
+                          "wall_ms":  282.24179999999978,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  18641.4071,
+                          "wall_ms":  272.30979999999909,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  18913.7169,
+                          "wall_ms":  270.41129999999976,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  19184.1282,
+                          "wall_ms":  281.44450000000143,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  19465.5727,
+                          "wall_ms":  275.75340000000142,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  19741.326100000002,
+                          "wall_ms":  273.79759999999806,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  20015.1237,
+                          "wall_ms":  280.8012000000017,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  20295.9249,
+                          "wall_ms":  283.08929999999964,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  20579.0142,
+                          "wall_ms":  281.45969999999943,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  20860.4739,
+                          "wall_ms":  279.77700000000186,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  21140.250900000003,
+                          "wall_ms":  268.709899999998,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  21408.9608,
+                          "wall_ms":  271.14700000000084,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  21680.1078,
+                          "wall_ms":  265.6208000000006,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  21945.728600000002,
+                          "wall_ms":  277.1893999999993,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  22222.918,
+                          "wall_ms":  274.24179999999978,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  22497.1598,
+                          "wall_ms":  271.6955999999991,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  22768.8554,
+                          "wall_ms":  278.07450000000244,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  23046.929900000003,
+                          "wall_ms":  258.95029999999679,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  23305.8802,
+                          "wall_ms":  276.06310000000303,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  23581.943300000003,
+                          "wall_ms":  273.65959999999905,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  23855.6029,
+                          "wall_ms":  280.13559999999779,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  24135.7385,
+                          "wall_ms":  277.18380000000252,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  24412.922300000002,
+                          "wall_ms":  273.90420000000086,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  24686.826500000003,
+                          "wall_ms":  286.04769999999917,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  24972.874200000002,
+                          "wall_ms":  277.57849999999962,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  25250.4527,
+                          "wall_ms":  278.28419999999824,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  25528.7369,
+                          "wall_ms":  283.065300000002,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  25811.802200000002,
+                          "wall_ms":  272.39909999999873,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  26084.2013,
+                          "wall_ms":  274.05099999999948,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  26358.2523,
+                          "wall_ms":  273.52590000000055,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  26631.7782,
+                          "wall_ms":  277.20960000000196,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  26908.987800000003,
+                          "wall_ms":  274.86139999999796,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  27183.8492,
+                          "wall_ms":  268.18860000000132,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  27452.037800000002,
+                          "wall_ms":  270.29699999999866,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  27722.3348,
+                          "wall_ms":  268.00730000000112,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  27990.3421,
+                          "wall_ms":  275.40899999999965,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  28265.7511,
+                          "wall_ms":  273.1903999999995,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  28538.9415,
+                          "wall_ms":  277.14610000000175,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  28816.087600000003,
+                          "wall_ms":  282.90480000000025,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  29098.992400000003,
+                          "wall_ms":  274.93599999999788,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  29373.9284,
+                          "wall_ms":  267.418700000002,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  29641.347100000003,
+                          "wall_ms":  281.19259999999849,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      },
+                      {
+                          "start_ms":  29922.5397,
+                          "wall_ms":  270.75460000000021,
+                          "kind":  "quiet-background",
+                          "cpu_ms":  0,
+                          "frames":  0,
+                          "native_activity":  0,
+                          "applied_updates":  0
+                      }
+                  ]
+}

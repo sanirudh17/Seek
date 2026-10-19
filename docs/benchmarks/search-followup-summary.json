@@ -1,0 +1,102 @@
+{
+  "date": "2026-10-18",
+  "stage": "Authorized Stage A/B follow-up only",
+  "release_sha256": "D129CA3BC76F4ED28E0E2CD1CAB23C58A16D763D20C0FD3DD158C4D35CB33805",
+  "release_bytes": 18032128,
+  "release_build_seconds": 393,
+  "engine_query_tests_passed": 10,
+  "content_tests_passed": 6,
+  "document_accuracy_cases_passed": 10,
+  "release_desktop_checks_passed": 7,
+  "release_browser_paste_passed": true,
+  "real_content_scan": {
+    "query": "note",
+    "locations": [
+      "%USERPROFILE%\\Downloads",
+      "%USERPROFILE%\\OneDrive\\Documents"
+    ],
+    "first_result_ms": 120.0488,
+    "elapsed_ms": 3023.1633,
+    "checked": 154,
+    "skipped": 495,
+    "unreadable": 1,
+    "limited": true,
+    "formats": {
+      "csv": [
+        1,
+        8.226199999999999
+      ],
+      "docx": [
+        86,
+        1193.2712
+      ],
+      "ini": [
+        2,
+        0.5745
+      ],
+      "json": [
+        3,
+        13.0223
+      ],
+      "log": [
+        2,
+        0.7129
+      ],
+      "md": [
+        8,
+        91.4357
+      ],
+      "pdf": [
+        7,
+        754.5510999999999
+      ],
+      "ps1": [
+        2,
+        0.39790000000000003
+      ],
+      "py": [
+        8,
+        78.0573
+      ],
+      "txt": [
+        35,
+        273.67900000000003
+      ]
+    },
+    "match_count": 47
+  },
+  "validation": {
+    "strict_app_clippy_all_targets_all_features": true,
+    "normal_features": true,
+    "format": true
+  },
+  "historical_idle_followup": {
+    "source": "v2-stage-b-idle-10000.json / v2-stage-b-idle-million.json",
+    "foreground_seconds": [
+      29.992326,
+      27.3056201
+    ],
+    "cpu_ms": [
+      0,
+      0
+    ],
+    "redraws": [
+      0,
+      0
+    ],
+    "repeated_this_run": false
+  },
+  "preview_feasibility": {
+    "implemented_this_run": false,
+    "docx_handler_registered": "84F66100-FF7C-4fb4-B0C0-02CD7FB668FE",
+    "pdf_handler_registered": "3A84F9C2-6164-485C-A7D9-4B27F8AC009E",
+    "word_application_registered": true
+  },
+  "unverified": [
+    "Physical HDR and mixed-DPI movement (hardware unavailable)",
+    "Individual chat app paste/drag targets (no message/draft modified)",
+    "True cold-cache launch remains Stage C",
+    "Universal PDF/Word recall: finite corpus only; no OCR, legacy .doc unsupported, scan limits remain"
+  ],
+  "no_stage_c_or_packaging": true
+}

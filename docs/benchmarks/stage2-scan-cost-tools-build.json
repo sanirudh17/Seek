@@ -1,0 +1,5 @@
+{
+    "command":  "cargo build -p seek-cli -p seek-helper --release --locked",
+    "exit_code":  0,
+    "wall_ms":  60878.9015
+}

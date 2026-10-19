@@ -1,0 +1,25 @@
+{
+    "checks":  [
+                   {
+                       "name":  "Fixture is ready",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Name and Content suggestions coexist",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Missing Content contains “quartz”",
+                       "passed":  false
+                   }
+               ],
+    "sha256":  "7A85F253AFFA658038D5E15E134922B2FFD1FFCDEC06E550AFFC7139998C309D",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-check-639277616866626082",
+    "captures":  [
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-suggestions-dark.png"
+                 ],
+    "content_observations":  [
+
+                             ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe"
+}

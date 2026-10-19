@@ -1,0 +1,9 @@
+{
+  "command": "cargo test -p seek --all-features --locked --offline",
+  "exit_code": 0,
+  "seconds": 13.487,
+  "passed": 15,
+  "failed": 0,
+  "ignored": 0,
+  "test_execution_seconds": 1.14
+}

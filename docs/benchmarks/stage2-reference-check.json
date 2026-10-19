@@ -1,0 +1,11 @@
+﻿{
+    "checked_utc":  "2026-10-11T14:44:46.3861703Z",
+    "usn_journal_rs":  {
+                           "date":  "2026-10-10T08:02:54Z",
+                           "revision":  "d811c0647ad10c66dcea0a41ca7897c39a95c87a",
+                           "message":  "Merge pull request #19 from wangfu91/api-refine\n\nPublic API refinements",
+                           "latest_stable":  "0.4.1",
+                           "updated_at":  "2026-05-27T05:49:52.525376Z"
+                       },
+    "decision":  "Use existing windows-sys 0.61.2 for the small NTFS/service boundary; usn-journal-rs is a maintained reference but its enumeration alone does not provide every hard-link name or authoritative size/mtime."
+}

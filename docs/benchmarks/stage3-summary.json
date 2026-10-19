@@ -1,0 +1,133 @@
+{
+  "stage": 3,
+  "status": "complete",
+  "framework_pins_unchanged": true,
+  "sha256": "25C9ADAD4CDE0EC5D74F612EFB468A4F964E0D7249D03C3DD512299DD8E8376D",
+  "rust_tests": {
+    "passed": 70,
+    "ignored": 1,
+    "report": "stage3-targeted-validation.json"
+  },
+  "release_build": {
+    "command": "cargo build --workspace --release --all-features --locked --offline",
+    "exit_code": 0,
+    "seconds": 291.536
+  },
+  "final_release_gui": {
+    "passed": 7,
+    "report": "stage3-settings-release-ui.json",
+    "scope": "Settings controls, persistence, restart and compact geometry"
+  },
+  "retained_full_gui": {
+    "passed": 23,
+    "report": "stage3-taste-ui-final.json",
+    "note": "Full product baseline before final header-only refinements; not rerun."
+  },
+  "private_working_set_mib": 38.0,
+  "private_commit_mib": 91.84,
+  "memory_scope": "Small owned Settings fixture after interaction; not a whole-drive, peak or sustained-idle benchmark.",
+  "close_ms": 89.168,
+  "close_exit": 0,
+  "normal_launch": {
+    "real_profile": true,
+    "data": "%USERPROFILE%\\AppData\\Local\\Seek",
+    "executable": "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+    "index_bytes": 186377752,
+    "utc": "2026-10-15T13:22:10.9313100Z",
+    "search_control_present": true,
+    "responding": true,
+    "sha256": "25C9ADAD4CDE0EC5D74F612EFB468A4F964E0D7249D03C3DD512299DD8E8376D",
+    "window_visible": true,
+    "pid": 35452,
+    "note": "Readiness retry handles the initially empty accessibility tree; this is not a cold-launch timing benchmark."
+  },
+  "correctness_fixture": {
+    "entries": 2065,
+    "missing": 0,
+    "extra": 0,
+    "stale": 0,
+    "report": "stage3-verify.json",
+    "note": "Retained engine verification; final Settings-only changes do not alter it."
+  },
+  "known_limits": [
+    "Mica fallback appearance and other DPI/HDR displays not visually checked.",
+    "HEIC and video depend on installed Windows providers.",
+    "Sustained idle, heavy churn and final latency/memory tuning remain Stage 4."
+  ],
+  "assumptions": [
+    "Latest toolbar mockup overrides earlier bare-toolbar geometry.",
+    "Rounded rectangle search chosen; no history dropdown or Ctrl+K badge.",
+    "Document-plus represents the existing hidden/system visibility toggle.",
+    "Last opened means successful opens through Seek."
+  ],
+  "next_step": "Stage 4 only after explicit authorization; no Stage 4 or deferred ideas started.",
+  "retained_toolbar_release": {
+    "sha256": "8D3E53CBD4E91F59859BE68C77A690526C755F374AD769CACC76B88F36B49D7E",
+    "gui": {
+      "passed": 7,
+      "report": "stage3-toolbar-release-ui.json"
+    },
+    "release_build": {
+      "command": "cargo build --workspace --release --all-features --locked --offline",
+      "exit_code": 0,
+      "seconds": 436.907
+    },
+    "note": "Baseline before the final Settings-only follow-up."
+  },
+  "final_settings_checks": [
+    {
+      "command": "cargo fmt --all",
+      "exit_code": 0,
+      "seconds": 4.532
+    },
+    {
+      "command": "cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings",
+      "exit_code": 0,
+      "seconds": 7.557
+    },
+    {
+      "command": "cargo build --workspace --all-features --locked --offline",
+      "exit_code": 0,
+      "seconds": 7.002
+    }
+  ],
+  "retained_toolbar_checks": [
+    {
+      "command": "cargo fmt --all",
+      "exit_code": 0,
+      "seconds": 5.054
+    },
+    {
+      "command": "cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings",
+      "exit_code": 0,
+      "seconds": 3.662
+    },
+    {
+      "command": "cargo build --workspace --all-features --locked --offline",
+      "exit_code": 0,
+      "seconds": 6.25
+    }
+  ],
+  "focused_app_tests": {
+    "passed": 15,
+    "report": "stage3-settings-tests.json",
+    "command": "cargo test -p seek --all-features --locked --offline",
+    "seconds": 13.487
+  },
+  "settings_followup": {
+    "report": "stage3-settings-review.json",
+    "review_disposition": "ship",
+    "theme_icons_px": 16,
+    "graphite": "#909090",
+    "helper_action_logical_width": 160,
+    "helper_modified": false,
+    "assumptions": [
+      "Graphite 90 means #909090; legacy #707070 presets migrate.",
+      "Reference physical dimensions are adapted to compact native laptop typography."
+    ],
+    "failed_harness_reports": [
+      "stage3-settings-ui-first-failure.json",
+      "stage3-settings-ui-second-failure.json"
+    ]
+  }
+}

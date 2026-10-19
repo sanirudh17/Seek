@@ -1,0 +1,48 @@
+﻿{
+    "captured_at":  "2026-10-11T11:24:50.6558778Z",
+    "checks":  [
+                   {
+                       "command":  "cargo build --workspace --locked",
+                       "exit_code":  0,
+                       "wall_seconds":  22.385714999999998,
+                       "tests_passed":  0,
+                       "log":  ".references/font-fix-check-0.log"
+                   },
+                   {
+                       "command":  "cargo test --workspace --all-features --locked",
+                       "exit_code":  0,
+                       "wall_seconds":  18.8959689,
+                       "tests_passed":  10,
+                       "log":  ".references/font-fix-check-1.log"
+                   },
+                   {
+                       "command":  "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+                       "exit_code":  0,
+                       "wall_seconds":  11.618448899999999,
+                       "tests_passed":  0,
+                       "log":  ".references/font-fix-check-2.log"
+                   },
+                   {
+                       "command":  "cargo fmt --all -- --check",
+                       "exit_code":  0,
+                       "wall_seconds":  4.4939689,
+                       "tests_passed":  0,
+                       "log":  ".references/font-fix-check-3.log"
+                   },
+                   {
+                       "command":  "rustc --test vendor/gpui-windows/src/frame_demand.rs -o target/frame-demand-tests.exe",
+                       "exit_code":  0,
+                       "wall_seconds":  0.4628188,
+                       "tests_passed":  0,
+                       "log":  ".references/font-fix-check-4.log"
+                   },
+                   {
+                       "command":  ".\\target\\frame-demand-tests.exe",
+                       "exit_code":  0,
+                       "wall_seconds":  0.2663663,
+                       "tests_passed":  2,
+                       "log":  ".references/font-fix-check-5.log"
+                   }
+               ],
+    "wrapper_note":  "The wrapper reported null-log parsing errors for silent successful commands. Child exits and timings above were checked; null handling in the ignored wrapper was corrected."
+}

@@ -1,0 +1,111 @@
+{
+    "checks":  [
+                   {
+                       "name":  "Fixture is ready",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Name and Content suggestions coexist",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Content mode shows only in-scope body matches",
+                       "passed":  true
+                   },
+                   {
+                       "detail":  {
+                                      "checked":  7,
+                                      "skipped":  2,
+                                      "errors":  0,
+                                      "limited":  false,
+                                      "cancelled":  false,
+                                      "elapsed_ms":  136.58880000000002,
+                                      "matches":  5
+                                  },
+                       "name":  "Content scan measurement",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "PDF direct extraction returns the owned PDF",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "A newer query replaces earlier content results",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Removing Content restores filename search",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Content locations save through Settings",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Missing Search files and folders",
+                       "passed":  false
+                   }
+               ],
+    "sha256":  "91E2B059BB1FB6FF4A50A882FF4A40F435EB7BEDC02E5B52BC9305386B07B4B2",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-check-639277611163450931",
+    "captures":  [
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-suggestions-dark.png",
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-content-dark.png",
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-content-settings.png"
+                 ],
+    "content_observations":  [
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  136.58880000000002,
+                                                    "matches":  5
+                                                },
+                                     "entry_ms":  10932.2907
+                                 },
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  113.41510000000001,
+                                                    "matches":  1
+                                                },
+                                     "entry_ms":  13770.886199999999
+                                 },
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  118.0813,
+                                                    "matches":  1
+                                                },
+                                     "entry_ms":  15247.5555
+                                 },
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  103.1497,
+                                                    "matches":  5
+                                                },
+                                     "entry_ms":  15965.041799999999
+                                 }
+                             ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe"
+}

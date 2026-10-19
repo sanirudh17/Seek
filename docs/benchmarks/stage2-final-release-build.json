@@ -1,0 +1,7 @@
+﻿{
+    "command":  "cargo build --workspace --release --all-features --locked",
+    "exit_code":  0,
+    "wall_ms":  250406.2844,
+    "finished_utc":  "2026-10-11T17:41:36.8818010Z",
+    "note":  "Final instrumentation build supports metrics through a pipe, preventing filesystem feedback while measuring C:"
+}

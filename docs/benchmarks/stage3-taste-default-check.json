@@ -1,0 +1,5 @@
+{
+  "command": "cargo check --workspace --locked --offline",
+  "exit_code": 0,
+  "seconds": 19.907
+}

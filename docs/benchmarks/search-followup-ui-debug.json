@@ -1,0 +1,86 @@
+{
+    "checks":  [
+                   {
+                       "name":  "Fixture is ready",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Plain t3 ranks exact filename first",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Enter on Name contains keeps exact t3 first",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Content still finds Markdown, code, UTF16 and DOCX",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Content has a partial presentation before final scan completion: Timed out waiting for assertion",
+                       "passed":  false
+                   }
+               ],
+    "sha256":  "D8E5A6C3E25CFC082A5F85CC8E447D8D6CF17B177431221B4112EF4A9C3AFD07",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-check-639278561124077345",
+    "captures":  [
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-name-contains-fixed.png"
+                 ],
+    "content_observations":  [
+                                 {
+                                     "interaction":  "content_partial",
+                                     "detail":  {
+                                                    "matches":  1,
+                                                    "checked":  1,
+                                                    "elapsed_ms":  1.4724
+                                                },
+                                     "entry_ms":  10669.3785
+                                 },
+                                 {
+                                     "interaction":  "content_partial",
+                                     "detail":  {
+                                                    "matches":  5,
+                                                    "checked":  7,
+                                                    "elapsed_ms":  227.18169999999998
+                                                },
+                                     "entry_ms":  10895.0909
+                                 },
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  227.215,
+                                                    "matches":  5,
+                                                    "first_result_ms":  1.3469,
+                                                    "formats":  {
+                                                                    "docx":  [
+                                                                                 1,
+                                                                                 0.5651999999999999
+                                                                             ],
+                                                                    "md":  [
+                                                                               1,
+                                                                               0.2744
+                                                                           ],
+                                                                    "pdf":  [
+                                                                                1,
+                                                                                222.9375
+                                                                            ],
+                                                                    "rs":  [
+                                                                               1,
+                                                                               0.3456
+                                                                           ],
+                                                                    "txt":  [
+                                                                                3,
+                                                                                0.7193
+                                                                            ]
+                                                                }
+                                                },
+                                     "entry_ms":  10895.4643
+                                 }
+                             ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe"
+}

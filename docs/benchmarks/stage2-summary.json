@@ -1,0 +1,430 @@
+{
+    "completed_utc":  "2026-10-12T16:17:45.3003166Z",
+    "passed":  true,
+    "checks_passed":  24,
+    "checks_total":  24,
+    "tests":  56,
+    "ignored":  1,
+    "first_indexes":  [
+                          {
+                              "name":  "First whole-C: index without helper source",
+                              "status":  {
+                                             "ready":  true,
+                                             "catching_up":  false,
+                                             "entries":  3016013,
+                                             "dirs":  278954,
+                                             "index_bytes":  174176448,
+                                             "skipped":  185,
+                                             "catch_up_ms":  22767.7124,
+                                             "error":  null,
+                                             "source":  "walker",
+                                             "helper_note":  null,
+                                             "journal_batches":  0,
+                                             "journal_directories":  0,
+                                             "journal_resets":  0,
+                                             "journal_reconciliations":  0,
+                                             "ntfs_fallbacks":  0,
+                                             "scan_profiles":  [
+
+                                                               ],
+                                             "checkpoint_ms":  2159.5743,
+                                             "checkpoint_status":  {
+                                                                       "ready":  true,
+                                                                       "catching_up":  false,
+                                                                       "entries":  3016013,
+                                                                       "dirs":  278954,
+                                                                       "index_bytes":  174176448,
+                                                                       "skipped":  185,
+                                                                       "catch_up_ms":  22767.7124,
+                                                                       "error":  null,
+                                                                       "source":  "walker",
+                                                                       "helper_note":  null,
+                                                                       "journal_batches":  0,
+                                                                       "journal_directories":  0,
+                                                                       "journal_resets":  0,
+                                                                       "journal_reconciliations":  0,
+                                                                       "ntfs_fallbacks":  0,
+                                                                       "scan_profiles":  [
+
+                                                                                         ]
+                                                                   },
+                                             "shutdown_ms":  13.608
+                                         },
+                              "wall_ms":  24976.564700000003
+                          },
+                          {
+                              "name":  "First whole-C: index with helper",
+                              "status":  {
+                                             "ready":  true,
+                                             "catching_up":  false,
+                                             "entries":  3016024,
+                                             "dirs":  278956,
+                                             "index_bytes":  174237516,
+                                             "skipped":  189,
+                                             "catch_up_ms":  21932.1268,
+                                             "error":  null,
+                                             "source":  "ntfs + usn",
+                                             "helper_note":  null,
+                                             "journal_batches":  26,
+                                             "journal_directories":  63,
+                                             "journal_resets":  0,
+                                             "journal_reconciliations":  0,
+                                             "ntfs_fallbacks":  0,
+                                             "scan_profiles":  [
+                                                                   {
+                                                                       "root":  [
+                                                                                    47,
+                                                                                    67,
+                                                                                    58
+                                                                                ],
+                                                                       "records":  2985300,
+                                                                       "directories":  278954,
+                                                                       "metadata_ms":  8578.4632,
+                                                                       "namespace_ms":  9277.0485
+                                                                   }
+                                                               ],
+                                             "checkpoint_ms":  2146.5937999999996,
+                                             "checkpoint_status":  {
+                                                                       "ready":  true,
+                                                                       "catching_up":  false,
+                                                                       "entries":  3016024,
+                                                                       "dirs":  278956,
+                                                                       "index_bytes":  174237516,
+                                                                       "skipped":  189,
+                                                                       "catch_up_ms":  21932.1268,
+                                                                       "error":  null,
+                                                                       "source":  "ntfs + usn",
+                                                                       "helper_note":  null,
+                                                                       "journal_batches":  27,
+                                                                       "journal_directories":  64,
+                                                                       "journal_resets":  0,
+                                                                       "journal_reconciliations":  0,
+                                                                       "ntfs_fallbacks":  0,
+                                                                       "scan_profiles":  [
+                                                                                             {
+                                                                                                 "root":  [
+                                                                                                              47,
+                                                                                                              67,
+                                                                                                              58
+                                                                                                          ],
+                                                                                                 "records":  2985300,
+                                                                                                 "directories":  278954,
+                                                                                                 "metadata_ms":  8578.4632,
+                                                                                                 "namespace_ms":  9277.0485
+                                                                                             }
+                                                                                         ]
+                                                                   },
+                                             "shutdown_ms":  12.3811
+                                         },
+                              "wall_ms":  24133.1415
+                          }
+                      ],
+    "real_folders":  [
+                         {
+                             "name":  "Real Downloads",
+                             "verification":  {
+                                                  "ground_truth":  501,
+                                                  "indexed":  501,
+                                                  "missing":  [
+
+                                                              ],
+                                                  "extra":  [
+
+                                                            ],
+                                                  "stale":  [
+
+                                                            ],
+                                                  "denied":  [
+
+                                                             ]
+                                              },
+                             "catch_up_ms":  7842.0568
+                         },
+                         {
+                             "name":  "Real Documents",
+                             "verification":  {
+                                                  "ground_truth":  565,
+                                                  "indexed":  565,
+                                                  "missing":  [
+
+                                                              ],
+                                                  "extra":  [
+
+                                                            ],
+                                                  "stale":  [
+
+                                                            ],
+                                                  "denied":  [
+
+                                                             ]
+                                              },
+                             "catch_up_ms":  33.5977
+                         },
+                         {
+                             "name":  "Real Desktop",
+                             "verification":  {
+                                                  "ground_truth":  24,
+                                                  "indexed":  24,
+                                                  "missing":  [
+
+                                                              ],
+                                                  "extra":  [
+
+                                                            ],
+                                                  "stale":  [
+
+                                                            ],
+                                                  "denied":  [
+
+                                                             ]
+                                              },
+                             "catch_up_ms":  18.6674
+                         },
+                         {
+                             "name":  "Whole-drive index covers real Downloads",
+                             "verification":  {
+                                                  "ground_truth":  501,
+                                                  "indexed":  501,
+                                                  "missing":  [
+
+                                                              ],
+                                                  "extra":  [
+
+                                                            ],
+                                                  "stale":  [
+
+                                                            ],
+                                                  "denied":  [
+
+                                                             ]
+                                              },
+                             "catch_up_ms":  1688.4666
+                         },
+                         {
+                             "name":  "Whole-drive index covers real Documents",
+                             "verification":  {
+                                                  "ground_truth":  565,
+                                                  "indexed":  565,
+                                                  "missing":  [
+
+                                                              ],
+                                                  "extra":  [
+
+                                                            ],
+                                                  "stale":  [
+
+                                                            ],
+                                                  "denied":  [
+
+                                                             ]
+                                              },
+                             "catch_up_ms":  1705.4784
+                         },
+                         {
+                             "name":  "Whole-drive index covers real Desktop",
+                             "verification":  {
+                                                  "ground_truth":  24,
+                                                  "indexed":  24,
+                                                  "missing":  [
+
+                                                              ],
+                                                  "extra":  [
+
+                                                            ],
+                                                  "stale":  [
+
+                                                            ],
+                                                  "denied":  [
+
+                                                             ]
+                                              },
+                             "catch_up_ms":  1579.3271
+                         }
+                     ],
+    "launch":  {
+                   "scope":  "C:\\",
+                   "measurement":  "Saved index; Windows caches not flushed; kernel process creation to Present return; metrics use a user-restricted pipe to avoid indexing trace writes",
+                   "process_launch_to_cached_present_ms":  277.791,
+                   "process_launch_to_correct_present_ms":  2805.871,
+                   "catch_up_ms":  2731.6487,
+                   "cached_catching_up":  true,
+                   "status":  {
+                                  "ready":  true,
+                                  "catching_up":  false,
+                                  "entries":  3016024,
+                                  "dirs":  278956,
+                                  "index_bytes":  174237858,
+                                  "skipped":  191,
+                                  "catch_up_ms":  2731.6487,
+                                  "error":  null,
+                                  "source":  "ntfs + usn",
+                                  "helper_note":  null,
+                                  "journal_batches":  99,
+                                  "journal_directories":  100,
+                                  "journal_resets":  0,
+                                  "journal_reconciliations":  0,
+                                  "ntfs_fallbacks":  0,
+                                  "scan_profiles":  [
+
+                                                    ]
+                              },
+                   "private_working_set_bytes":  47923200,
+                   "private_commit_bytes":  93646848,
+                   "close_ms":  110.6748,
+                   "exit_code":  0
+               },
+    "idle":  {
+                 "wall_ms":  3146.9624000000003,
+                 "cpu_ms":  0,
+                 "private_working_set_bytes":  9408512,
+                 "private_commit_bytes":  14970880
+             },
+    "recovery":  [
+                     {
+                         "name":  "Recover invalidated Downloads history",
+                         "catch_up_ms":  21.6323,
+                         "status":  {
+                                        "ready":  true,
+                                        "catching_up":  false,
+                                        "entries":  505,
+                                        "dirs":  10,
+                                        "index_bytes":  49857,
+                                        "skipped":  0,
+                                        "catch_up_ms":  21.6323,
+                                        "error":  null,
+                                        "source":  "ntfs + usn",
+                                        "helper_note":  "USN history unavailable/replaced; full folder reconciliation",
+                                        "journal_batches":  4,
+                                        "journal_directories":  0,
+                                        "journal_resets":  1,
+                                        "journal_reconciliations":  0,
+                                        "ntfs_fallbacks":  0,
+                                        "scan_profiles":  [
+
+                                                          ]
+                                    },
+                         "verification":  {
+                                              "ground_truth":  501,
+                                              "indexed":  501,
+                                              "missing":  [
+
+                                                          ],
+                                              "extra":  [
+
+                                                        ],
+                                              "stale":  [
+
+                                                        ],
+                                              "denied":  [
+
+                                                         ]
+                                          }
+                     },
+                     {
+                         "name":  "Closed changes and deleted parent replay without full scan",
+                         "catch_up_ms":  19.6801,
+                         "status":  {
+                                        "ready":  true,
+                                        "catching_up":  false,
+                                        "entries":  16,
+                                        "dirs":  12,
+                                        "index_bytes":  12054,
+                                        "skipped":  2,
+                                        "catch_up_ms":  19.6801,
+                                        "error":  null,
+                                        "source":  "ntfs + usn",
+                                        "helper_note":  null,
+                                        "journal_batches":  5,
+                                        "journal_directories":  6,
+                                        "journal_resets":  0,
+                                        "journal_reconciliations":  0,
+                                        "ntfs_fallbacks":  0,
+                                        "scan_profiles":  [
+
+                                                          ]
+                                    },
+                         "verification":  {
+                                              "ground_truth":  8,
+                                              "indexed":  8,
+                                              "missing":  [
+
+                                                          ],
+                                              "extra":  [
+
+                                                        ],
+                                              "stale":  [
+
+                                                        ],
+                                              "denied":  [
+
+                                                         ]
+                                          }
+                     },
+                     {
+                         "name":  "Lost history recovers closed create/rename/move/delete",
+                         "catch_up_ms":  18.4251,
+                         "status":  {
+                                        "ready":  true,
+                                        "catching_up":  false,
+                                        "entries":  16,
+                                        "dirs":  12,
+                                        "index_bytes":  12054,
+                                        "skipped":  2,
+                                        "catch_up_ms":  18.4251,
+                                        "error":  null,
+                                        "source":  "ntfs + usn",
+                                        "helper_note":  "USN history unavailable/replaced; full folder reconciliation",
+                                        "journal_batches":  4,
+                                        "journal_directories":  0,
+                                        "journal_resets":  1,
+                                        "journal_reconciliations":  0,
+                                        "ntfs_fallbacks":  0,
+                                        "scan_profiles":  [
+
+                                                          ]
+                                    },
+                         "verification":  {
+                                              "ground_truth":  8,
+                                              "indexed":  8,
+                                              "missing":  [
+
+                                                          ],
+                                              "extra":  [
+
+                                                        ],
+                                              "stale":  [
+
+                                                        ],
+                                              "denied":  [
+
+                                                         ]
+                                          }
+                     }
+                 ],
+    "release_build":  {
+                          "wall_ms":  328784.8707,
+                          "command":  "cargo build --workspace --release --all-features --locked",
+                          "hashes":  [
+                                         {
+                                             "Path":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek-helper.exe",
+                                             "Hash":  "151539B785DBAF56E80AC8F403BCF383988A48762FE8A13B47F21652700D9560"
+                                         },
+                                         {
+                                             "Path":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek-cli.exe",
+                                             "Hash":  "398F6E5E34C28957192F58F2983F69B2FA4EDC1A6F8D7B2F72FEAE7124D9FD60"
+                                         },
+                                         {
+                                             "Path":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+                                             "Hash":  "1F6324B6EB2B8C69A4E4553695754909DCA114E46E4C70EBF95F24DE822C3815"
+                                         }
+                                     ],
+                          "completed_utc":  "2026-10-12T16:14:26.7801086Z",
+                          "exit_code":  0
+                      },
+    "limitations":  [
+                        "Sequential live-drive runs; OS caches not flushed; no fsearch parity claim",
+                        "Independent verification covers real Known Folders and fixtures, not all protected/system C: contents",
+                        "Helper idle sample is 3.147 seconds; sustained foreground app idle and heavy churn are Stage 4",
+                        "GPUI Kit remains tested 0.7.1; compatible 0.7.3 upgrade is the first Stage 3 task"
+                    ]
+}

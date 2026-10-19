@@ -1,0 +1,44 @@
+{
+  "catch_up_ms": 1887.3519000000001,
+  "report": {
+    "denied": [],
+    "extra": [],
+    "ground_truth": 11,
+    "indexed": 11,
+    "missing": [],
+    "stale": []
+  },
+  "status": {
+    "catch_up_ms": 1887.3519000000001,
+    "catching_up": false,
+    "dirs": 304322,
+    "entries": 3377665,
+    "error": null,
+    "helper_note": null,
+    "index_bytes": 187318579,
+    "journal_batches": 16,
+    "journal_directories": 29,
+    "journal_reconciliations": 0,
+    "journal_resets": 0,
+    "ntfs_fallbacks": 0,
+    "progress": {
+      "apply_ms": 1.5798999999999996,
+      "completed": 175,
+      "connect_ms": 1.2021,
+      "full_relist_done": false,
+      "load_ms": 48.3728,
+      "phase": "Replaying journal",
+      "plan_ms": 13.628400000000001,
+      "priority_ms": 126.6803,
+      "priority_ready": true,
+      "read_ms": 87.98309999999996,
+      "save_ms": 1754.4864,
+      "total": null
+    },
+    "ready": true,
+    "scan_profiles": [],
+    "skipped": 330,
+    "source": "ntfs + usn"
+  },
+  "verify_ms": 8407.5403
+}

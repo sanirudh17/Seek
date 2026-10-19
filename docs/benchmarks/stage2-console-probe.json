@@ -1,0 +1,10 @@
+{
+  "available": true,
+  "server_pid": 24344,
+  "trusted_installed_service": false,
+  "response": {
+    "Pong": {
+      "version": 1
+    }
+  }
+}

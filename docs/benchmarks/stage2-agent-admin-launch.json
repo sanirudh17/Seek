@@ -1,0 +1,6 @@
+{
+    "method":  "Normal Windows RunAs; service controller elevated, all engine/UI checks ordinary desktop token",
+    "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File %USERPROFILE%\\Seek\\scripts\\finish-stage2.ps1",
+    "started_utc":  "2026-10-12T16:15:43.3036621Z",
+    "process_id":  17184
+}

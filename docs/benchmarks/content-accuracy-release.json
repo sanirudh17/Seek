@@ -1,0 +1,430 @@
+[
+  {
+    "query": "quartzmarker",
+    "locations": [
+      "%USERPROFILE%\\Seek\\.bench-data\\content-accuracy\\files"
+    ],
+    "accuracy": {
+      "passed": true,
+      "expected": [
+        "Plain.txt",
+        "Structured.docx",
+        "Structured.pdf"
+      ],
+      "actual": [
+        "Plain.txt",
+        "Structured.docx",
+        "Structured.pdf"
+      ]
+    },
+    "names": [
+      "Plain.txt",
+      "Structured.docx",
+      "Structured.pdf"
+    ],
+    "first_result_ms": 23.1092,
+    "elapsed_ms": 412.8243,
+    "checked": 8,
+    "skipped": 1,
+    "unreadable": 2,
+    "limited": false,
+    "formats": {
+      "docx": [
+        3,
+        31.167
+      ],
+      "pdf": [
+        4,
+        353.7127
+      ],
+      "txt": [
+        1,
+        9.3006
+      ]
+    },
+    "partials": [
+      {
+        "matches": 1,
+        "first_ms": 23.1092
+      },
+      {
+        "matches": 3,
+        "first_ms": 23.1092
+      }
+    ]
+  },
+  {
+    "query": "CAFÉ",
+    "locations": [
+      "%USERPROFILE%\\Seek\\.bench-data\\content-accuracy\\files"
+    ],
+    "accuracy": {
+      "passed": true,
+      "expected": [
+        "Structured.docx"
+      ],
+      "actual": [
+        "Structured.docx"
+      ]
+    },
+    "names": [
+      "Structured.docx"
+    ],
+    "first_result_ms": 1.6502999999999999,
+    "elapsed_ms": 261.34069999999997,
+    "checked": 8,
+    "skipped": 1,
+    "unreadable": 2,
+    "limited": false,
+    "formats": {
+      "docx": [
+        3,
+        0.6737
+      ],
+      "pdf": [
+        4,
+        258.8011
+      ],
+      "txt": [
+        1,
+        0.1192
+      ]
+    },
+    "partials": [
+      {
+        "matches": 1,
+        "first_ms": 1.6502999999999999
+      }
+    ]
+  },
+  {
+    "query": "a+b",
+    "locations": [
+      "%USERPROFILE%\\Seek\\.bench-data\\content-accuracy\\files"
+    ],
+    "accuracy": {
+      "passed": true,
+      "expected": [
+        "Structured.docx"
+      ],
+      "actual": [
+        "Structured.docx"
+      ]
+    },
+    "names": [
+      "Structured.docx"
+    ],
+    "first_result_ms": 1.6972,
+    "elapsed_ms": 250.46550000000002,
+    "checked": 8,
+    "skipped": 1,
+    "unreadable": 2,
+    "limited": false,
+    "formats": {
+      "docx": [
+        3,
+        0.6593
+      ],
+      "pdf": [
+        4,
+        248.0548
+      ],
+      "txt": [
+        1,
+        0.1466
+      ]
+    },
+    "partials": [
+      {
+        "matches": 1,
+        "first_ms": 1.6972
+      }
+    ]
+  },
+  {
+    "query": "table cedar",
+    "locations": [
+      "%USERPROFILE%\\Seek\\.bench-data\\content-accuracy\\files"
+    ],
+    "accuracy": {
+      "passed": true,
+      "expected": [
+        "Structured.docx"
+      ],
+      "actual": [
+        "Structured.docx"
+      ]
+    },
+    "names": [
+      "Structured.docx"
+    ],
+    "first_result_ms": 1.8054,
+    "elapsed_ms": 236.9454,
+    "checked": 8,
+    "skipped": 1,
+    "unreadable": 2,
+    "limited": false,
+    "formats": {
+      "docx": [
+        3,
+        0.6645
+      ],
+      "pdf": [
+        4,
+        234.1328
+      ],
+      "txt": [
+        1,
+        0.1688
+      ]
+    },
+    "partials": [
+      {
+        "matches": 1,
+        "first_ms": 1.8054
+      }
+    ]
+  },
+  {
+    "query": "header copper",
+    "locations": [
+      "%USERPROFILE%\\Seek\\.bench-data\\content-accuracy\\files"
+    ],
+    "accuracy": {
+      "passed": true,
+      "expected": [
+        "Structured.docx"
+      ],
+      "actual": [
+        "Structured.docx"
+      ]
+    },
+    "names": [
+      "Structured.docx"
+    ],
+    "first_result_ms": 1.6915,
+    "elapsed_ms": 255.60509999999996,
+    "checked": 8,
+    "skipped": 1,
+    "unreadable": 2,
+    "limited": false,
+    "formats": {
+      "docx": [
+        3,
+        0.7848999999999999
+      ],
+      "pdf": [
+        4,
+        253.0616
+      ],
+      "txt": [
+        1,
+        0.1522
+      ]
+    },
+    "partials": [
+      {
+        "matches": 1,
+        "first_ms": 1.6915
+      }
+    ]
+  },
+  {
+    "query": "footer silver",
+    "locations": [
+      "%USERPROFILE%\\Seek\\.bench-data\\content-accuracy\\files"
+    ],
+    "accuracy": {
+      "passed": true,
+      "expected": [
+        "Structured.docx"
+      ],
+      "actual": [
+        "Structured.docx"
+      ]
+    },
+    "names": [
+      "Structured.docx"
+    ],
+    "first_result_ms": 1.3874,
+    "elapsed_ms": 242.6835,
+    "checked": 8,
+    "skipped": 1,
+    "unreadable": 2,
+    "limited": false,
+    "formats": {
+      "docx": [
+        3,
+        0.5585
+      ],
+      "pdf": [
+        4,
+        240.5789
+      ],
+      "txt": [
+        1,
+        0.1206
+      ]
+    },
+    "partials": [
+      {
+        "matches": 1,
+        "first_ms": 1.3874
+      }
+    ]
+  },
+  {
+    "query": "blueberry",
+    "locations": [
+      "%USERPROFILE%\\Seek\\.bench-data\\content-accuracy\\files"
+    ],
+    "accuracy": {
+      "passed": true,
+      "expected": [
+        "Structured.pdf"
+      ],
+      "actual": [
+        "Structured.pdf"
+      ]
+    },
+    "names": [
+      "Structured.pdf"
+    ],
+    "first_result_ms": 260.7051,
+    "elapsed_ms": 260.7524,
+    "checked": 8,
+    "skipped": 1,
+    "unreadable": 2,
+    "limited": false,
+    "formats": {
+      "docx": [
+        3,
+        0.6482
+      ],
+      "pdf": [
+        4,
+        258.2037
+      ],
+      "txt": [
+        1,
+        0.1056
+      ]
+    },
+    "partials": [
+      {
+        "matches": 1,
+        "first_ms": 260.7051
+      }
+    ]
+  },
+  {
+    "query": "second page amber",
+    "locations": [
+      "%USERPROFILE%\\Seek\\.bench-data\\content-accuracy\\files"
+    ],
+    "accuracy": {
+      "passed": true,
+      "expected": [
+        "Structured.pdf"
+      ],
+      "actual": [
+        "Structured.pdf"
+      ]
+    },
+    "names": [
+      "Structured.pdf"
+    ],
+    "first_result_ms": 258.3693,
+    "elapsed_ms": 258.418,
+    "checked": 8,
+    "skipped": 1,
+    "unreadable": 2,
+    "limited": false,
+    "formats": {
+      "docx": [
+        3,
+        0.6577999999999999
+      ],
+      "pdf": [
+        4,
+        255.6673
+      ],
+      "txt": [
+        1,
+        0.1013
+      ]
+    },
+    "partials": [
+      {
+        "matches": 1,
+        "first_ms": 258.3693
+      }
+    ]
+  },
+  {
+    "query": "metadataonlytoken",
+    "locations": [
+      "%USERPROFILE%\\Seek\\.bench-data\\content-accuracy\\files"
+    ],
+    "accuracy": {
+      "passed": true,
+      "expected": [],
+      "actual": []
+    },
+    "names": [],
+    "first_result_ms": null,
+    "elapsed_ms": 239.5907,
+    "checked": 8,
+    "skipped": 1,
+    "unreadable": 2,
+    "limited": false,
+    "formats": {
+      "docx": [
+        3,
+        0.6327
+      ],
+      "pdf": [
+        4,
+        237.3182
+      ],
+      "txt": [
+        1,
+        0.11739999999999999
+      ]
+    },
+    "partials": []
+  },
+  {
+    "query": "absentneedle",
+    "locations": [
+      "%USERPROFILE%\\Seek\\.bench-data\\content-accuracy\\files"
+    ],
+    "accuracy": {
+      "passed": true,
+      "expected": [],
+      "actual": []
+    },
+    "names": [],
+    "first_result_ms": null,
+    "elapsed_ms": 237.7552,
+    "checked": 8,
+    "skipped": 1,
+    "unreadable": 2,
+    "limited": false,
+    "formats": {
+      "docx": [
+        3,
+        0.6557
+      ],
+      "pdf": [
+        4,
+        234.9898
+      ],
+      "txt": [
+        1,
+        0.10890000000000001
+      ]
+    },
+    "partials": []
+  }
+]

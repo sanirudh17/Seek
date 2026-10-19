@@ -1,0 +1,106 @@
+{
+  "root": ".bench-data/correctness-31204-1791717950263251800\\files",
+  "fixtures": [
+    "3000-file folder",
+    "emoji",
+    "Unicode",
+    "long path",
+    "unpaired surrogate on disk",
+    "hard link",
+    "junction loop skipped",
+    "live and closed case-only rename"
+  ],
+  "first": {
+    "ground_truth": 3015,
+    "indexed": 3015,
+    "missing": [],
+    "extra": [],
+    "stale": [],
+    "denied": []
+  },
+  "live": {
+    "ground_truth": 3015,
+    "indexed": 3015,
+    "missing": [],
+    "extra": [],
+    "stale": [],
+    "denied": []
+  },
+  "closed": {
+    "ground_truth": 3015,
+    "indexed": 3015,
+    "missing": [],
+    "extra": [],
+    "stale": [],
+    "denied": []
+  },
+  "first_status": {
+    "ready": true,
+    "catching_up": false,
+    "entries": 3022,
+    "dirs": 12,
+    "index_bytes": 211008,
+    "skipped": 0,
+    "catch_up_ms": 57.1708,
+    "error": null
+  },
+  "live_ms": 148.82819999999998,
+  "walker_catch_up_ms": 13.656,
+  "helper_catch_up_ms": null,
+  "accuracy": [
+    {
+      "query": "annual-report-final",
+      "target": "annual-report-final.txt",
+      "top5": true
+    },
+    {
+      "query": "report",
+      "target": "annual-report-final.txt",
+      "top5": true
+    },
+    {
+      "query": "invoce",
+      "target": "invoice-budget.pdf",
+      "top5": true
+    },
+    {
+      "query": "invocie",
+      "target": "invoice-budget.pdf",
+      "top5": true
+    },
+    {
+      "query": "Résumé",
+      "target": "Résumé-🚀.txt",
+      "top5": true
+    },
+    {
+      "query": "casedifference",
+      "target": "CaseDifference.TXT",
+      "top5": true
+    },
+    {
+      "query": "long-path",
+      "target": "long-path-🚀.txt",
+      "top5": true
+    },
+    {
+      "query": "'annual-report-final.txt",
+      "target": "annual-report-final.txt",
+      "top5": true
+    },
+    {
+      "query": "^annual",
+      "target": "annual-report-final.txt",
+      "top5": true
+    },
+    {
+      "query": "report in:\"%USERPROFILE%\\Seek\\.bench-data\\correctness-31204-1791717950263251800\\files\\Downloads\"",
+      "target": "annual-report-final.txt",
+      "top5": true
+    }
+  ],
+  "accuracy_passed": 10,
+  "accuracy_total": 10,
+  "accuracy_percent": 100.0,
+  "typo_claim_comparison": "Different workload; no comparison with upstream percentage"
+}

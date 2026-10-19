@@ -1,0 +1,37 @@
+{
+    "checked_utc":  "2026-10-12T13:53:19.7287539Z",
+    "executable":  "target/x86_64-pc-windows-msvc/release/seek.exe",
+    "root":  "C:\\",
+    "saved_index":  ".bench-data/stage2-final/run-639273688913338727/drive-helper",
+    "installed_helper_sha256":  "3C80F84C4F60CF8F4490D7691E2FBB306947482E91CEC49C1A6A89CDE07EBC67",
+    "observations":  [
+                         {
+                             "scope":  "Pictures",
+                             "verified_by":  "Agent inspected the actual post-click screenshot",
+                             "files_visible":  true,
+                             "folders_visible":  [
+                                                     "Camera Roll",
+                                                     "Screenshots",
+                                                     "SnapCapture"
+                                                 ],
+                             "screenshot":  "%USERPROFILE%\\AppData\\Local\\Temp\\orca-computer-use\\b1de6cee-caac-4e07-8c5a-66e05320d499-screenshot.png"
+                         },
+                         {
+                             "scope":  "Videos",
+                             "verified_by":  "Agent inspected the actual post-click screenshot",
+                             "files_visible":  true,
+                             "folders_visible":  [
+                                                     "Screen Recordings",
+                                                     "WinShot",
+                                                     "Recordings",
+                                                     "SnapShot"
+                                                 ],
+                             "screenshot":  "%USERPROFILE%\\AppData\\Local\\Temp\\orca-computer-use\\7eaf0ec7-7b71-401c-9719-8130e306eed6-screenshot.png"
+                         }
+                     ],
+    "owned_gui_pid":  28244,
+    "process_remaining":  false,
+    "catch_up_ms":  null,
+    "private_working_set_bytes":  null,
+    "timing_note":  "The interim harness compared the rows array directly with zero; it ended without persisting launch metrics. No launch, catch-up, memory or graceful-close measurement is certified by this run. The final administrator script correctly tests rows.Count and will measure the updated installed helper."
+}

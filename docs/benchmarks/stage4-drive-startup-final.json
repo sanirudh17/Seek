@@ -1,0 +1,315 @@
+{
+    "data":  "%USERPROFILE%\\Seek\\.bench-data\\stage4-drive-639276827115925899",
+    "root":  "C:\\",
+    "sha256":  "6F07B9F048CCDDC9192DB9F2ACF9300137D3A144A033250DAC133135A6BBD8D7",
+    "samples":  [
+                    {
+                        "working_set_bytes":  260616192,
+                        "correct_present_ms":  55502.472,
+                        "milestones":  [
+                                           {
+                                               "phase":  "entry",
+                                               "entry_ms":  0.25880000000000003
+                                           },
+                                           {
+                                               "phase":  "windows_platform_start",
+                                               "entry_ms":  0.5947
+                                           },
+                                           {
+                                               "phase":  "direct_write_ready",
+                                               "entry_ms":  5.6678
+                                           },
+                                           {
+                                               "phase":  "gpui_application_created",
+                                               "entry_ms":  41.7005
+                                           },
+                                           {
+                                               "phase":  "directx_start",
+                                               "entry_ms":  41.7397
+                                           },
+                                           {
+                                               "phase":  "directx_devices_ready",
+                                               "entry_ms":  182.6786
+                                           },
+                                           {
+                                               "phase":  "directx_ready",
+                                               "entry_ms":  183.2717
+                                           },
+                                           {
+                                               "phase":  "gpui_finish_launching",
+                                               "entry_ms":  183.29680000000002
+                                           },
+                                           {
+                                               "phase":  "kit_initialized",
+                                               "entry_ms":  187.66369999999998
+                                           },
+                                           {
+                                               "phase":  "search_worker_started",
+                                               "entry_ms":  244.3826
+                                           },
+                                           {
+                                               "phase":  "backend_spawned",
+                                               "entry_ms":  244.4304
+                                           },
+                                           {
+                                               "phase":  "known_folders_resolved",
+                                               "entry_ms":  244.68110000000001
+                                           },
+                                           {
+                                               "phase":  "shell_constructing",
+                                               "entry_ms":  331.7395
+                                           },
+                                           {
+                                               "phase":  "shell_constructed",
+                                               "entry_ms":  332.4523
+                                           },
+                                           {
+                                               "phase":  "window_opened",
+                                               "entry_ms":  346.1639
+                                           },
+                                           {
+                                               "phase":  "cached_search_started",
+                                               "entry_ms":  364.1033
+                                           },
+                                           {
+                                               "phase":  "cached_rows_materialized",
+                                               "entry_ms":  378.44309999999996
+                                           }
+                                       ],
+                        "exit_code":  0,
+                        "close_ms":  184.67430000000002,
+                        "run":  1,
+                        "catch_up_ms":  55105.868,
+                        "private_commit_bytes":  124211200,
+                        "cached_present_ms":  460.6167,
+                        "status":  {
+                                       "ready":  true,
+                                       "catching_up":  false,
+                                       "entries":  3248542,
+                                       "dirs":  301881,
+                                       "index_bytes":  183905775,
+                                       "skipped":  321,
+                                       "catch_up_ms":  55105.868,
+                                       "error":  null,
+                                       "source":  "ntfs + usn",
+                                       "helper_note":  "USN history unavailable/replaced; full folder reconciliation",
+                                       "journal_batches":  188,
+                                       "journal_directories":  205,
+                                       "journal_resets":  1,
+                                       "journal_reconciliations":  0,
+                                       "ntfs_fallbacks":  0,
+                                       "scan_profiles":  [
+
+                                                         ]
+                                   },
+                        "cached_catching_up":  true,
+                        "private_working_set_bytes":  67989504
+                    },
+                    {
+                        "working_set_bytes":  247046144,
+                        "correct_present_ms":  3033.1958,
+                        "milestones":  [
+                                           {
+                                               "phase":  "entry",
+                                               "entry_ms":  0.3358
+                                           },
+                                           {
+                                               "phase":  "windows_platform_start",
+                                               "entry_ms":  0.5559999999999999
+                                           },
+                                           {
+                                               "phase":  "direct_write_ready",
+                                               "entry_ms":  5.149500000000001
+                                           },
+                                           {
+                                               "phase":  "gpui_application_created",
+                                               "entry_ms":  44.712300000000006
+                                           },
+                                           {
+                                               "phase":  "directx_start",
+                                               "entry_ms":  44.758199999999995
+                                           },
+                                           {
+                                               "phase":  "directx_devices_ready",
+                                               "entry_ms":  137.0828
+                                           },
+                                           {
+                                               "phase":  "directx_ready",
+                                               "entry_ms":  137.6532
+                                           },
+                                           {
+                                               "phase":  "gpui_finish_launching",
+                                               "entry_ms":  137.671
+                                           },
+                                           {
+                                               "phase":  "kit_initialized",
+                                               "entry_ms":  141.4573
+                                           },
+                                           {
+                                               "phase":  "search_worker_started",
+                                               "entry_ms":  211.3901
+                                           },
+                                           {
+                                               "phase":  "backend_spawned",
+                                               "entry_ms":  211.4684
+                                           },
+                                           {
+                                               "phase":  "known_folders_resolved",
+                                               "entry_ms":  211.7595
+                                           },
+                                           {
+                                               "phase":  "shell_constructing",
+                                               "entry_ms":  296.90860000000004
+                                           },
+                                           {
+                                               "phase":  "shell_constructed",
+                                               "entry_ms":  297.1531
+                                           },
+                                           {
+                                               "phase":  "cached_search_started",
+                                               "entry_ms":  299.75039999999996
+                                           },
+                                           {
+                                               "phase":  "window_opened",
+                                               "entry_ms":  306.09560000000005
+                                           },
+                                           {
+                                               "phase":  "cached_rows_materialized",
+                                               "entry_ms":  314.023
+                                           }
+                                       ],
+                        "exit_code":  0,
+                        "close_ms":  154.9478,
+                        "run":  2,
+                        "catch_up_ms":  2678.7694,
+                        "private_commit_bytes":  145326080,
+                        "cached_present_ms":  382.2527,
+                        "status":  {
+                                       "ready":  true,
+                                       "catching_up":  false,
+                                       "entries":  3248543,
+                                       "dirs":  301881,
+                                       "index_bytes":  183906672,
+                                       "skipped":  321,
+                                       "catch_up_ms":  2678.7694,
+                                       "error":  null,
+                                       "source":  "ntfs + usn",
+                                       "helper_note":  null,
+                                       "journal_batches":  41,
+                                       "journal_directories":  72,
+                                       "journal_resets":  0,
+                                       "journal_reconciliations":  0,
+                                       "ntfs_fallbacks":  0,
+                                       "scan_profiles":  [
+
+                                                         ]
+                                   },
+                        "cached_catching_up":  true,
+                        "private_working_set_bytes":  60641280
+                    },
+                    {
+                        "working_set_bytes":  238567424,
+                        "correct_present_ms":  2297.8,
+                        "milestones":  [
+                                           {
+                                               "phase":  "entry",
+                                               "entry_ms":  0.1883
+                                           },
+                                           {
+                                               "phase":  "windows_platform_start",
+                                               "entry_ms":  0.43019999999999997
+                                           },
+                                           {
+                                               "phase":  "direct_write_ready",
+                                               "entry_ms":  5.4379
+                                           },
+                                           {
+                                               "phase":  "gpui_application_created",
+                                               "entry_ms":  39.3784
+                                           },
+                                           {
+                                               "phase":  "directx_start",
+                                               "entry_ms":  39.427299999999995
+                                           },
+                                           {
+                                               "phase":  "directx_devices_ready",
+                                               "entry_ms":  177.9947
+                                           },
+                                           {
+                                               "phase":  "directx_ready",
+                                               "entry_ms":  178.41770000000002
+                                           },
+                                           {
+                                               "phase":  "gpui_finish_launching",
+                                               "entry_ms":  178.4289
+                                           },
+                                           {
+                                               "phase":  "kit_initialized",
+                                               "entry_ms":  181.8562
+                                           },
+                                           {
+                                               "phase":  "search_worker_started",
+                                               "entry_ms":  247.1978
+                                           },
+                                           {
+                                               "phase":  "backend_spawned",
+                                               "entry_ms":  247.28220000000002
+                                           },
+                                           {
+                                               "phase":  "known_folders_resolved",
+                                               "entry_ms":  247.49609999999998
+                                           },
+                                           {
+                                               "phase":  "shell_constructing",
+                                               "entry_ms":  319.7688
+                                           },
+                                           {
+                                               "phase":  "shell_constructed",
+                                               "entry_ms":  320.0926
+                                           },
+                                           {
+                                               "phase":  "window_opened",
+                                               "entry_ms":  329.50849999999997
+                                           },
+                                           {
+                                               "phase":  "cached_search_started",
+                                               "entry_ms":  345.9458
+                                           },
+                                           {
+                                               "phase":  "cached_rows_materialized",
+                                               "entry_ms":  358.6202
+                                           }
+                                       ],
+                        "exit_code":  0,
+                        "close_ms":  148.0199,
+                        "run":  3,
+                        "catch_up_ms":  1930.3151,
+                        "private_commit_bytes":  136966144,
+                        "cached_present_ms":  403.2236,
+                        "status":  {
+                                       "ready":  true,
+                                       "catching_up":  false,
+                                       "entries":  3248544,
+                                       "dirs":  301881,
+                                       "index_bytes":  183906736,
+                                       "skipped":  321,
+                                       "catch_up_ms":  1930.3151,
+                                       "error":  null,
+                                       "source":  "ntfs + usn",
+                                       "helper_note":  null,
+                                       "journal_batches":  18,
+                                       "journal_directories":  24,
+                                       "journal_resets":  0,
+                                       "journal_reconciliations":  0,
+                                       "ntfs_fallbacks":  0,
+                                       "scan_profiles":  [
+
+                                                         ]
+                                   },
+                        "cached_catching_up":  true,
+                        "private_working_set_bytes":  52023296
+                    }
+                ],
+    "measurement":  "Ordinary-user app, copied real saved profile, process creation through DirectX Present return; user-restricted memory pipe prevents trace-write feedback. Windows caches not flushed; not physical scanout. Real user files read-only; installed helper not modified.",
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe"
+}

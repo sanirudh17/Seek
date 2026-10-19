@@ -1,0 +1,8 @@
+{
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\settings-check-639276663365976766",
+    "failure":  "Missing control: Choose accent color",
+    "checks":  [
+
+               ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe"
+}

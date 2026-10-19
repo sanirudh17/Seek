@@ -1,0 +1,20 @@
+{
+  "root": "/C:",
+  "first_chunk_ms": 28421.4248,
+  "stream_after_first_chunk_ms": 280.9108000000015,
+  "total_ms": 28702.335600000002,
+  "frames": 284804,
+  "entries": 2997166,
+  "directories": 278878,
+  "skipped": 184,
+  "reconciliations": 0,
+  "cursors": [
+    {
+      "drive": 67,
+      "serial": 475756948759402495,
+      "journal_id": 133973191378566477,
+      "next_usn": 33627445152
+    }
+  ],
+  "measurement": "Trusted helper baseline only; excludes index construction, persistence, ordinary watcher and independent verification"
+}

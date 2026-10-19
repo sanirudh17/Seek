@@ -1,0 +1,30 @@
+{
+  "report": {
+    "ground_truth": 500,
+    "indexed": 500,
+    "missing": [],
+    "extra": [],
+    "stale": [],
+    "denied": []
+  },
+  "catch_up_ms": 3897.4348999999997,
+  "verify_ms": 133.4862,
+  "status": {
+    "ready": true,
+    "catching_up": false,
+    "entries": 504,
+    "dirs": 10,
+    "index_bytes": 49729,
+    "skipped": 0,
+    "catch_up_ms": 3897.4348999999997,
+    "error": null,
+    "source": "ntfs + usn",
+    "helper_note": "Conservative USN reconciliation: reused NTFS file reference",
+    "journal_batches": 4,
+    "journal_directories": 0,
+    "journal_resets": 0,
+    "journal_reconciliations": 1,
+    "ntfs_fallbacks": 0,
+    "scan_profiles": []
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "query": "note",
+  "locations": [
+    "%USERPROFILE%\\Downloads",
+    "%USERPROFILE%\\OneDrive\\Documents"
+  ],
+  "first_result_ms": 120.0488,
+  "elapsed_ms": 3023.1633,
+  "checked": 154,
+  "skipped": 495,
+  "unreadable": 1,
+  "limited": true,
+  "formats": {
+    "csv": [
+      1,
+      8.226199999999999
+    ],
+    "docx": [
+      86,
+      1193.2712
+    ],
+    "ini": [
+      2,
+      0.5745
+    ],
+    "json": [
+      3,
+      13.0223
+    ],
+    "log": [
+      2,
+      0.7129
+    ],
+    "md": [
+      8,
+      91.4357
+    ],
+    "pdf": [
+      7,
+      754.5510999999999
+    ],
+    "ps1": [
+      2,
+      0.39790000000000003
+    ],
+    "py": [
+      8,
+      78.0573
+    ],
+    "txt": [
+      35,
+      273.67900000000003
+    ]
+  },
+  "match_count": 47
+}

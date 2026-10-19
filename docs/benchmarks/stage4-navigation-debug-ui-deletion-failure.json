@@ -1,0 +1,20 @@
+{
+    "timings":  [
+
+                ],
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\navigation-639276853401285058",
+    "failure":  "Deleting a row above the viewport jumped to the selected folder",
+    "checks":  [
+                   {
+                       "name":  "Indexed folder expands all direct children",
+                       "rows":  2050,
+                       "passed":  true
+                   },
+                   {
+                       "after":  2030,
+                       "before":  2030,
+                       "name":  "Selected offscreen folder does not pull scrolling back during live updates",
+                       "passed":  true
+                   }
+               ]
+}

@@ -1,0 +1,1475 @@
+{
+    "started_utc":  "2026-10-12T15:41:41.6361170Z",
+    "complete":  true,
+    "passed":  false,
+    "repository":  "%USERPROFILE%\\Seek",
+    "service":  "SeekHelper-S-1-5-21-111111111-222222222-333333333-1001",
+    "user_sid":  "S-1-5-21-111111111-222222222-333333333-1001",
+    "administrator_checks":  [
+                                 {
+                                     "name":  "Update Seek helper",
+                                     "passed":  true,
+                                     "details":  {
+                                                     "name":  "Update Seek helper",
+                                                     "arguments":  [
+                                                                       "install",
+                                                                       "--sid",
+                                                                       "S-1-5-21-111111111-222222222-333333333-1001"
+                                                                   ],
+                                                     "exit_code":  0,
+                                                     "wall_ms":  203.9973,
+                                                     "peak_total_working_set_bytes":  null,
+                                                     "report":  null,
+                                                     "stdout":  "Installed SeekHelper-S-1-5-21-111111111-222222222-333333333-1001 at C:\\Program Files\\Seek Helper\\S-1-5-21-111111111-222222222-333333333-1001\\seek-helper.exe. Restart Seek to use it.\n",
+                                                     "stderr":  ""
+                                                 }
+                                 },
+                                 {
+                                     "name":  "Updated helper identity, hash and protected binary",
+                                     "passed":  true,
+                                     "details":  {
+                                                     "sha256":  "2A8FC3E51806B43AFD4FB64BC18868F7CDABA96AE4DBA3A40C9A574FC8401143",
+                                                     "binary_sddl":  "O:BAG:S-1-5-21-111111111-222222222-333333333-1001D:PAI(A;;FA;;;SY)(A;;FA;;;BA)(A;;0x1200a9;;;BU)",
+                                                     "built_sha256":  "2A8FC3E51806B43AFD4FB64BC18868F7CDABA96AE4DBA3A40C9A574FC8401143",
+                                                     "installed":  "C:\\Program Files\\Seek Helper\\S-1-5-21-111111111-222222222-333333333-1001\\seek-helper.exe",
+                                                     "service":  {
+                                                                     "Name":  "SeekHelper-S-1-5-21-111111111-222222222-333333333-1001",
+                                                                     "State":  "Running",
+                                                                     "StartMode":  "Auto",
+                                                                     "StartName":  "LocalSystem",
+                                                                     "PathName":  "\"C:\\Program Files\\Seek Helper\\S-1-5-21-111111111-222222222-333333333-1001\\seek-helper.exe\" service --sid S-1-5-21-111111111-222222222-333333333-1001",
+                                                                     "ProcessId":  20664
+                                                                 }
+                                                 }
+                                 },
+                                 {
+                                     "name":  "Seek service configuration permissions",
+                                     "passed":  true,
+                                     "details":  {
+                                                     "name":  "Seek service configuration permissions",
+                                                     "arguments":  [
+                                                                       "sdshow",
+                                                                       "SeekHelper-S-1-5-21-111111111-222222222-333333333-1001"
+                                                                   ],
+                                                     "exit_code":  0,
+                                                     "wall_ms":  26.1783,
+                                                     "peak_total_working_set_bytes":  null,
+                                                     "report":  null,
+                                                     "stdout":  "\r\nD:P(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWRPWPLOCRRC;;;S-1-5-21-111111111-222222222-333333333-1001)S:(AU;FA;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;WD)\r\n",
+                                                     "stderr":  ""
+                                                 }
+                                 },
+                                 {
+                                     "name":  "Helper idle after client disconnect",
+                                     "passed":  true,
+                                     "details":  {
+                                                     "wall_ms":  4266.6769,
+                                                     "cpu_ms":  0,
+                                                     "private_working_set_bytes":  7565312,
+                                                     "private_commit_bytes":  12132352
+                                                 }
+                                 }
+                             ],
+    "worker":  {
+                   "checks":  [
+                                  {
+                                      "name":  "Ordinary-user verification token",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "sid":  "S-1-5-21-111111111-222222222-333333333-1001",
+                                                      "elevated":  false
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Trusted installed helper",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "Trusted installed helper",
+                                                      "arguments":  [
+                                                                        "helper-probe"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  77.56280000000001,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "available":  true,
+                                                                     "server_pid":  20664,
+                                                                     "trusted_installed_service":  true,
+                                                                     "response":  {
+                                                                                      "Pong":  {
+                                                                                                   "version":  2
+                                                                                               }
+                                                                                  }
+                                                                 },
+                                                      "stdout":  "{\n  \"available\": true,\n  \"server_pid\": 20664,\n  \"trusted_installed_service\": true,\n  \"response\": {\n    \"Pong\": {\n      \"version\": 2\n    }\n  }\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Helper first/live/closed correctness and accuracy",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "Helper first/live/closed correctness and accuracy",
+                                                      "arguments":  [
+                                                                        "self-test",
+                                                                        "--source",
+                                                                        "helper"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  21040.3782,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "root":  ".bench-data/correctness-30240-1791819703496440700\\files",
+                                                                     "fixtures":  [
+                                                                                      "3000-file folder",
+                                                                                      "emoji",
+                                                                                      "Unicode",
+                                                                                      "long path",
+                                                                                      "unpaired surrogate on disk",
+                                                                                      "hard link",
+                                                                                      "junction loop skipped",
+                                                                                      "live and closed case-only rename"
+                                                                                  ],
+                                                                     "first":  {
+                                                                                   "ground_truth":  3015,
+                                                                                   "indexed":  3015,
+                                                                                   "missing":  [
+
+                                                                                               ],
+                                                                                   "extra":  [
+
+                                                                                             ],
+                                                                                   "stale":  [
+
+                                                                                             ],
+                                                                                   "denied":  [
+
+                                                                                              ]
+                                                                               },
+                                                                     "live":  {
+                                                                                  "ground_truth":  3015,
+                                                                                  "indexed":  3015,
+                                                                                  "missing":  [
+
+                                                                                              ],
+                                                                                  "extra":  [
+
+                                                                                            ],
+                                                                                  "stale":  [
+
+                                                                                            ],
+                                                                                  "denied":  [
+
+                                                                                             ]
+                                                                              },
+                                                                     "closed":  {
+                                                                                    "ground_truth":  3015,
+                                                                                    "indexed":  3015,
+                                                                                    "missing":  [
+
+                                                                                                ],
+                                                                                    "extra":  [
+
+                                                                                              ],
+                                                                                    "stale":  [
+
+                                                                                              ],
+                                                                                    "denied":  [
+
+                                                                                               ]
+                                                                                },
+                                                                     "first_status":  {
+                                                                                          "ready":  true,
+                                                                                          "catching_up":  false,
+                                                                                          "entries":  3022,
+                                                                                          "dirs":  12,
+                                                                                          "index_bytes":  211433,
+                                                                                          "skipped":  0,
+                                                                                          "catch_up_ms":  19397.533,
+                                                                                          "error":  null,
+                                                                                          "source":  "ntfs + usn",
+                                                                                          "helper_note":  null,
+                                                                                          "journal_batches":  5,
+                                                                                          "journal_directories":  0,
+                                                                                          "journal_resets":  0,
+                                                                                          "journal_reconciliations":  0,
+                                                                                          "ntfs_fallbacks":  0,
+                                                                                          "scan_profiles":  [
+                                                                                                                {
+                                                                                                                    "root":  [
+                                                                                                                                 47,
+                                                                                                                                 67,
+                                                                                                                                 58,
+                                                                                                                                 47,
+                                                                                                                                 85,
+                                                                                                                                 115,
+                                                                                                                                 101,
+                                                                                                                                 114,
+                                                                                                                                 115,
+                                                                                                                                 47,
+                                                                                                                                 115,
+                                                                                                                                 97,
+                                                                                                                                 110,
+                                                                                                                                 105,
+                                                                                                                                 114,
+                                                                                                                                 47,
+                                                                                                                                 83,
+                                                                                                                                 101,
+                                                                                                                                 101,
+                                                                                                                                 107,
+                                                                                                                                 47,
+                                                                                                                                 46,
+                                                                                                                                 98,
+                                                                                                                                 101,
+                                                                                                                                 110,
+                                                                                                                                 99,
+                                                                                                                                 104,
+                                                                                                                                 45,
+                                                                                                                                 100,
+                                                                                                                                 97,
+                                                                                                                                 116,
+                                                                                                                                 97,
+                                                                                                                                 47,
+                                                                                                                                 99,
+                                                                                                                                 111,
+                                                                                                                                 114,
+                                                                                                                                 114,
+                                                                                                                                 101,
+                                                                                                                                 99,
+                                                                                                                                 116,
+                                                                                                                                 110,
+                                                                                                                                 101,
+                                                                                                                                 115,
+                                                                                                                                 115,
+                                                                                                                                 45,
+                                                                                                                                 51,
+                                                                                                                                 48,
+                                                                                                                                 50,
+                                                                                                                                 52,
+                                                                                                                                 48,
+                                                                                                                                 45,
+                                                                                                                                 49,
+                                                                                                                                 55,
+                                                                                                                                 57,
+                                                                                                                                 49,
+                                                                                                                                 56,
+                                                                                                                                 49,
+                                                                                                                                 57,
+                                                                                                                                 55,
+                                                                                                                                 48,
+                                                                                                                                 51,
+                                                                                                                                 52,
+                                                                                                                                 57,
+                                                                                                                                 54,
+                                                                                                                                 52,
+                                                                                                                                 52,
+                                                                                                                                 48,
+                                                                                                                                 55,
+                                                                                                                                 48,
+                                                                                                                                 48,
+                                                                                                                                 47,
+                                                                                                                                 102,
+                                                                                                                                 105,
+                                                                                                                                 108,
+                                                                                                                                 101,
+                                                                                                                                 115
+                                                                                                                             ],
+                                                                                                                    "records":  2976707,
+                                                                                                                    "directories":  5,
+                                                                                                                    "metadata_ms":  19236.7269,
+                                                                                                                    "namespace_ms":  125.7197
+                                                                                                                }
+                                                                                                            ]
+                                                                                      },
+                                                                     "relaunch_status":  {
+                                                                                             "ready":  true,
+                                                                                             "catching_up":  false,
+                                                                                             "entries":  3022,
+                                                                                             "dirs":  12,
+                                                                                             "index_bytes":  211433,
+                                                                                             "skipped":  0,
+                                                                                             "catch_up_ms":  22.5762,
+                                                                                             "error":  null,
+                                                                                             "source":  "ntfs + usn",
+                                                                                             "helper_note":  null,
+                                                                                             "journal_batches":  6,
+                                                                                             "journal_directories":  3,
+                                                                                             "journal_resets":  0,
+                                                                                             "journal_reconciliations":  0,
+                                                                                             "ntfs_fallbacks":  0,
+                                                                                             "scan_profiles":  [
+
+                                                                                                               ]
+                                                                                         },
+                                                                     "live_ms":  198.74820000000003,
+                                                                     "walker_catch_up_ms":  null,
+                                                                     "helper_catch_up_ms":  22.5762,
+                                                                     "accuracy":  [
+                                                                                      {
+                                                                                          "query":  "annual-report-final",
+                                                                                          "target":  "annual-report-final.txt",
+                                                                                          "top5":  true
+                                                                                      },
+                                                                                      {
+                                                                                          "query":  "report",
+                                                                                          "target":  "annual-report-final.txt",
+                                                                                          "top5":  true
+                                                                                      },
+                                                                                      {
+                                                                                          "query":  "invoce",
+                                                                                          "target":  "invoice-budget.pdf",
+                                                                                          "top5":  true
+                                                                                      },
+                                                                                      {
+                                                                                          "query":  "invocie",
+                                                                                          "target":  "invoice-budget.pdf",
+                                                                                          "top5":  true
+                                                                                      },
+                                                                                      {
+                                                                                          "query":  "R├⌐sum├⌐",
+                                                                                          "target":  "R├⌐sum├⌐-≡ƒÜÇ.txt",
+                                                                                          "top5":  true
+                                                                                      },
+                                                                                      {
+                                                                                          "query":  "casedifference",
+                                                                                          "target":  "CaseDifference.TXT",
+                                                                                          "top5":  true
+                                                                                      },
+                                                                                      {
+                                                                                          "query":  "long-path",
+                                                                                          "target":  "long-path-≡ƒÜÇ.txt",
+                                                                                          "top5":  true
+                                                                                      },
+                                                                                      {
+                                                                                          "query":  "\u0027annual-report-final.txt",
+                                                                                          "target":  "annual-report-final.txt",
+                                                                                          "top5":  true
+                                                                                      },
+                                                                                      {
+                                                                                          "query":  "^annual",
+                                                                                          "target":  "annual-report-final.txt",
+                                                                                          "top5":  true
+                                                                                      },
+                                                                                      {
+                                                                                          "query":  "report in:\"%USERPROFILE%\\Seek\\.bench-data\\correctness-30240-1791819703496440700\\files\\Downloads\"",
+                                                                                          "target":  "annual-report-final.txt",
+                                                                                          "top5":  true
+                                                                                      }
+                                                                                  ],
+                                                                     "accuracy_passed":  10,
+                                                                     "accuracy_total":  10,
+                                                                     "accuracy_percent":  100.0,
+                                                                     "typo_claim_comparison":  "Different workload; no comparison with upstream percentage"
+                                                                 },
+                                                      "stdout":  "{\n  \"root\": \".bench-data/correctness-30240-1791819703496440700\\\\files\",\n  \"fixtures\": [\n    \"3000-file folder\",\n    \"emoji\",\n    \"Unicode\",\n    \"long path\",\n    \"unpaired surrogate on disk\",\n    \"hard link\",\n    \"junction loop skipped\",\n    \"live and closed case-only rename\"\n  ],\n  \"first\": {\n    \"ground_truth\": 3015,\n    \"indexed\": 3015,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": []\n  },\n  \"live\": {\n    \"ground_truth\": 3015,\n    \"indexed\": 3015,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": []\n  },\n  \"closed\": {\n    \"ground_truth\": 3015,\n    \"indexed\": 3015,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": []\n  },\n  \"first_status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 3022,\n    \"dirs\": 12,\n    \"index_bytes\": 211433,\n    \"skipped\": 0,\n    \"catch_up_ms\": 19397.533,\n    \"error\": null,\n    \"source\": \"ntfs + usn\",\n    \"helper_note\": null,\n    \"journal_batches\": 5,\n    \"journal_directories\": 0,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0,\n    \"scan_profiles\": [\n      {\n        \"root\": [\n          47,\n          67,\n          58,\n          47,\n          85,\n          115,\n          101,\n          114,\n          115,\n          47,\n          115,\n          97,\n          110,\n          105,\n          114,\n          47,\n          83,\n          101,\n          101,\n          107,\n          47,\n          46,\n          98,\n          101,\n          110,\n          99,\n          104,\n          45,\n          100,\n          97,\n          116,\n          97,\n          47,\n          99,\n          111,\n          114,\n          114,\n          101,\n          99,\n          116,\n          110,\n          101,\n          115,\n          115,\n          45,\n          51,\n          48,\n          50,\n          52,\n          48,\n          45,\n          49,\n          55,\n          57,\n          49,\n          56,\n          49,\n          57,\n          55,\n          48,\n          51,\n          52,\n          57,\n          54,\n          52,\n          52,\n          48,\n          55,\n          48,\n          48,\n          47,\n          102,\n          105,\n          108,\n          101,\n          115\n        ],\n        \"records\": 2976707,\n        \"directories\": 5,\n        \"metadata_ms\": 19236.7269,\n        \"namespace_ms\": 125.7197\n      }\n    ]\n  },\n  \"relaunch_status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 3022,\n    \"dirs\": 12,\n    \"index_bytes\": 211433,\n    \"skipped\": 0,\n    \"catch_up_ms\": 22.5762,\n    \"error\": null,\n    \"source\": \"ntfs + usn\",\n    \"helper_note\": null,\n    \"journal_batches\": 6,\n    \"journal_directories\": 3,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0,\n    \"scan_profiles\": []\n  },\n  \"live_ms\": 198.74820000000003,\n  \"walker_catch_up_ms\": null,\n  \"helper_catch_up_ms\": 22.5762,\n  \"accuracy\": [\n    {\n      \"query\": \"annual-report-final\",\n      \"target\": \"annual-report-final.txt\",\n      \"top5\": true\n    },\n    {\n      \"query\": \"report\",\n      \"target\": \"annual-report-final.txt\",\n      \"top5\": true\n    },\n    {\n      \"query\": \"invoce\",\n      \"target\": \"invoice-budget.pdf\",\n      \"top5\": true\n    },\n    {\n      \"query\": \"invocie\",\n      \"target\": \"invoice-budget.pdf\",\n      \"top5\": true\n    },\n    {\n      \"query\": \"R├⌐sum├⌐\",\n      \"target\": \"R├⌐sum├⌐-≡ƒÜÇ.txt\",\n      \"top5\": true\n    },\n    {\n      \"query\": \"casedifference\",\n      \"target\": \"CaseDifference.TXT\",\n      \"top5\": true\n    },\n    {\n      \"query\": \"long-path\",\n      \"target\": \"long-path-≡ƒÜÇ.txt\",\n      \"top5\": true\n    },\n    {\n      \"query\": \"\u0027annual-report-final.txt\",\n      \"target\": \"annual-report-final.txt\",\n      \"top5\": true\n    },\n    {\n      \"query\": \"^annual\",\n      \"target\": \"annual-report-final.txt\",\n      \"top5\": true\n    },\n    {\n      \"query\": \"report in:\\\"%USERPROFILE%\\\\Seek\\\\.bench-data\\\\correctness-30240-1791819703496440700\\\\files\\\\Downloads\\\"\",\n      \"target\": \"annual-report-final.txt\",\n      \"top5\": true\n    }\n  ],\n  \"accuracy_passed\": 10,\n  \"accuracy_total\": 10,\n  \"accuracy_percent\": 100.0,\n  \"typo_claim_comparison\": \"Different workload; no comparison with upstream percentage\"\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Real Downloads",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "Real Downloads",
+                                                      "arguments":  [
+                                                                        "verify",
+                                                                        "--source",
+                                                                        "helper",
+                                                                        "--root",
+                                                                        "%USERPROFILE%\\Downloads",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\Downloads"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  21458.8423,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "report":  {
+                                                                                    "ground_truth":  500,
+                                                                                    "indexed":  500,
+                                                                                    "missing":  [
+
+                                                                                                ],
+                                                                                    "extra":  [
+
+                                                                                              ],
+                                                                                    "stale":  [
+
+                                                                                              ],
+                                                                                    "denied":  [
+
+                                                                                               ]
+                                                                                },
+                                                                     "catch_up_ms":  21366.2572,
+                                                                     "verify_ms":  48.6695,
+                                                                     "status":  {
+                                                                                    "ready":  true,
+                                                                                    "catching_up":  false,
+                                                                                    "entries":  504,
+                                                                                    "dirs":  10,
+                                                                                    "index_bytes":  49729,
+                                                                                    "skipped":  0,
+                                                                                    "catch_up_ms":  21366.2572,
+                                                                                    "error":  null,
+                                                                                    "source":  "ntfs + usn",
+                                                                                    "helper_note":  null,
+                                                                                    "journal_batches":  5,
+                                                                                    "journal_directories":  0,
+                                                                                    "journal_resets":  0,
+                                                                                    "journal_reconciliations":  0,
+                                                                                    "ntfs_fallbacks":  0,
+                                                                                    "scan_profiles":  [
+                                                                                                          {
+                                                                                                              "root":  [
+                                                                                                                           47,
+                                                                                                                           67,
+                                                                                                                           58,
+                                                                                                                           47,
+                                                                                                                           85,
+                                                                                                                           115,
+                                                                                                                           101,
+                                                                                                                           114,
+                                                                                                                           115,
+                                                                                                                           47,
+                                                                                                                           115,
+                                                                                                                           97,
+                                                                                                                           110,
+                                                                                                                           105,
+                                                                                                                           114,
+                                                                                                                           47,
+                                                                                                                           68,
+                                                                                                                           111,
+                                                                                                                           119,
+                                                                                                                           110,
+                                                                                                                           108,
+                                                                                                                           111,
+                                                                                                                           97,
+                                                                                                                           100,
+                                                                                                                           115
+                                                                                                                       ],
+                                                                                                              "records":  2978523,
+                                                                                                              "directories":  6,
+                                                                                                              "metadata_ms":  21214.3858,
+                                                                                                              "namespace_ms":  105.7156
+                                                                                                          }
+                                                                                                      ]
+                                                                                }
+                                                                 },
+                                                      "stdout":  "{\n  \"report\": {\n    \"ground_truth\": 500,\n    \"indexed\": 500,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": []\n  },\n  \"catch_up_ms\": 21366.2572,\n  \"verify_ms\": 48.6695,\n  \"status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 504,\n    \"dirs\": 10,\n    \"index_bytes\": 49729,\n    \"skipped\": 0,\n    \"catch_up_ms\": 21366.2572,\n    \"error\": null,\n    \"source\": \"ntfs + usn\",\n    \"helper_note\": null,\n    \"journal_batches\": 5,\n    \"journal_directories\": 0,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0,\n    \"scan_profiles\": [\n      {\n        \"root\": [\n          47,\n          67,\n          58,\n          47,\n          85,\n          115,\n          101,\n          114,\n          115,\n          47,\n          115,\n          97,\n          110,\n          105,\n          114,\n          47,\n          68,\n          111,\n          119,\n          110,\n          108,\n          111,\n          97,\n          100,\n          115\n        ],\n        \"records\": 2978523,\n        \"directories\": 6,\n        \"metadata_ms\": 21214.3858,\n        \"namespace_ms\": 105.7156\n      }\n    ]\n  }\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Real Documents",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "Real Documents",
+                                                      "arguments":  [
+                                                                        "verify",
+                                                                        "--source",
+                                                                        "helper",
+                                                                        "--root",
+                                                                        "%USERPROFILE%\\OneDrive\\Documents",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\Documents"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  287.2472,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "report":  {
+                                                                                    "ground_truth":  565,
+                                                                                    "indexed":  565,
+                                                                                    "missing":  [
+
+                                                                                                ],
+                                                                                    "extra":  [
+
+                                                                                              ],
+                                                                                    "stale":  [
+
+                                                                                              ],
+                                                                                    "denied":  [
+
+                                                                                               ]
+                                                                                },
+                                                                     "catch_up_ms":  46.4195,
+                                                                     "verify_ms":  194.70589999999999,
+                                                                     "status":  {
+                                                                                    "ready":  true,
+                                                                                    "catching_up":  false,
+                                                                                    "entries":  570,
+                                                                                    "dirs":  142,
+                                                                                    "index_bytes":  45987,
+                                                                                    "skipped":  0,
+                                                                                    "catch_up_ms":  46.4195,
+                                                                                    "error":  null,
+                                                                                    "source":  "walker + usn",
+                                                                                    "helper_note":  "MFT scan could not prove completeness; walker used: Provider-backed root requires a directory listing; USN replay remains available",
+                                                                                    "journal_batches":  4,
+                                                                                    "journal_directories":  0,
+                                                                                    "journal_resets":  0,
+                                                                                    "journal_reconciliations":  0,
+                                                                                    "ntfs_fallbacks":  1,
+                                                                                    "scan_profiles":  [
+
+                                                                                                      ]
+                                                                                }
+                                                                 },
+                                                      "stdout":  "{\n  \"report\": {\n    \"ground_truth\": 565,\n    \"indexed\": 565,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": []\n  },\n  \"catch_up_ms\": 46.4195,\n  \"verify_ms\": 194.70589999999999,\n  \"status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 570,\n    \"dirs\": 142,\n    \"index_bytes\": 45987,\n    \"skipped\": 0,\n    \"catch_up_ms\": 46.4195,\n    \"error\": null,\n    \"source\": \"walker + usn\",\n    \"helper_note\": \"MFT scan could not prove completeness; walker used: Provider-backed root requires a directory listing; USN replay remains available\",\n    \"journal_batches\": 4,\n    \"journal_directories\": 0,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 1,\n    \"scan_profiles\": []\n  }\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Real Desktop",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "Real Desktop",
+                                                      "arguments":  [
+                                                                        "verify",
+                                                                        "--source",
+                                                                        "helper",
+                                                                        "--root",
+                                                                        "%USERPROFILE%\\OneDrive\\Desktop",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\Desktop"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  70.0438,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "report":  {
+                                                                                    "ground_truth":  24,
+                                                                                    "indexed":  24,
+                                                                                    "missing":  [
+
+                                                                                                ],
+                                                                                    "extra":  [
+
+                                                                                              ],
+                                                                                    "stale":  [
+
+                                                                                              ],
+                                                                                    "denied":  [
+
+                                                                                               ]
+                                                                                },
+                                                                     "catch_up_ms":  17.3404,
+                                                                     "verify_ms":  13.9472,
+                                                                     "status":  {
+                                                                                    "ready":  true,
+                                                                                    "catching_up":  false,
+                                                                                    "entries":  29,
+                                                                                    "dirs":  7,
+                                                                                    "index_bytes":  11612,
+                                                                                    "skipped":  0,
+                                                                                    "catch_up_ms":  17.3404,
+                                                                                    "error":  null,
+                                                                                    "source":  "walker + usn",
+                                                                                    "helper_note":  "MFT scan could not prove completeness; walker used: Provider-backed root requires a directory listing; USN replay remains available",
+                                                                                    "journal_batches":  4,
+                                                                                    "journal_directories":  0,
+                                                                                    "journal_resets":  0,
+                                                                                    "journal_reconciliations":  0,
+                                                                                    "ntfs_fallbacks":  1,
+                                                                                    "scan_profiles":  [
+
+                                                                                                      ]
+                                                                                }
+                                                                 },
+                                                      "stdout":  "{\n  \"report\": {\n    \"ground_truth\": 24,\n    \"indexed\": 24,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": []\n  },\n  \"catch_up_ms\": 17.3404,\n  \"verify_ms\": 13.9472,\n  \"status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 29,\n    \"dirs\": 7,\n    \"index_bytes\": 11612,\n    \"skipped\": 0,\n    \"catch_up_ms\": 17.3404,\n    \"error\": null,\n    \"source\": \"walker + usn\",\n    \"helper_note\": \"MFT scan could not prove completeness; walker used: Provider-backed root requires a directory listing; USN replay remains available\",\n    \"journal_batches\": 4,\n    \"journal_directories\": 0,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 1,\n    \"scan_profiles\": []\n  }\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Invalidate disposable saved history",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "Invalidate disposable saved history",
+                                                      "arguments":  [
+                                                                        "invalidate-journal",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\Downloads"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  37.9776,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "test_index":  "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\Downloads\\index.bin",
+                                                                     "journal_checkpoint_invalidated":  true,
+                                                                     "windows_journal_changed":  false
+                                                                 },
+                                                      "stdout":  "{\n  \"test_index\": \"%USERPROFILE%\\\\Seek\\\\.bench-data\\\\stage2-final\\\\run-639274165025916517\\\\Downloads\\\\index.bin\",\n  \"journal_checkpoint_invalidated\": true,\n  \"windows_journal_changed\": false\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Recover invalidated Downloads history",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "Recover invalidated Downloads history",
+                                                      "arguments":  [
+                                                                        "verify",
+                                                                        "--source",
+                                                                        "helper",
+                                                                        "--root",
+                                                                        "%USERPROFILE%\\Downloads",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\Downloads"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  86.2706,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "report":  {
+                                                                                    "ground_truth":  500,
+                                                                                    "indexed":  500,
+                                                                                    "missing":  [
+
+                                                                                                ],
+                                                                                    "extra":  [
+
+                                                                                              ],
+                                                                                    "stale":  [
+
+                                                                                              ],
+                                                                                    "denied":  [
+
+                                                                                               ]
+                                                                                },
+                                                                     "catch_up_ms":  17.308,
+                                                                     "verify_ms":  35.2281,
+                                                                     "status":  {
+                                                                                    "ready":  true,
+                                                                                    "catching_up":  false,
+                                                                                    "entries":  504,
+                                                                                    "dirs":  10,
+                                                                                    "index_bytes":  49729,
+                                                                                    "skipped":  0,
+                                                                                    "catch_up_ms":  17.308,
+                                                                                    "error":  null,
+                                                                                    "source":  "ntfs + usn",
+                                                                                    "helper_note":  "USN history unavailable/replaced; full folder reconciliation",
+                                                                                    "journal_batches":  4,
+                                                                                    "journal_directories":  0,
+                                                                                    "journal_resets":  1,
+                                                                                    "journal_reconciliations":  0,
+                                                                                    "ntfs_fallbacks":  0,
+                                                                                    "scan_profiles":  [
+
+                                                                                                      ]
+                                                                                }
+                                                                 },
+                                                      "stdout":  "{\n  \"report\": {\n    \"ground_truth\": 500,\n    \"indexed\": 500,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": []\n  },\n  \"catch_up_ms\": 17.308,\n  \"verify_ms\": 35.2281,\n  \"status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 504,\n    \"dirs\": 10,\n    \"index_bytes\": 49729,\n    \"skipped\": 0,\n    \"catch_up_ms\": 17.308,\n    \"error\": null,\n    \"source\": \"ntfs + usn\",\n    \"helper_note\": \"USN history unavailable/replaced; full folder reconciliation\",\n    \"journal_batches\": 4,\n    \"journal_directories\": 0,\n    \"journal_resets\": 1,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0,\n    \"scan_profiles\": []\n  }\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "History fixture NTFS baseline",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "History fixture NTFS baseline",
+                                                      "arguments":  [
+                                                                        "index",
+                                                                        "--source",
+                                                                        "helper",
+                                                                        "--root",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\history-files",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\history-index"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  22198.6817,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "ready":  true,
+                                                                     "catching_up":  false,
+                                                                     "entries":  17,
+                                                                     "dirs":  13,
+                                                                     "index_bytes":  12064,
+                                                                     "skipped":  1,
+                                                                     "catch_up_ms":  22142.0059,
+                                                                     "error":  null,
+                                                                     "source":  "ntfs + usn",
+                                                                     "helper_note":  null,
+                                                                     "journal_batches":  6,
+                                                                     "journal_directories":  0,
+                                                                     "journal_resets":  0,
+                                                                     "journal_reconciliations":  0,
+                                                                     "ntfs_fallbacks":  0,
+                                                                     "scan_profiles":  [
+                                                                                           {
+                                                                                               "root":  [
+                                                                                                            47,
+                                                                                                            67,
+                                                                                                            58,
+                                                                                                            47,
+                                                                                                            85,
+                                                                                                            115,
+                                                                                                            101,
+                                                                                                            114,
+                                                                                                            115,
+                                                                                                            47,
+                                                                                                            115,
+                                                                                                            97,
+                                                                                                            110,
+                                                                                                            105,
+                                                                                                            114,
+                                                                                                            47,
+                                                                                                            83,
+                                                                                                            101,
+                                                                                                            101,
+                                                                                                            107,
+                                                                                                            47,
+                                                                                                            46,
+                                                                                                            98,
+                                                                                                            101,
+                                                                                                            110,
+                                                                                                            99,
+                                                                                                            104,
+                                                                                                            45,
+                                                                                                            100,
+                                                                                                            97,
+                                                                                                            116,
+                                                                                                            97,
+                                                                                                            47,
+                                                                                                            115,
+                                                                                                            116,
+                                                                                                            97,
+                                                                                                            103,
+                                                                                                            101,
+                                                                                                            50,
+                                                                                                            45,
+                                                                                                            102,
+                                                                                                            105,
+                                                                                                            110,
+                                                                                                            97,
+                                                                                                            108,
+                                                                                                            47,
+                                                                                                            114,
+                                                                                                            117,
+                                                                                                            110,
+                                                                                                            45,
+                                                                                                            54,
+                                                                                                            51,
+                                                                                                            57,
+                                                                                                            50,
+                                                                                                            55,
+                                                                                                            52,
+                                                                                                            49,
+                                                                                                            54,
+                                                                                                            53,
+                                                                                                            48,
+                                                                                                            50,
+                                                                                                            53,
+                                                                                                            57,
+                                                                                                            49,
+                                                                                                            54,
+                                                                                                            53,
+                                                                                                            49,
+                                                                                                            55,
+                                                                                                            47,
+                                                                                                            104,
+                                                                                                            105,
+                                                                                                            115,
+                                                                                                            116,
+                                                                                                            111,
+                                                                                                            114,
+                                                                                                            121,
+                                                                                                            45,
+                                                                                                            102,
+                                                                                                            105,
+                                                                                                            108,
+                                                                                                            101,
+                                                                                                            115
+                                                                                                        ],
+                                                                                               "records":  2978447,
+                                                                                               "directories":  5,
+                                                                                               "metadata_ms":  21996.6242,
+                                                                                               "namespace_ms":  97.3964
+                                                                                           }
+                                                                                       ],
+                                                                     "checkpoint_ms":  14.4747,
+                                                                     "checkpoint_status":  {
+                                                                                               "ready":  true,
+                                                                                               "catching_up":  false,
+                                                                                               "entries":  17,
+                                                                                               "dirs":  13,
+                                                                                               "index_bytes":  12064,
+                                                                                               "skipped":  1,
+                                                                                               "catch_up_ms":  22142.0059,
+                                                                                               "error":  null,
+                                                                                               "source":  "ntfs + usn",
+                                                                                               "helper_note":  null,
+                                                                                               "journal_batches":  13,
+                                                                                               "journal_directories":  0,
+                                                                                               "journal_resets":  0,
+                                                                                               "journal_reconciliations":  0,
+                                                                                               "ntfs_fallbacks":  0,
+                                                                                               "scan_profiles":  [
+                                                                                                                     {
+                                                                                                                         "root":  [
+                                                                                                                                      47,
+                                                                                                                                      67,
+                                                                                                                                      58,
+                                                                                                                                      47,
+                                                                                                                                      85,
+                                                                                                                                      115,
+                                                                                                                                      101,
+                                                                                                                                      114,
+                                                                                                                                      115,
+                                                                                                                                      47,
+                                                                                                                                      115,
+                                                                                                                                      97,
+                                                                                                                                      110,
+                                                                                                                                      105,
+                                                                                                                                      114,
+                                                                                                                                      47,
+                                                                                                                                      83,
+                                                                                                                                      101,
+                                                                                                                                      101,
+                                                                                                                                      107,
+                                                                                                                                      47,
+                                                                                                                                      46,
+                                                                                                                                      98,
+                                                                                                                                      101,
+                                                                                                                                      110,
+                                                                                                                                      99,
+                                                                                                                                      104,
+                                                                                                                                      45,
+                                                                                                                                      100,
+                                                                                                                                      97,
+                                                                                                                                      116,
+                                                                                                                                      97,
+                                                                                                                                      47,
+                                                                                                                                      115,
+                                                                                                                                      116,
+                                                                                                                                      97,
+                                                                                                                                      103,
+                                                                                                                                      101,
+                                                                                                                                      50,
+                                                                                                                                      45,
+                                                                                                                                      102,
+                                                                                                                                      105,
+                                                                                                                                      110,
+                                                                                                                                      97,
+                                                                                                                                      108,
+                                                                                                                                      47,
+                                                                                                                                      114,
+                                                                                                                                      117,
+                                                                                                                                      110,
+                                                                                                                                      45,
+                                                                                                                                      54,
+                                                                                                                                      51,
+                                                                                                                                      57,
+                                                                                                                                      50,
+                                                                                                                                      55,
+                                                                                                                                      52,
+                                                                                                                                      49,
+                                                                                                                                      54,
+                                                                                                                                      53,
+                                                                                                                                      48,
+                                                                                                                                      50,
+                                                                                                                                      53,
+                                                                                                                                      57,
+                                                                                                                                      49,
+                                                                                                                                      54,
+                                                                                                                                      53,
+                                                                                                                                      49,
+                                                                                                                                      55,
+                                                                                                                                      47,
+                                                                                                                                      104,
+                                                                                                                                      105,
+                                                                                                                                      115,
+                                                                                                                                      116,
+                                                                                                                                      111,
+                                                                                                                                      114,
+                                                                                                                                      121,
+                                                                                                                                      45,
+                                                                                                                                      102,
+                                                                                                                                      105,
+                                                                                                                                      108,
+                                                                                                                                      101,
+                                                                                                                                      115
+                                                                                                                                  ],
+                                                                                                                         "records":  2978447,
+                                                                                                                         "directories":  5,
+                                                                                                                         "metadata_ms":  21996.6242,
+                                                                                                                         "namespace_ms":  97.3964
+                                                                                                                     }
+                                                                                                                 ]
+                                                                                           }
+                                                                 },
+                                                      "stdout":  "{\n  \"ready\": true,\n  \"catching_up\": false,\n  \"entries\": 17,\n  \"dirs\": 13,\n  \"index_bytes\": 12064,\n  \"skipped\": 1,\n  \"catch_up_ms\": 22142.0059,\n  \"error\": null,\n  \"source\": \"ntfs + usn\",\n  \"helper_note\": null,\n  \"journal_batches\": 6,\n  \"journal_directories\": 0,\n  \"journal_resets\": 0,\n  \"journal_reconciliations\": 0,\n  \"ntfs_fallbacks\": 0,\n  \"scan_profiles\": [\n    {\n      \"root\": [\n        47,\n        67,\n        58,\n        47,\n        85,\n        115,\n        101,\n        114,\n        115,\n        47,\n        115,\n        97,\n        110,\n        105,\n        114,\n        47,\n        83,\n        101,\n        101,\n        107,\n        47,\n        46,\n        98,\n        101,\n        110,\n        99,\n        104,\n        45,\n        100,\n        97,\n        116,\n        97,\n        47,\n        115,\n        116,\n        97,\n        103,\n        101,\n        50,\n        45,\n        102,\n        105,\n        110,\n        97,\n        108,\n        47,\n        114,\n        117,\n        110,\n        45,\n        54,\n        51,\n        57,\n        50,\n        55,\n        52,\n        49,\n        54,\n        53,\n        48,\n        50,\n        53,\n        57,\n        49,\n        54,\n        53,\n        49,\n        55,\n        47,\n        104,\n        105,\n        115,\n        116,\n        111,\n        114,\n        121,\n        45,\n        102,\n        105,\n        108,\n        101,\n        115\n      ],\n      \"records\": 2978447,\n      \"directories\": 5,\n      \"metadata_ms\": 21996.6242,\n      \"namespace_ms\": 97.3964\n    }\n  ],\n  \"checkpoint_ms\": 14.4747,\n  \"checkpoint_status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 17,\n    \"dirs\": 13,\n    \"index_bytes\": 12064,\n    \"skipped\": 1,\n    \"catch_up_ms\": 22142.0059,\n    \"error\": null,\n    \"source\": \"ntfs + usn\",\n    \"helper_note\": null,\n    \"journal_batches\": 13,\n    \"journal_directories\": 0,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0,\n    \"scan_profiles\": [\n      {\n        \"root\": [\n          47,\n          67,\n          58,\n          47,\n          85,\n          115,\n          101,\n          114,\n          115,\n          47,\n          115,\n          97,\n          110,\n          105,\n          114,\n          47,\n          83,\n          101,\n          101,\n          107,\n          47,\n          46,\n          98,\n          101,\n          110,\n          99,\n          104,\n          45,\n          100,\n          97,\n          116,\n          97,\n          47,\n          115,\n          116,\n          97,\n          103,\n          101,\n          50,\n          45,\n          102,\n          105,\n          110,\n          97,\n          108,\n          47,\n          114,\n          117,\n          110,\n          45,\n          54,\n          51,\n          57,\n          50,\n          55,\n          52,\n          49,\n          54,\n          53,\n          48,\n          50,\n          53,\n          57,\n          49,\n          54,\n          53,\n          49,\n          55,\n          47,\n          104,\n          105,\n          115,\n          116,\n          111,\n          114,\n          121,\n          45,\n          102,\n          105,\n          108,\n          101,\n          115\n        ],\n        \"records\": 2978447,\n        \"directories\": 5,\n        \"metadata_ms\": 21996.6242,\n        \"namespace_ms\": 97.3964\n      }\n    ]\n  }\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Ordinary-user directory access does not leak denied children",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "Ordinary-user directory access does not leak denied children",
+                                                      "arguments":  [
+                                                                        "verify",
+                                                                        "--source",
+                                                                        "helper",
+                                                                        "--root",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\history-files",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\history-index"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  86.76230000000001,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "report":  {
+                                                                                    "ground_truth":  9,
+                                                                                    "indexed":  9,
+                                                                                    "missing":  [
+
+                                                                                                ],
+                                                                                    "extra":  [
+
+                                                                                              ],
+                                                                                    "stale":  [
+
+                                                                                              ],
+                                                                                    "denied":  [
+                                                                                                   "\\\\?\\%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\history-files\\denied-fixture: Access is denied. (os error 5)"
+                                                                                               ]
+                                                                                },
+                                                                     "catch_up_ms":  17.6143,
+                                                                     "verify_ms":  15.3094,
+                                                                     "status":  {
+                                                                                    "ready":  true,
+                                                                                    "catching_up":  false,
+                                                                                    "entries":  17,
+                                                                                    "dirs":  13,
+                                                                                    "index_bytes":  12064,
+                                                                                    "skipped":  1,
+                                                                                    "catch_up_ms":  17.6143,
+                                                                                    "error":  null,
+                                                                                    "source":  "ntfs + usn",
+                                                                                    "helper_note":  null,
+                                                                                    "journal_batches":  5,
+                                                                                    "journal_directories":  0,
+                                                                                    "journal_resets":  0,
+                                                                                    "journal_reconciliations":  0,
+                                                                                    "ntfs_fallbacks":  0,
+                                                                                    "scan_profiles":  [
+
+                                                                                                      ]
+                                                                                }
+                                                                 },
+                                                      "stdout":  "{\n  \"report\": {\n    \"ground_truth\": 9,\n    \"indexed\": 9,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": [\n      \"\\\\\\\\?\\\\%USERPROFILE%\\\\Seek\\\\.bench-data\\\\stage2-final\\\\run-639274165025916517\\\\history-files\\\\denied-fixture: Access is denied. (os error 5)\"\n    ]\n  },\n  \"catch_up_ms\": 17.6143,\n  \"verify_ms\": 15.3094,\n  \"status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 17,\n    \"dirs\": 13,\n    \"index_bytes\": 12064,\n    \"skipped\": 1,\n    \"catch_up_ms\": 17.6143,\n    \"error\": null,\n    \"source\": \"ntfs + usn\",\n    \"helper_note\": null,\n    \"journal_batches\": 5,\n    \"journal_directories\": 0,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0,\n    \"scan_profiles\": []\n  }\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Closed changes and deleted parent replay without full scan",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "Closed changes and deleted parent replay without full scan",
+                                                      "arguments":  [
+                                                                        "verify",
+                                                                        "--source",
+                                                                        "helper",
+                                                                        "--root",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\history-files",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\history-index"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  83.8108,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "report":  {
+                                                                                    "ground_truth":  8,
+                                                                                    "indexed":  8,
+                                                                                    "missing":  [
+
+                                                                                                ],
+                                                                                    "extra":  [
+
+                                                                                              ],
+                                                                                    "stale":  [
+
+                                                                                              ],
+                                                                                    "denied":  [
+
+                                                                                               ]
+                                                                                },
+                                                                     "catch_up_ms":  36.205099999999995,
+                                                                     "verify_ms":  17.7073,
+                                                                     "status":  {
+                                                                                    "ready":  true,
+                                                                                    "catching_up":  false,
+                                                                                    "entries":  16,
+                                                                                    "dirs":  12,
+                                                                                    "index_bytes":  12054,
+                                                                                    "skipped":  2,
+                                                                                    "catch_up_ms":  36.205099999999995,
+                                                                                    "error":  null,
+                                                                                    "source":  "ntfs + usn",
+                                                                                    "helper_note":  null,
+                                                                                    "journal_batches":  5,
+                                                                                    "journal_directories":  6,
+                                                                                    "journal_resets":  0,
+                                                                                    "journal_reconciliations":  0,
+                                                                                    "ntfs_fallbacks":  0,
+                                                                                    "scan_profiles":  [
+
+                                                                                                      ]
+                                                                                }
+                                                                 },
+                                                      "stdout":  "{\n  \"report\": {\n    \"ground_truth\": 8,\n    \"indexed\": 8,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": []\n  },\n  \"catch_up_ms\": 36.205099999999995,\n  \"verify_ms\": 17.7073,\n  \"status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 16,\n    \"dirs\": 12,\n    \"index_bytes\": 12054,\n    \"skipped\": 2,\n    \"catch_up_ms\": 36.205099999999995,\n    \"error\": null,\n    \"source\": \"ntfs + usn\",\n    \"helper_note\": null,\n    \"journal_batches\": 5,\n    \"journal_directories\": 6,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0,\n    \"scan_profiles\": []\n  }\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Invalidate changed fixture history",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "Invalidate changed fixture history",
+                                                      "arguments":  [
+                                                                        "invalidate-journal",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\history-index"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  45.225100000000005,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "test_index":  "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\history-index\\index.bin",
+                                                                     "journal_checkpoint_invalidated":  true,
+                                                                     "windows_journal_changed":  false
+                                                                 },
+                                                      "stdout":  "{\n  \"test_index\": \"%USERPROFILE%\\\\Seek\\\\.bench-data\\\\stage2-final\\\\run-639274165025916517\\\\history-index\\\\index.bin\",\n  \"journal_checkpoint_invalidated\": true,\n  \"windows_journal_changed\": false\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Lost history recovers closed create/rename/move/delete",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "Lost history recovers closed create/rename/move/delete",
+                                                      "arguments":  [
+                                                                        "verify",
+                                                                        "--source",
+                                                                        "helper",
+                                                                        "--root",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\history-files",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\history-index"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  64.77170000000001,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "report":  {
+                                                                                    "ground_truth":  8,
+                                                                                    "indexed":  8,
+                                                                                    "missing":  [
+
+                                                                                                ],
+                                                                                    "extra":  [
+
+                                                                                              ],
+                                                                                    "stale":  [
+
+                                                                                              ],
+                                                                                    "denied":  [
+
+                                                                                               ]
+                                                                                },
+                                                                     "catch_up_ms":  19.8203,
+                                                                     "verify_ms":  13.6966,
+                                                                     "status":  {
+                                                                                    "ready":  true,
+                                                                                    "catching_up":  false,
+                                                                                    "entries":  16,
+                                                                                    "dirs":  12,
+                                                                                    "index_bytes":  12054,
+                                                                                    "skipped":  2,
+                                                                                    "catch_up_ms":  19.8203,
+                                                                                    "error":  null,
+                                                                                    "source":  "ntfs + usn",
+                                                                                    "helper_note":  "USN history unavailable/replaced; full folder reconciliation",
+                                                                                    "journal_batches":  4,
+                                                                                    "journal_directories":  0,
+                                                                                    "journal_resets":  1,
+                                                                                    "journal_reconciliations":  0,
+                                                                                    "ntfs_fallbacks":  0,
+                                                                                    "scan_profiles":  [
+
+                                                                                                      ]
+                                                                                }
+                                                                 },
+                                                      "stdout":  "{\n  \"report\": {\n    \"ground_truth\": 8,\n    \"indexed\": 8,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": []\n  },\n  \"catch_up_ms\": 19.8203,\n  \"verify_ms\": 13.6966,\n  \"status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 16,\n    \"dirs\": 12,\n    \"index_bytes\": 12054,\n    \"skipped\": 2,\n    \"catch_up_ms\": 19.8203,\n    \"error\": null,\n    \"source\": \"ntfs + usn\",\n    \"helper_note\": \"USN history unavailable/replaced; full folder reconciliation\",\n    \"journal_batches\": 4,\n    \"journal_directories\": 0,\n    \"journal_resets\": 1,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0,\n    \"scan_profiles\": []\n  }\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "First whole-C: index without helper source",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "First whole-C: index without helper source",
+                                                      "arguments":  [
+                                                                        "index",
+                                                                        "--source",
+                                                                        "walker",
+                                                                        "--root",
+                                                                        "C:\\",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\drive-walker"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  27280.3967,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "ready":  true,
+                                                                     "catching_up":  false,
+                                                                     "entries":  3007770,
+                                                                     "dirs":  278915,
+                                                                     "index_bytes":  173992704,
+                                                                     "skipped":  187,
+                                                                     "catch_up_ms":  25149.655899999998,
+                                                                     "error":  null,
+                                                                     "source":  "walker",
+                                                                     "helper_note":  null,
+                                                                     "journal_batches":  0,
+                                                                     "journal_directories":  0,
+                                                                     "journal_resets":  0,
+                                                                     "journal_reconciliations":  0,
+                                                                     "ntfs_fallbacks":  0,
+                                                                     "scan_profiles":  [
+
+                                                                                       ],
+                                                                     "checkpoint_ms":  2081.4216,
+                                                                     "checkpoint_status":  {
+                                                                                               "ready":  true,
+                                                                                               "catching_up":  false,
+                                                                                               "entries":  3007770,
+                                                                                               "dirs":  278915,
+                                                                                               "index_bytes":  173992704,
+                                                                                               "skipped":  187,
+                                                                                               "catch_up_ms":  25149.655899999998,
+                                                                                               "error":  null,
+                                                                                               "source":  "walker",
+                                                                                               "helper_note":  null,
+                                                                                               "journal_batches":  0,
+                                                                                               "journal_directories":  0,
+                                                                                               "journal_resets":  0,
+                                                                                               "journal_reconciliations":  0,
+                                                                                               "ntfs_fallbacks":  0,
+                                                                                               "scan_profiles":  [
+
+                                                                                                                 ]
+                                                                                           }
+                                                                 },
+                                                      "stdout":  "{\n  \"ready\": true,\n  \"catching_up\": false,\n  \"entries\": 3007770,\n  \"dirs\": 278915,\n  \"index_bytes\": 173992704,\n  \"skipped\": 187,\n  \"catch_up_ms\": 25149.655899999998,\n  \"error\": null,\n  \"source\": \"walker\",\n  \"helper_note\": null,\n  \"journal_batches\": 0,\n  \"journal_directories\": 0,\n  \"journal_resets\": 0,\n  \"journal_reconciliations\": 0,\n  \"ntfs_fallbacks\": 0,\n  \"scan_profiles\": [],\n  \"checkpoint_ms\": 2081.4216,\n  \"checkpoint_status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 3007770,\n    \"dirs\": 278915,\n    \"index_bytes\": 173992704,\n    \"skipped\": 187,\n    \"catch_up_ms\": 25149.655899999998,\n    \"error\": null,\n    \"source\": \"walker\",\n    \"helper_note\": null,\n    \"journal_batches\": 0,\n    \"journal_directories\": 0,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0,\n    \"scan_profiles\": []\n  }\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "First whole-C: index with helper",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "First whole-C: index with helper",
+                                                      "arguments":  [
+                                                                        "index",
+                                                                        "--source",
+                                                                        "helper",
+                                                                        "--root",
+                                                                        "C:\\",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\drive-helper"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  65616.5217,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "ready":  true,
+                                                                     "catching_up":  false,
+                                                                     "entries":  3007767,
+                                                                     "dirs":  278916,
+                                                                     "index_bytes":  174052733,
+                                                                     "skipped":  186,
+                                                                     "catch_up_ms":  35708.498,
+                                                                     "error":  null,
+                                                                     "source":  "ntfs + usn",
+                                                                     "helper_note":  null,
+                                                                     "journal_batches":  7,
+                                                                     "journal_directories":  16,
+                                                                     "journal_resets":  0,
+                                                                     "journal_reconciliations":  0,
+                                                                     "ntfs_fallbacks":  0,
+                                                                     "scan_profiles":  [
+                                                                                           {
+                                                                                               "root":  [
+                                                                                                            47,
+                                                                                                            67,
+                                                                                                            58
+                                                                                                        ],
+                                                                                               "records":  2976939,
+                                                                                               "directories":  278915,
+                                                                                               "metadata_ms":  21121.4275,
+                                                                                               "namespace_ms":  10808.6767
+                                                                                           }
+                                                                                       ],
+                                                                     "checkpoint_ms":  2135.4511,
+                                                                     "checkpoint_status":  {
+                                                                                               "ready":  true,
+                                                                                               "catching_up":  false,
+                                                                                               "entries":  3007766,
+                                                                                               "dirs":  278916,
+                                                                                               "index_bytes":  174052733,
+                                                                                               "skipped":  186,
+                                                                                               "catch_up_ms":  35708.498,
+                                                                                               "error":  null,
+                                                                                               "source":  "ntfs + usn",
+                                                                                               "helper_note":  null,
+                                                                                               "journal_batches":  20,
+                                                                                               "journal_directories":  29,
+                                                                                               "journal_resets":  0,
+                                                                                               "journal_reconciliations":  0,
+                                                                                               "ntfs_fallbacks":  0,
+                                                                                               "scan_profiles":  [
+                                                                                                                     {
+                                                                                                                         "root":  [
+                                                                                                                                      47,
+                                                                                                                                      67,
+                                                                                                                                      58
+                                                                                                                                  ],
+                                                                                                                         "records":  2976939,
+                                                                                                                         "directories":  278915,
+                                                                                                                         "metadata_ms":  21121.4275,
+                                                                                                                         "namespace_ms":  10808.6767
+                                                                                                                     }
+                                                                                                                 ]
+                                                                                           }
+                                                                 },
+                                                      "stdout":  "{\n  \"ready\": true,\n  \"catching_up\": false,\n  \"entries\": 3007767,\n  \"dirs\": 278916,\n  \"index_bytes\": 174052733,\n  \"skipped\": 186,\n  \"catch_up_ms\": 35708.498,\n  \"error\": null,\n  \"source\": \"ntfs + usn\",\n  \"helper_note\": null,\n  \"journal_batches\": 7,\n  \"journal_directories\": 16,\n  \"journal_resets\": 0,\n  \"journal_reconciliations\": 0,\n  \"ntfs_fallbacks\": 0,\n  \"scan_profiles\": [\n    {\n      \"root\": [\n        47,\n        67,\n        58\n      ],\n      \"records\": 2976939,\n      \"directories\": 278915,\n      \"metadata_ms\": 21121.4275,\n      \"namespace_ms\": 10808.6767\n    }\n  ],\n  \"checkpoint_ms\": 2135.4511,\n  \"checkpoint_status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 3007766,\n    \"dirs\": 278916,\n    \"index_bytes\": 174052733,\n    \"skipped\": 186,\n    \"catch_up_ms\": 35708.498,\n    \"error\": null,\n    \"source\": \"ntfs + usn\",\n    \"helper_note\": null,\n    \"journal_batches\": 20,\n    \"journal_directories\": 29,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0,\n    \"scan_profiles\": [\n      {\n        \"root\": [\n          47,\n          67,\n          58\n        ],\n        \"records\": 2976939,\n        \"directories\": 278915,\n        \"metadata_ms\": 21121.4275,\n        \"namespace_ms\": 10808.6767\n      }\n    ]\n  }\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Helper first-index speed compared with walker",
+                                      "passed":  false,
+                                      "details":  {
+                                                      "measurement":  "Sequential runs on the same live drive; OS caches not flushed; no fsearch parity claim",
+                                                      "helper_ms":  35708.498,
+                                                      "helper_over_walker_ratio":  1.419840420162567824225413769,
+                                                      "walker_ms":  25149.655899999998
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Whole-drive index covers real Downloads",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "Whole-drive index covers real Downloads",
+                                                      "arguments":  [
+                                                                        "verify",
+                                                                        "--source",
+                                                                        "helper",
+                                                                        "--root",
+                                                                        "C:\\",
+                                                                        "--verify-root",
+                                                                        "%USERPROFILE%\\Downloads",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\drive-helper"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  33302.055,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "report":  {
+                                                                                    "ground_truth":  500,
+                                                                                    "indexed":  500,
+                                                                                    "missing":  [
+
+                                                                                                ],
+                                                                                    "extra":  [
+
+                                                                                              ],
+                                                                                    "stale":  [
+
+                                                                                              ],
+                                                                                    "denied":  [
+
+                                                                                               ]
+                                                                                },
+                                                                     "catch_up_ms":  2305.5536,
+                                                                     "verify_ms":  7248.8706,
+                                                                     "status":  {
+                                                                                    "ready":  true,
+                                                                                    "catching_up":  false,
+                                                                                    "entries":  3007445,
+                                                                                    "dirs":  278916,
+                                                                                    "index_bytes":  174047601,
+                                                                                    "skipped":  194,
+                                                                                    "catch_up_ms":  2305.5536,
+                                                                                    "error":  null,
+                                                                                    "source":  "ntfs + usn",
+                                                                                    "helper_note":  null,
+                                                                                    "journal_batches":  59,
+                                                                                    "journal_directories":  216,
+                                                                                    "journal_resets":  0,
+                                                                                    "journal_reconciliations":  0,
+                                                                                    "ntfs_fallbacks":  0,
+                                                                                    "scan_profiles":  [
+
+                                                                                                      ]
+                                                                                }
+                                                                 },
+                                                      "stdout":  "{\n  \"report\": {\n    \"ground_truth\": 500,\n    \"indexed\": 500,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": []\n  },\n  \"catch_up_ms\": 2305.5536,\n  \"verify_ms\": 7248.8706,\n  \"status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 3007445,\n    \"dirs\": 278916,\n    \"index_bytes\": 174047601,\n    \"skipped\": 194,\n    \"catch_up_ms\": 2305.5536,\n    \"error\": null,\n    \"source\": \"ntfs + usn\",\n    \"helper_note\": null,\n    \"journal_batches\": 59,\n    \"journal_directories\": 216,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0,\n    \"scan_profiles\": []\n  }\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Whole-drive index covers real Documents",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "Whole-drive index covers real Documents",
+                                                      "arguments":  [
+                                                                        "verify",
+                                                                        "--source",
+                                                                        "helper",
+                                                                        "--root",
+                                                                        "C:\\",
+                                                                        "--verify-root",
+                                                                        "%USERPROFILE%\\OneDrive\\Documents",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\drive-helper"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  31438.2183,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "report":  {
+                                                                                    "ground_truth":  565,
+                                                                                    "indexed":  565,
+                                                                                    "missing":  [
+
+                                                                                                ],
+                                                                                    "extra":  [
+
+                                                                                              ],
+                                                                                    "stale":  [
+
+                                                                                              ],
+                                                                                    "denied":  [
+
+                                                                                               ]
+                                                                                },
+                                                                     "catch_up_ms":  1903.3039999999999,
+                                                                     "verify_ms":  7657.6401,
+                                                                     "status":  {
+                                                                                    "ready":  true,
+                                                                                    "catching_up":  false,
+                                                                                    "entries":  3007460,
+                                                                                    "dirs":  278916,
+                                                                                    "index_bytes":  174048835,
+                                                                                    "skipped":  194,
+                                                                                    "catch_up_ms":  1903.3039999999999,
+                                                                                    "error":  null,
+                                                                                    "source":  "ntfs + usn",
+                                                                                    "helper_note":  null,
+                                                                                    "journal_batches":  16,
+                                                                                    "journal_directories":  39,
+                                                                                    "journal_resets":  0,
+                                                                                    "journal_reconciliations":  0,
+                                                                                    "ntfs_fallbacks":  0,
+                                                                                    "scan_profiles":  [
+
+                                                                                                      ]
+                                                                                }
+                                                                 },
+                                                      "stdout":  "{\n  \"report\": {\n    \"ground_truth\": 565,\n    \"indexed\": 565,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": []\n  },\n  \"catch_up_ms\": 1903.3039999999999,\n  \"verify_ms\": 7657.6401,\n  \"status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 3007460,\n    \"dirs\": 278916,\n    \"index_bytes\": 174048835,\n    \"skipped\": 194,\n    \"catch_up_ms\": 1903.3039999999999,\n    \"error\": null,\n    \"source\": \"ntfs + usn\",\n    \"helper_note\": null,\n    \"journal_batches\": 16,\n    \"journal_directories\": 39,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0,\n    \"scan_profiles\": []\n  }\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Whole-drive index covers real Desktop",
+                                      "passed":  true,
+                                      "details":  {
+                                                      "name":  "Whole-drive index covers real Desktop",
+                                                      "arguments":  [
+                                                                        "verify",
+                                                                        "--source",
+                                                                        "helper",
+                                                                        "--root",
+                                                                        "C:\\",
+                                                                        "--verify-root",
+                                                                        "%USERPROFILE%\\OneDrive\\Desktop",
+                                                                        "--data",
+                                                                        "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\drive-helper"
+                                                                    ],
+                                                      "exit_code":  0,
+                                                      "wall_ms":  28626.631800000003,
+                                                      "peak_total_working_set_bytes":  null,
+                                                      "report":  {
+                                                                     "report":  {
+                                                                                    "ground_truth":  24,
+                                                                                    "indexed":  24,
+                                                                                    "missing":  [
+
+                                                                                                ],
+                                                                                    "extra":  [
+
+                                                                                              ],
+                                                                                    "stale":  [
+
+                                                                                              ],
+                                                                                    "denied":  [
+
+                                                                                               ]
+                                                                                },
+                                                                     "catch_up_ms":  1907.2728,
+                                                                     "verify_ms":  5982.3205,
+                                                                     "status":  {
+                                                                                    "ready":  true,
+                                                                                    "catching_up":  false,
+                                                                                    "entries":  3007459,
+                                                                                    "dirs":  278916,
+                                                                                    "index_bytes":  174048771,
+                                                                                    "skipped":  194,
+                                                                                    "catch_up_ms":  1907.2728,
+                                                                                    "error":  null,
+                                                                                    "source":  "ntfs + usn",
+                                                                                    "helper_note":  null,
+                                                                                    "journal_batches":  8,
+                                                                                    "journal_directories":  26,
+                                                                                    "journal_resets":  0,
+                                                                                    "journal_reconciliations":  0,
+                                                                                    "ntfs_fallbacks":  0,
+                                                                                    "scan_profiles":  [
+
+                                                                                                      ]
+                                                                                }
+                                                                 },
+                                                      "stdout":  "{\n  \"report\": {\n    \"ground_truth\": 24,\n    \"indexed\": 24,\n    \"missing\": [],\n    \"extra\": [],\n    \"stale\": [],\n    \"denied\": []\n  },\n  \"catch_up_ms\": 1907.2728,\n  \"verify_ms\": 5982.3205,\n  \"status\": {\n    \"ready\": true,\n    \"catching_up\": false,\n    \"entries\": 3007459,\n    \"dirs\": 278916,\n    \"index_bytes\": 174048771,\n    \"skipped\": 194,\n    \"catch_up_ms\": 1907.2728,\n    \"error\": null,\n    \"source\": \"ntfs + usn\",\n    \"helper_note\": null,\n    \"journal_batches\": 8,\n    \"journal_directories\": 26,\n    \"journal_resets\": 0,\n    \"journal_reconciliations\": 0,\n    \"ntfs_fallbacks\": 0,\n    \"scan_profiles\": []\n  }\n}\n",
+                                                      "stderr":  ""
+                                                  }
+                                  },
+                                  {
+                                      "name":  "Whole-C: app launch deferred until correctness and speed pass",
+                                      "passed":  false,
+                                      "details":  {
+                                                      "drive_index":  "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\drive-helper",
+                                                      "reason":  "Prior gate failed; app timing would not certify the fast path"
+                                                  }
+                                  }
+                              ],
+                   "complete":  true,
+                   "passed":  false,
+                   "sid":  "S-1-5-21-111111111-222222222-333333333-1001",
+                   "elevated":  false,
+                   "run_directory":  "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517",
+                   "whole_drive_data":  "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517\\drive-helper"
+               },
+    "uninstall_command":  "powershell -NoProfile -ExecutionPolicy Bypass -File \"%USERPROFILE%\\Seek\\scripts\\finish-stage2.ps1\" -Uninstall",
+    "scope":  "Only Seek helper and owned checkout artifacts are written. Real folders are read-only. Windows journal unchanged.",
+    "run_directory":  "%USERPROFILE%\\Seek\\.bench-data\\stage2-final\\run-639274165025916517",
+    "worker_exit_code":  1,
+    "finished_utc":  "2026-10-12T15:46:00.7286190Z"
+}

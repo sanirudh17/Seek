@@ -1,0 +1,5 @@
+{
+  "command": "cargo build --workspace --release --all-features --locked --offline",
+  "exit_code": 0,
+  "seconds": 460.481
+}

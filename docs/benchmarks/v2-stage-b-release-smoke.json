@@ -1,0 +1,54 @@
+{
+    "checks":  [
+                   {
+                       "name":  "Fixture is ready",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Final release PDF host returns the owned content match",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "F5 rescans content after an external file addition",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Closing quits after content worker use",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "72AD5AB678DDF453E158CD60CD2C89153E0528006A3ACFA327084D0E4F2548DF",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-check-639278522129028657",
+    "captures":  [
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-content-final.png"
+                 ],
+    "content_observations":  [
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  115.7935,
+                                                    "matches":  1
+                                                },
+                                     "entry_ms":  10789.7642
+                                 },
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  8,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  55.4707,
+                                                    "matches":  2
+                                                },
+                                     "entry_ms":  12141.862700000001
+                                 }
+                             ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe"
+}

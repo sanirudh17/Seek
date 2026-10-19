@@ -1,0 +1,47 @@
+{
+    "private_working_set_bytes":  38518784,
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\stage3-targeted-639276616639914706",
+    "private_commit_bytes":  89763840,
+    "checks":  [
+                   {
+                       "name":  "Populated dark List, uniform yellow folders and selected PNG",
+                       "rows":  6,
+                       "passed":  true
+                   },
+                   {
+                       "start":  817,
+                       "samples":  [
+                                       807,
+                                       764,
+                                       686,
+                                       600,
+                                       562,
+                                       562,
+                                       562,
+                                       562,
+                                       562,
+                                       562,
+                                       562,
+                                       562
+                                   ],
+                       "name":  "160 ms sidebar transition has intermediate widths and restores",
+                       "restored":  817,
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Icons/Gallery retain selected item",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Light Graphite selection, centered small Settings controls",
+                       "passed":  true
+                   },
+                   {
+                       "ms":  279.5412,
+                       "exit":  0,
+                       "name":  "Window close exits",
+                       "passed":  true
+                   }
+               ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe"
+}

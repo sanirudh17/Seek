@@ -1,0 +1,31 @@
+{
+    "checks":  [
+                   {
+                       "wall_ms":  5921.0787,
+                       "command":  "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+                       "exit_code":  0
+                   },
+                   {
+                       "wall_ms":  2732.4568,
+                       "command":  "cargo check --workspace --locked",
+                       "exit_code":  0
+                   },
+                   {
+                       "wall_ms":  4045.4994,
+                       "command":  "cargo fmt --all -- --check",
+                       "exit_code":  0
+                   },
+                   {
+                       "wall_ms":  916.28050000000007,
+                       "command":  "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\finish-stage2.ps1 -CheckOnly",
+                       "exit_code":  0
+                   }
+               ],
+    "tests":  {
+                  "passed":  55,
+                  "ignored":  1,
+                  "command":  "cargo test --workspace --all-features --locked",
+                  "compile_report_seconds":  25.98,
+                  "exit_code":  0
+              }
+}

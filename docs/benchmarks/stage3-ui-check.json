@@ -1,0 +1,211 @@
+{
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\stage3-check-639274983497225159",
+    "pid":  12060,
+    "checks":  [
+                   {
+                       "name":  "Ordinary-user window and complete fixture index",
+                       "passed":  true,
+                       "detail":  {
+                                      "entries":  2072,
+                                      "skipped":  0,
+                                      "catch_up_ms":  64.3475
+                                  }
+                   },
+                   {
+                       "name":  "Right expands 2,049 direct children from the index",
+                       "passed":  true,
+                       "detail":  {
+                                      "max_depth":  1,
+                                      "rows":  2050
+                                  }
+                   },
+                   {
+                       "name":  "Virtualized expanded list",
+                       "passed":  true,
+                       "detail":  {
+                                      "realized_rows":  20,
+                                      "logical_rows":  2050
+                                  }
+                   },
+                   {
+                       "name":  "Nested expansion follows sibling sort and indentation",
+                       "passed":  true,
+                       "detail":  {
+                                      "first_rows":  [
+                                                         "Expansion",
+                                                         "Nested",
+                                                         "deep.txt",
+                                                         "child-2047.txt",
+                                                         "child-2046.txt"
+                                                     ],
+                                      "depths":  [
+                                                     0,
+                                                     1,
+                                                     2,
+                                                     1,
+                                                     1
+                                                 ]
+                                  }
+                   },
+                   {
+                       "name":  "Left collapses selected subfolder",
+                       "passed":  true,
+                       "detail":  {
+                                      "rows":  2050
+                                  }
+                   },
+                   {
+                       "name":  "Expanded contents follow hidden-files setting",
+                       "passed":  true,
+                       "detail":  {
+                                      "rows":  2051
+                                  }
+                   },
+                   {
+                       "name":  "Disclosure clicks collapse and expand",
+                       "passed":  true,
+                       "detail":  {
+                                      "rows":  2051
+                                  }
+                   },
+                   {
+                       "name":  "Real image preview and Space panel toggle",
+                       "passed":  true,
+                       "detail":  {
+                                      "name":  "Picture.png",
+                                      "edge":  480,
+                                      "details":  false,
+                                      "image":  true
+                                  }
+                   },
+                   {
+                       "name":  "Icons view activates",
+                       "passed":  true,
+                       "detail":  {
+                                      "view":  "Icons"
+                                  }
+                   },
+                   {
+                       "name":  "Gallery view activates",
+                       "passed":  true,
+                       "detail":  {
+                                      "view":  "Gallery"
+                                  }
+                   },
+                   {
+                       "name":  "List view activates",
+                       "passed":  true,
+                       "detail":  {
+                                      "view":  "List"
+                                  }
+                   },
+                   {
+                       "name":  "Real SVG preview",
+                       "passed":  true,
+                       "detail":  {
+                                      "name":  "Picture.svg",
+                                      "edge":  480,
+                                      "details":  false,
+                                      "image":  true
+                                  }
+                   },
+                   {
+                       "name":  "Windows video provider queried",
+                       "passed":  true,
+                       "detail":  {
+                                      "name":  "Preview.mp4",
+                                      "edge":  480,
+                                      "details":  false,
+                                      "image":  true
+                                  }
+                   },
+                   {
+                       "name":  "Markdown uses text icon and worker text preview",
+                       "passed":  true,
+                       "detail":  {
+
+                                  }
+                   },
+                   {
+                       "name":  "Dark theme saved",
+                       "passed":  true,
+                       "detail":  {
+                                      "theme":  "dark"
+                                  }
+                   },
+                   {
+                       "name":  "Light theme saved",
+                       "passed":  true,
+                       "detail":  {
+                                      "theme":  "light"
+                                  }
+                   },
+                   {
+                       "name":  "System theme saved",
+                       "passed":  true,
+                       "detail":  {
+                                      "theme":  "system"
+                                  }
+                   },
+                   {
+                       "name":  "Glass can be disabled and restored",
+                       "passed":  true,
+                       "detail":  {
+                                      "glass":  true
+                                  }
+                   },
+                   {
+                       "name":  "Preset and custom accent persisted",
+                       "passed":  true,
+                       "detail":  {
+                                      "accent":  "#267e58"
+                                  }
+                   },
+                   {
+                       "name":  "Second launch exits and restores the existing window",
+                       "passed":  true,
+                       "detail":  {
+                                      "foreground":  true,
+                                      "second_exit":  0
+                                  }
+                   },
+                   {
+                       "name":  "Closing exits the entire app",
+                       "passed":  true,
+                       "detail":  {
+                                      "ms":  175.2623,
+                                      "exit":  0
+                                  }
+                   }
+               ],
+    "private_working_set_bytes":  55566336,
+    "private_commit_bytes":  111599616,
+    "close":  {
+                  "ms":  175.2623,
+                  "exit":  0
+              },
+    "settings":  {
+                     "theme":  "system",
+                     "glass":  true,
+                     "accent":  "#267e58",
+                     "show_hidden":  true,
+                     "default_view":  "list",
+                     "indexed_locations":  [
+
+                                           ],
+                     "exclusions":  [
+
+                                    ],
+                     "window":  {
+                                    "bounds":  [
+                                                   218.39999389648438,
+                                                   58.400001525878906,
+                                                   1100.0,
+                                                   700.0
+                                               ],
+                                    "maximized":  false
+                                }
+                 },
+    "note":  "Focused Stage 3 fixture checks. Windows caches warm; not a whole-drive or foreground-idle benchmark."
+}

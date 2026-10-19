@@ -1,0 +1,41 @@
+{
+    "captures":  [
+                     {
+                         "name":  "dark-preview-scroll",
+                         "path":  "%USERPROFILE%\\AppData\\Local\\Temp\\seek-preview-scroll-b3ad19c023124392909c0cd6a5847abc\\dark-preview-scroll.png"
+                     },
+                     {
+                         "name":  "light-preview-scroll",
+                         "path":  "%USERPROFILE%\\AppData\\Local\\Temp\\seek-preview-scroll-b3ad19c023124392909c0cd6a5847abc\\light-preview-scroll.png"
+                     }
+                 ],
+    "sha256":  "3AAB07193CB67876BD71BEA6FC26C69229B034468A52655FF7C46BC824EA39F8",
+    "fixture":  "%USERPROFILE%\\AppData\\Local\\Temp\\seek-preview-scroll-b3ad19c023124392909c0cd6a5847abc",
+    "checks":  [
+                   {
+                       "name":  "Selected high-resolution preview: A-red.png",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Selected high-resolution preview: B-blue.png",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Selected high-resolution preview: C-000.txt",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Selected high-resolution preview: A-red.png",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Closing info panel releases large preview and details",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Light theme preview and scrollbar captured",
+                       "passed":  true
+                   }
+               ],
+    "limitations":  "Screenshots inspect settled quality and thumb geometry, not a high-speed recording of the transition."
+}

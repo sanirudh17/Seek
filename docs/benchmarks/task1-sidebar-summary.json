@@ -1,0 +1,336 @@
+{
+  "task": 1,
+  "date": "2026-10-18",
+  "status": "complete",
+  "roots_causes": [
+    "Sidebar scope navigation retained Content/Largest modes",
+    "Folder reads were gated by global ready and queried only published index children; out-of-index folders looked empty",
+    "Known Folder API failure fell back to guessed USERPROFILE paths"
+  ],
+  "reproductions": [
+    "task1-sidebar-before.json",
+    "task1-sidebar-unindexed-before.json"
+  ],
+  "folder_truth": [
+    {
+      "expected": 11,
+      "extra": 0,
+      "actual": 11,
+      "index_ready": true,
+      "button": "%USERPROFILE%\\Seek\\target",
+      "path": "%USERPROFILE%\\Seek\\target",
+      "query_to_present_ms": 21.526400000000002,
+      "missing": 0
+    },
+    {
+      "expected": 539,
+      "extra": 0,
+      "actual": 539,
+      "index_ready": true,
+      "button": "Downloads",
+      "path": "%USERPROFILE%\\Downloads",
+      "query_to_present_ms": null,
+      "missing": 0
+    },
+    {
+      "expected": 18,
+      "extra": 0,
+      "actual": 18,
+      "index_ready": true,
+      "button": "Desktop",
+      "path": "%USERPROFILE%\\OneDrive\\Desktop",
+      "query_to_present_ms": null,
+      "missing": 0
+    },
+    {
+      "expected": 133,
+      "extra": 0,
+      "actual": 133,
+      "index_ready": true,
+      "button": "Documents",
+      "path": "%USERPROFILE%\\OneDrive\\Documents",
+      "query_to_present_ms": null,
+      "missing": 0
+    },
+    {
+      "expected": 15,
+      "extra": 0,
+      "actual": 15,
+      "index_ready": true,
+      "button": "Pictures",
+      "path": "%USERPROFILE%\\OneDrive\\Pictures",
+      "query_to_present_ms": null,
+      "missing": 0
+    },
+    {
+      "expected": 7,
+      "extra": 0,
+      "actual": 7,
+      "index_ready": true,
+      "button": "Videos",
+      "path": "%USERPROFILE%\\Videos",
+      "query_to_present_ms": null,
+      "missing": 0
+    },
+    {
+      "expected": 1,
+      "extra": 0,
+      "actual": 1,
+      "index_ready": true,
+      "button": "Music",
+      "path": "%USERPROFILE%\\Expense Tracker\\Music",
+      "query_to_present_ms": null,
+      "missing": 0
+    },
+    {
+      "expected": 4,
+      "extra": 0,
+      "actual": 4,
+      "index_ready": true,
+      "button": "Z:\\",
+      "path": "Z:\\",
+      "query_to_present_ms": 15.0105,
+      "missing": 0
+    }
+  ],
+  "ui_checks": [
+    {
+      "name": "Genuinely empty folder is distinguished from loading",
+      "passed": true
+    },
+    {
+      "name": "Sidebar exits Content mode and restores directory rows",
+      "passed": true
+    },
+    {
+      "name": "Sidebar exits Largest mode and restores folders",
+      "passed": true
+    },
+    {
+      "name": "Closing quits",
+      "passed": true
+    }
+  ],
+  "new_rust_checks_passed": 3,
+  "before_ready_rows": 2,
+  "before_ready_ms": 7.403,
+  "before_ready_global_index_ready": false,
+  "priority_metadata_reads": [
+    {
+      "interaction": "folder_metadata",
+      "detail": {
+        "folder": "%USERPROFILE%\\Downloads",
+        "rows": 540,
+        "error": null,
+        "elapsed_ms": 3.3542
+      },
+      "entry_ms": 55.4902
+    },
+    {
+      "interaction": "folder_metadata",
+      "detail": {
+        "folder": "%USERPROFILE%\\OneDrive\\Desktop",
+        "rows": 19,
+        "error": null,
+        "elapsed_ms": 0.5680000000000001
+      },
+      "entry_ms": 56.2041
+    },
+    {
+      "interaction": "folder_metadata",
+      "detail": {
+        "folder": "%USERPROFILE%\\OneDrive\\Documents",
+        "rows": 134,
+        "error": null,
+        "elapsed_ms": 1.053
+      },
+      "entry_ms": 57.287699999999994
+    },
+    {
+      "interaction": "folder_metadata",
+      "detail": {
+        "folder": "%USERPROFILE%\\OneDrive\\Pictures",
+        "rows": 16,
+        "error": null,
+        "elapsed_ms": 0.22010000000000002
+      },
+      "entry_ms": 57.5375
+    },
+    {
+      "interaction": "folder_metadata",
+      "detail": {
+        "folder": "%USERPROFILE%\\Videos",
+        "rows": 8,
+        "error": null,
+        "elapsed_ms": 0.1753
+      },
+      "entry_ms": 57.7347
+    },
+    {
+      "interaction": "folder_metadata",
+      "detail": {
+        "folder": "%USERPROFILE%\\Expense Tracker\\Music",
+        "rows": 2,
+        "error": null,
+        "elapsed_ms": 0.1431
+      },
+      "entry_ms": 57.8956
+    },
+    {
+      "interaction": "folder_view",
+      "detail": {
+        "scope": "\\\\?\\%USERPROFILE%\\Seek\\target",
+        "generation": 1,
+        "rows": 11,
+        "message": "Folder contents",
+        "index_ready": true
+      },
+      "entry_ms": 2736.5247
+    },
+    {
+      "interaction": "folder_view",
+      "detail": {
+        "scope": "%USERPROFILE%\\Downloads",
+        "generation": 2,
+        "rows": 0,
+        "message": "Indexing this folder...",
+        "index_ready": true
+      },
+      "entry_ms": 4318.3032
+    },
+    {
+      "interaction": "folder_view",
+      "detail": {
+        "scope": "%USERPROFILE%\\Downloads",
+        "generation": 2,
+        "rows": 539,
+        "message": "Folder contents",
+        "index_ready": true
+      },
+      "entry_ms": 4330.4186
+    },
+    {
+      "interaction": "folder_view",
+      "detail": {
+        "scope": "%USERPROFILE%\\OneDrive\\Desktop",
+        "generation": 3,
+        "rows": 0,
+        "message": "Indexing this folder...",
+        "index_ready": true
+      },
+      "entry_ms": 5862.4408
+    },
+    {
+      "interaction": "folder_view",
+      "detail": {
+        "scope": "%USERPROFILE%\\OneDrive\\Desktop",
+        "generation": 3,
+        "rows": 18,
+        "message": "Folder contents",
+        "index_ready": true
+      },
+      "entry_ms": 5863.8138
+    },
+    {
+      "interaction": "folder_view",
+      "detail": {
+        "scope": "%USERPROFILE%\\OneDrive\\Documents",
+        "generation": 4,
+        "rows": 0,
+        "message": "Indexing this folder...",
+        "index_ready": true
+      },
+      "entry_ms": 7406.270100000001
+    },
+    {
+      "interaction": "folder_view",
+      "detail": {
+        "scope": "%USERPROFILE%\\OneDrive\\Documents",
+        "generation": 4,
+        "rows": 133,
+        "message": "Folder contents",
+        "index_ready": true
+      },
+      "entry_ms": 7409.7215
+    },
+    {
+      "interaction": "folder_view",
+      "detail": {
+        "scope": "%USERPROFILE%\\OneDrive\\Pictures",
+        "generation": 5,
+        "rows": 0,
+        "message": "Indexing this folder...",
+        "index_ready": true
+      },
+      "entry_ms": 8963.8146
+    },
+    {
+      "interaction": "folder_view",
+      "detail": {
+        "scope": "%USERPROFILE%\\OneDrive\\Pictures",
+        "generation": 5,
+        "rows": 15,
+        "message": "Folder contents",
+        "index_ready": true
+      },
+      "entry_ms": 8964.9997
+    },
+    {
+      "interaction": "folder_view",
+      "detail": {
+        "scope": "%USERPROFILE%\\Videos",
+        "generation": 6,
+        "rows": 0,
+        "message": "Indexing this folder...",
+        "index_ready": true
+      },
+      "entry_ms": 10574.0675
+    },
+    {
+      "interaction": "folder_view",
+      "detail": {
+        "scope": "%USERPROFILE%\\Videos",
+        "generation": 6,
+        "rows": 7,
+        "message": "Folder contents",
+        "index_ready": true
+      },
+      "entry_ms": 10574.988899999998
+    },
+    {
+      "interaction": "folder_view",
+      "detail": {
+        "scope": "%USERPROFILE%\\Expense Tracker\\Music",
+        "generation": 7,
+        "rows": 0,
+        "message": "Indexing this folder...",
+        "index_ready": true
+      },
+      "entry_ms": 12054.268399999999
+    },
+    {
+      "interaction": "folder_view",
+      "detail": {
+        "scope": "%USERPROFILE%\\Expense Tracker\\Music",
+        "generation": 7,
+        "rows": 1,
+        "message": "Folder contents",
+        "index_ready": true
+      },
+      "entry_ms": 12055.2309
+    }
+  ],
+  "validation": {
+    "clippy_all_targets_all_features": true,
+    "normal_feature_check": true,
+    "format": true
+  },
+  "artifact_kind": "debug (GUI); no release timing claims",
+  "limits": [
+    "One physical C: volume available; non-C drive-letter check uses temporary SUBST mapping to owned files",
+    "No physical HDR/mixed-DPI verification",
+    "Directory metadata reads are snapshots; indexed change tracking takes over for folders in the published index"
+  ],
+  "data_safety": "Every app test used --data pointing into an owned .bench-data temporary folder; no real Seek profile read or written by the tests",
+  "framework_updates": false
+}

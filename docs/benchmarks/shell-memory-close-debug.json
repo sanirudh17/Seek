@@ -1,0 +1,9 @@
+﻿{
+    "pid":  13296,
+    "private_working_set_bytes":  31449088,
+    "working_set_bytes":  94855168,
+    "private_commit_bytes":  77189120,
+    "close_requested":  true,
+    "close_exited":  true,
+    "exit_code":  null
+}

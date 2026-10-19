@@ -1,0 +1,260 @@
+{
+    "captured_at":  "2026-10-11T11:07:54.1307231Z",
+    "files":  1000000,
+    "runs":  3,
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+    "launch_kind":  "Repeated launches; OS file cache not flushed; successful DirectX Present return, excluding physical DWM scanout",
+    "idle_method":  "Final run only; foreground checked every 250 ms by harness; app trace records every presentation; wait for up-to-date before sampling",
+    "samples":  [
+                    {
+                        "run":  1,
+                        "trace":  "%USERPROFILE%\\Seek\\.bench-data\\1000000\\startup-639273136653525865.ndjson",
+                        "process_launch_to_cached_present_ms":  548.4216,
+                        "process_entry_to_cached_present_ms":  445.6773,
+                        "cached_present_catching_up":  true,
+                        "cached_present_rows":  200,
+                        "process_launch_to_up_to_date_present_ms":  6158.187,
+                        "walker_catch_up_ms":  6005.1265,
+                        "milestones":  [
+                                           {
+                                               "phase":  "entry",
+                                               "entry_ms":  0.7303000000000001
+                                           },
+                                           {
+                                               "phase":  "backend_spawned",
+                                               "entry_ms":  0.8048000000000001
+                                           },
+                                           {
+                                               "phase":  "windows_platform_start",
+                                               "entry_ms":  0.8085
+                                           },
+                                           {
+                                               "phase":  "search_worker_started",
+                                               "entry_ms":  0.9519
+                                           },
+                                           {
+                                               "phase":  "known_folders_resolved",
+                                               "entry_ms":  5.3279
+                                           },
+                                           {
+                                               "phase":  "direct_write_ready",
+                                               "entry_ms":  103.7348
+                                           },
+                                           {
+                                               "phase":  "gpui_application_created",
+                                               "entry_ms":  127.6362
+                                           },
+                                           {
+                                               "phase":  "directx_start",
+                                               "entry_ms":  127.6715
+                                           },
+                                           {
+                                               "phase":  "directx_devices_ready",
+                                               "entry_ms":  205.90130000000002
+                                           },
+                                           {
+                                               "phase":  "directx_ready",
+                                               "entry_ms":  206.274
+                                           },
+                                           {
+                                               "phase":  "gpui_finish_launching",
+                                               "entry_ms":  206.29659999999998
+                                           },
+                                           {
+                                               "phase":  "kit_initialized",
+                                               "entry_ms":  209.3518
+                                           },
+                                           {
+                                               "phase":  "cached_search_started",
+                                               "entry_ms":  248.57670000000002
+                                           },
+                                           {
+                                               "phase":  "cached_rows_materialized",
+                                               "entry_ms":  263.5367
+                                           },
+                                           {
+                                               "phase":  "shell_constructing",
+                                               "entry_ms":  279.6244
+                                           },
+                                           {
+                                               "phase":  "shell_constructed",
+                                               "entry_ms":  279.7591
+                                           },
+                                           {
+                                               "phase":  "window_opened",
+                                               "entry_ms":  433.3906
+                                           }
+                                       ],
+                        "foreground_idle":  null,
+                        "close_to_exit_ms":  49.850100000000005,
+                        "exit_code":  0
+                    },
+                    {
+                        "run":  2,
+                        "trace":  "%USERPROFILE%\\Seek\\.bench-data\\1000000\\startup-639273136716022524.ndjson",
+                        "process_launch_to_cached_present_ms":  507.5012,
+                        "process_entry_to_cached_present_ms":  462.2338,
+                        "cached_present_catching_up":  true,
+                        "cached_present_rows":  200,
+                        "process_launch_to_up_to_date_present_ms":  1126.4714,
+                        "walker_catch_up_ms":  1054.4859,
+                        "milestones":  [
+                                           {
+                                               "phase":  "entry",
+                                               "entry_ms":  0.45649999999999996
+                                           },
+                                           {
+                                               "phase":  "backend_spawned",
+                                               "entry_ms":  0.5242
+                                           },
+                                           {
+                                               "phase":  "windows_platform_start",
+                                               "entry_ms":  0.5279
+                                           },
+                                           {
+                                               "phase":  "search_worker_started",
+                                               "entry_ms":  0.6457
+                                           },
+                                           {
+                                               "phase":  "known_folders_resolved",
+                                               "entry_ms":  5.6397
+                                           },
+                                           {
+                                               "phase":  "cached_search_started",
+                                               "entry_ms":  23.416
+                                           },
+                                           {
+                                               "phase":  "cached_rows_materialized",
+                                               "entry_ms":  29.826600000000003
+                                           },
+                                           {
+                                               "phase":  "direct_write_ready",
+                                               "entry_ms":  120.0027
+                                           },
+                                           {
+                                               "phase":  "gpui_application_created",
+                                               "entry_ms":  140.9733
+                                           },
+                                           {
+                                               "phase":  "directx_start",
+                                               "entry_ms":  141.0146
+                                           },
+                                           {
+                                               "phase":  "directx_devices_ready",
+                                               "entry_ms":  222.275
+                                           },
+                                           {
+                                               "phase":  "directx_ready",
+                                               "entry_ms":  222.9672
+                                           },
+                                           {
+                                               "phase":  "gpui_finish_launching",
+                                               "entry_ms":  222.9936
+                                           },
+                                           {
+                                               "phase":  "kit_initialized",
+                                               "entry_ms":  226.74159999999998
+                                           },
+                                           {
+                                               "phase":  "shell_constructing",
+                                               "entry_ms":  296.83739999999995
+                                           },
+                                           {
+                                               "phase":  "shell_constructed",
+                                               "entry_ms":  296.982
+                                           },
+                                           {
+                                               "phase":  "window_opened",
+                                               "entry_ms":  450.0069
+                                           }
+                                       ],
+                        "foreground_idle":  null,
+                        "close_to_exit_ms":  78.2243,
+                        "exit_code":  0
+                    },
+                    {
+                        "run":  3,
+                        "trace":  "%USERPROFILE%\\Seek\\.bench-data\\1000000\\startup-639273136728306596.ndjson",
+                        "process_launch_to_cached_present_ms":  572.6936,
+                        "process_entry_to_cached_present_ms":  526.3333,
+                        "cached_present_catching_up":  true,
+                        "cached_present_rows":  200,
+                        "process_launch_to_up_to_date_present_ms":  1207.3176,
+                        "walker_catch_up_ms":  1139.2447,
+                        "milestones":  [
+                                           {
+                                               "phase":  "entry",
+                                               "entry_ms":  0.4432
+                                           },
+                                           {
+                                               "phase":  "backend_spawned",
+                                               "entry_ms":  0.5287999999999999
+                                           },
+                                           {
+                                               "phase":  "windows_platform_start",
+                                               "entry_ms":  0.5321
+                                           },
+                                           {
+                                               "phase":  "search_worker_started",
+                                               "entry_ms":  0.6687000000000001
+                                           },
+                                           {
+                                               "phase":  "known_folders_resolved",
+                                               "entry_ms":  5.6997
+                                           },
+                                           {
+                                               "phase":  "cached_search_started",
+                                               "entry_ms":  23.904700000000002
+                                           },
+                                           {
+                                               "phase":  "cached_rows_materialized",
+                                               "entry_ms":  28.9162
+                                           },
+                                           {
+                                               "phase":  "direct_write_ready",
+                                               "entry_ms":  121.6078
+                                           },
+                                           {
+                                               "phase":  "gpui_application_created",
+                                               "entry_ms":  148.3324
+                                           },
+                                           {
+                                               "phase":  "directx_start",
+                                               "entry_ms":  148.3678
+                                           },
+                                           {
+                                               "phase":  "directx_devices_ready",
+                                               "entry_ms":  234.2062
+                                           },
+                                           {
+                                               "phase":  "directx_ready",
+                                               "entry_ms":  234.75289999999998
+                                           },
+                                           {
+                                               "phase":  "gpui_finish_launching",
+                                               "entry_ms":  234.7669
+                                           },
+                                           {
+                                               "phase":  "kit_initialized",
+                                               "entry_ms":  238.1482
+                                           },
+                                           {
+                                               "phase":  "shell_constructing",
+                                               "entry_ms":  319.197
+                                           },
+                                           {
+                                               "phase":  "shell_constructed",
+                                               "entry_ms":  319.34069999999997
+                                           },
+                                           {
+                                               "phase":  "window_opened",
+                                               "entry_ms":  513.6178
+                                           }
+                                       ],
+                        "foreground_idle":  null,
+                        "close_to_exit_ms":  71.0677,
+                        "exit_code":  0
+                    }
+                ],
+    "clock_note":  "This earlier report starts the launch clock before Start-Process; it includes PowerShell setup overhead. See startup-kernel-clock reports for Windows process-creation timing."
+}

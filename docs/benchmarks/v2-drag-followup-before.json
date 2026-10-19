@@ -1,0 +1,20 @@
+{
+    "source_preserved":  true,
+    "explorer_copy_passed":  false,
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-ole-639278529703388248",
+    "method":  "Fresh native UIA row/window bounds. One continuous native pointer drag with 1500 ms held over an empty owned Explorer target. Only COPY offered.",
+    "utc":  "2026-10-17T16:56:19.2538827Z",
+    "events":  [
+                   {
+                       "interaction":  "ole_start",
+                       "detail":  {
+                                      "files":  1
+                                  },
+                       "entry_ms":  3455.5881
+                   }
+               ],
+    "sha256":  "BAF1B8C03EE3E33BE33715B1F7503D1745F6E86569E722A6F790A33D1616EB3C",
+    "target_bounds":  "1220,40,700,700",
+    "source_bounds":  "0,40,1218,700"
+}

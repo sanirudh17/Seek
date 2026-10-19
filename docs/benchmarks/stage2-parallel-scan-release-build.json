@@ -1,0 +1,24 @@
+{
+    "command":  "cargo build --workspace --release --all-features --locked",
+    "started_utc":  "2026-10-12T14:44:21.4342901Z",
+    "finished_utc":  "2026-10-12T14:49:14.3248062Z",
+    "exit_code":  0,
+    "wall_ms":  292890.4951,
+    "executables":  [
+                        {
+                            "path":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+                            "sha256":  "5A8A053DD880EEA6D47B85CFA18BC147213EC3EA882FEFDE78F222D749EFE5A2",
+                            "bytes":  15562752
+                        },
+                        {
+                            "path":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek-cli.exe",
+                            "sha256":  "52C2225F271431330CF7F7F83EB885117C5787278F859C332D74C8EE0BDA1097",
+                            "bytes":  2556416
+                        },
+                        {
+                            "path":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek-helper.exe",
+                            "sha256":  "F69DFCDACDE627C06B09CFA0D9A969A939A7DCC6C86E0CE6C2E755EF4473689B",
+                            "bytes":  507904
+                        }
+                    ]
+}

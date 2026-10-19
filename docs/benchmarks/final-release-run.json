@@ -1,0 +1,11 @@
+{
+    "captured_at":  "2026-10-11T10:46:04.9672325Z",
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+    "dataset":  10000,
+    "window_title":  "Seek",
+    "close_to_exit_ms":  166.6063,
+    "exit_code":  0,
+    "closed_process":  true,
+    "launch_until_exit_ms":  511.30310000000003,
+    "timing_note":  "Total from after Start-Process through window close; this is not first-paint timing"
+}

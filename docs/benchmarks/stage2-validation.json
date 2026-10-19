@@ -1,0 +1,22 @@
+﻿{
+    "default_build":  0,
+    "seconds":  66.0245861,
+    "passed_tests":  26,
+    "clippy":  0,
+    "tests":  0,
+    "commands":  [
+                     "cargo fmt --all -- --check",
+                     "cargo test --workspace --all-features --locked",
+                     "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+                     "cargo build --workspace --locked"
+                 ],
+    "format":  0,
+    "post_benchmark_mode_checks":  {
+                                       "powershell_harness_syntax_exit":  0,
+                                       "format_check_exit":  0,
+                                       "release_rebuild_exit":  0,
+                                       "cli_tests_passed":  1,
+                                       "cli_tests_exit":  0,
+                                       "clippy_all_targets_all_features_exit":  0
+                                   }
+}

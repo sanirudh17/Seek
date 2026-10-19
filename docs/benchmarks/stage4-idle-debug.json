@@ -1,0 +1,115 @@
+{
+    "captured_at":  "2026-10-15T17:25:58.2136646Z",
+    "files":  10000,
+    "runs":  1,
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe",
+    "launch_kind":  "Windows process creation timestamp through successful DirectX Present return; OS file cache not flushed; excludes PowerShell launch setup and physical DWM scanout",
+    "idle_method":  "Final run only; foreground checked every 250 ms by harness; app trace records every presentation; wait for up-to-date before sampling",
+    "samples":  [
+                    {
+                        "run":  1,
+                        "trace":  "%USERPROFILE%\\Seek\\.bench-data\\10000\\startup-639276819290891284.ndjson",
+                        "harness_start_to_cached_present_ms":  2988.7412,
+                        "process_launch_to_cached_present_ms":  1789.7412,
+                        "process_entry_to_cached_present_ms":  938.4093,
+                        "cached_present_catching_up":  false,
+                        "cached_present_rows":  200,
+                        "process_launch_to_up_to_date_present_ms":  1789.7412,
+                        "harness_start_to_process_creation_ms":  1199,
+                        "walker_catch_up_ms":  111.60770000000001,
+                        "milestones":  [
+                                           {
+                                               "phase":  "entry",
+                                               "entry_ms":  51.4101
+                                           },
+                                           {
+                                               "phase":  "windows_platform_start",
+                                               "entry_ms":  54.2309
+                                           },
+                                           {
+                                               "phase":  "direct_write_ready",
+                                               "entry_ms":  60.4872
+                                           },
+                                           {
+                                               "phase":  "gpui_application_created",
+                                               "entry_ms":  101.58349999999999
+                                           },
+                                           {
+                                               "phase":  "directx_start",
+                                               "entry_ms":  102.2593
+                                           },
+                                           {
+                                               "phase":  "directx_devices_ready",
+                                               "entry_ms":  233.97979999999998
+                                           },
+                                           {
+                                               "phase":  "directx_ready",
+                                               "entry_ms":  269.6583
+                                           },
+                                           {
+                                               "phase":  "gpui_finish_launching",
+                                               "entry_ms":  270.48850000000004
+                                           },
+                                           {
+                                               "phase":  "kit_initialized",
+                                               "entry_ms":  316.1852
+                                           },
+                                           {
+                                               "phase":  "search_worker_started",
+                                               "entry_ms":  417.3404
+                                           },
+                                           {
+                                               "phase":  "known_folders_resolved",
+                                               "entry_ms":  417.78749999999997
+                                           },
+                                           {
+                                               "phase":  "backend_spawned",
+                                               "entry_ms":  417.85060000000004
+                                           },
+                                           {
+                                               "phase":  "cached_search_started",
+                                               "entry_ms":  463.96700000000004
+                                           },
+                                           {
+                                               "phase":  "cached_rows_materialized",
+                                               "entry_ms":  475.1799
+                                           },
+                                           {
+                                               "phase":  "shell_constructing",
+                                               "entry_ms":  798.9469
+                                           },
+                                           {
+                                               "phase":  "shell_constructed",
+                                               "entry_ms":  804.3231
+                                           },
+                                           {
+                                               "phase":  "window_opened",
+                                               "entry_ms":  905.1001
+                                           }
+                                       ],
+                        "foreground_idle":  {
+                                                "wall_ms":  20198.0942,
+                                                "cpu_ms":  15.625,
+                                                "foreground_at_start":  true,
+                                                "foreground_checks":  76,
+                                                "foreground_lost_checks":  73,
+                                                "foreground_at_end":  false,
+                                                "other_foreground_samples":  {
+                                                                                 "msedge":  73
+                                                                             },
+                                                "presentations_during_idle":  1,
+                                                "query_generation_at_start":  0,
+                                                "query_generation_at_end":  0,
+                                                "foreground_and_query_unchanged":  false,
+                                                "native_activity_messages":  3,
+                                                "quiet_foreground_sample":  false,
+                                                "input_attribution":  "Native keyboard, character/IME, mouse, non-client mouse, pointer and activation/focus message ids; no text payloads. Redraw count is an outcome, not a reason to discard a quiet sample.",
+                                                "private_working_set_bytes":  36315136,
+                                                "working_set_bytes":  91848704,
+                                                "private_commit_bytes":  83394560
+                                            },
+                        "close_to_exit_ms":  105.1545,
+                        "exit_code":  0
+                    }
+                ]
+}

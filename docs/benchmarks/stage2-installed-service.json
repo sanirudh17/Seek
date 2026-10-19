@@ -1,0 +1,15 @@
+{
+    "installed_sha256":  "44939B7B720D07DA627826C2EE159C644D4E2899C11269406F70C1A318D3105E",
+    "service":  {
+                    "Name":  "SeekHelper-S-1-5-21-111111111-222222222-333333333-1001",
+                    "State":  "Running",
+                    "StartMode":  "Auto",
+                    "StartName":  "LocalSystem",
+                    "ProcessId":  26436,
+                    "PathName":  "\"C:\\Program Files\\Seek Helper\\S-1-5-21-111111111-222222222-333333333-1001\\seek-helper.exe\" service --sid S-1-5-21-111111111-222222222-333333333-1001"
+                },
+    "note":  "Installed service appeared during interactive GUI check; agent performed no install action. Its binary differs from current workspace. No update/elevation action performed.",
+    "binary_sddl":  "O:BAG:S-1-5-21-111111111-222222222-333333333-1001D:PAI(A;;FA;;;SY)(A;;FA;;;BA)(A;;0x1200a9;;;BU)",
+    "workspace_debug_sha256":  "E9AB7B1EF201D7F72CB98F60CC8565332E425BD43A55F521EBE5B40D0DE3B749",
+    "binary_owner":  "BUILTIN\\Administrators"
+}

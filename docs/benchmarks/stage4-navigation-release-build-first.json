@@ -1,0 +1,6 @@
+{
+  "command": "cargo build --workspace --release --all-features --locked --offline",
+  "exit_code": 101,
+  "seconds": 364.323,
+  "note": "Agent stopped this superseded draft after a GUI deletion regression exposed a viewport-anchor error. This is not a successful release build."
+}

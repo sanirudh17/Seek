@@ -1,0 +1,1 @@
+{"failure":"Initial exact-pixel assertion rejected a one-level RGB rounding difference (224,231,240 versus 225,232,241) between separate glass-group raster positions. The production style uses the same color. The check now records both samples and permits at most 2/255 per channel; larger mismatches still fail."}

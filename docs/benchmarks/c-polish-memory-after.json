@@ -1,0 +1,111 @@
+{
+    "checks":  [
+                   {
+                       "name":  "Two searches remain independent; Ctrl+Tab wraps",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "New folder tab equals independent directory listing (120 files)",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "List viewport returns to same row",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Grid view and its scroll offset survive tab switching",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Content search mode, query and Alpha scope survive tab switch",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Inactive preview images/details are not retained",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Modal Cancel preserves all 240 disposable files",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Three-tab foreground idle has no measured CPU/redraws/input",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Close inactive and active tabs without closing remaining window",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Closing final tab quits process",
+                       "passed":  true
+                   }
+               ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+    "fixture":  "%USERPROFILE%\\AppData\\Local\\Temp\\seek-stage-c-check-7ff9e49fd5474f1d964a29de8617e5e5",
+    "idle":  {
+                 "quiet_foreground":  true,
+                 "working_set_bytes":  122036224,
+                 "redraws":  0,
+                 "tabs":  3,
+                 "cpu_ms":  0,
+                 "private_commit_bytes":  121831424,
+                 "seconds":  20.0476425
+             },
+    "captured_at":  "2026-10-19T18:25:33.6232165Z",
+    "memory":  [
+                   {
+                       "media_cache":  [
+                                           22,
+                                           2442259,
+                                           1,
+                                           1
+                                       ],
+                       "working_set_bytes":  101629952,
+                       "name":  "one-tab-warm-preview",
+                       "private_commit_bytes":  103309312
+                   },
+                   {
+                       "media_cache":  [
+                                           96,
+                                           4884627,
+                                           1,
+                                           1
+                                       ],
+                       "working_set_bytes":  117125120,
+                       "name":  "three-tabs-warm-preview",
+                       "private_commit_bytes":  116436992
+                   },
+                   {
+                       "media_cache":  [
+                                           96,
+                                           4884627,
+                                           1,
+                                           1
+                                       ],
+                       "working_set_bytes":  120320000,
+                       "name":  "three-tabs-after-12-previews",
+                       "private_commit_bytes":  120815616
+                   },
+                   {
+                       "media_cache":  [
+                                           96,
+                                           4884608,
+                                           1,
+                                           1
+                                       ],
+                       "working_set_bytes":  122568704,
+                       "name":  "one-tab-after-close",
+                       "private_commit_bytes":  122368000
+                   }
+               ],
+    "sha256":  "3AAB07193CB67876BD71BEA6FC26C69229B034468A52655FF7C46BC824EA39F8",
+    "visual_captures":  [
+                            "tabs-dark",
+                            "delete-dark",
+                            "settings-light",
+                            "delete-light",
+                            "tabs-light"
+                        ],
+    "limitations":  "Native SDR at 125%; no physical mixed-DPI/HDR check; no real file deletion."
+}

@@ -1,0 +1,36 @@
+{
+  "cached_ms": 261.7975,
+  "fully_current_ms": 71871.6787,
+  "method": "Engine readiness and profiled work on a copied saved index; this excludes native window presentation.",
+  "status": {
+    "catch_up_ms": 71771.7698,
+    "catching_up": false,
+    "dirs": 303343,
+    "entries": 3358995,
+    "error": null,
+    "helper_note": "USN history unavailable/replaced; full folder reconciliation",
+    "index_bytes": 186822439,
+    "journal_batches": 200,
+    "journal_directories": 358,
+    "journal_reconciliations": 0,
+    "journal_resets": 1,
+    "ntfs_fallbacks": 0,
+    "progress": {
+      "apply_ms": 10543.155099999965,
+      "completed": 167,
+      "connect_ms": 1.4381000000000002,
+      "full_relist_done": false,
+      "load_ms": 85.5304,
+      "phase": "Replaying journal",
+      "priority_ms": 907.6881,
+      "priority_ready": true,
+      "read_ms": 55580.3943000001,
+      "save_ms": 5107.5849,
+      "total": null
+    },
+    "ready": true,
+    "scan_profiles": [],
+    "skipped": 335,
+    "source": "ntfs + usn"
+  }
+}

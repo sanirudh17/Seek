@@ -1,0 +1,29 @@
+{
+    "checks":  [
+                   {
+                       "name":  "Fixture is ready",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Reproduced normal sidebar empty outside the published index roots",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Independent Downloads entries: 539",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Closing quits after content worker use",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "D129CA3BC76F4ED28E0E2CD1CAB23C58A16D763D20C0FD3DD158C4D35CB33805",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-check-639278972380391509",
+    "captures":  [
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-sidebar-normal-before.png"
+                 ],
+    "content_observations":  [
+
+                             ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe"
+}

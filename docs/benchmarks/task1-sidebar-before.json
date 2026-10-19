@@ -1,0 +1,99 @@
+{
+    "checks":  [
+                   {
+                       "name":  "Fixture is ready",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Content mode has an owned body match",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Reproduced: sidebar remains in Content mode with no directory rows",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Closing quits after content worker use",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "D129CA3BC76F4ED28E0E2CD1CAB23C58A16D763D20C0FD3DD158C4D35CB33805",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-check-639278961102177693",
+    "captures":  [
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-sidebar-before.png"
+                 ],
+    "content_observations":  [
+                                 {
+                                     "interaction":  "content_partial",
+                                     "detail":  {
+                                                    "matches":  1,
+                                                    "checked":  1,
+                                                    "elapsed_ms":  0.9164000000000001
+                                                },
+                                     "entry_ms":  7911.8834
+                                 },
+                                 {
+                                     "interaction":  "content_partial",
+                                     "detail":  {
+                                                    "matches":  5,
+                                                    "checked":  7,
+                                                    "elapsed_ms":  121.2753
+                                                },
+                                     "entry_ms":  8032.243599999999
+                                 },
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  7,
+                                                    "skipped":  2,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  121.3245,
+                                                    "matches":  5,
+                                                    "first_result_ms":  0.8836,
+                                                    "formats":  {
+                                                                    "docx":  [
+                                                                                 1,
+                                                                                 0.252
+                                                                             ],
+                                                                    "md":  [
+                                                                               1,
+                                                                               0.12940000000000002
+                                                                           ],
+                                                                    "pdf":  [
+                                                                                1,
+                                                                                119.07
+                                                                            ],
+                                                                    "rs":  [
+                                                                               1,
+                                                                               0.2185
+                                                                           ],
+                                                                    "txt":  [
+                                                                                3,
+                                                                                0.3778
+                                                                            ]
+                                                                }
+                                                },
+                                     "entry_ms":  8032.3779
+                                 },
+                                 {
+                                     "interaction":  "content_search",
+                                     "detail":  {
+                                                    "checked":  0,
+                                                    "skipped":  0,
+                                                    "errors":  0,
+                                                    "limited":  false,
+                                                    "cancelled":  false,
+                                                    "elapsed_ms":  0.0,
+                                                    "matches":  0,
+                                                    "first_result_ms":  null,
+                                                    "formats":  {
+
+                                                                }
+                                                },
+                                     "entry_ms":  9996.7188
+                                 }
+                             ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe"
+}

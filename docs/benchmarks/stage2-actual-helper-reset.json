@@ -1,0 +1,33 @@
+﻿{
+    "report":  {
+                   "ground_truth":  3,
+                   "indexed":  3,
+                   "missing":  [
+
+                               ],
+                   "extra":  [
+
+                             ],
+                   "stale":  [
+
+                             ],
+                   "denied":  [
+
+                              ]
+               },
+    "catch_up_ms":  22837.6486,
+    "verify_ms":  1.5224,
+    "status":  {
+                   "ready":  true,
+                   "catching_up":  false,
+                   "entries":  10,
+                   "dirs":  8,
+                   "index_bytes":  11083,
+                   "skipped":  0,
+                   "catch_up_ms":  22837.6486,
+                   "error":  null,
+                   "source":  "walker + usn",
+                   "helper_note":  "Conservative USN reconciliation: torn NTFS file record"
+               },
+    "measurement_note":  "Earlier installed helper, walker baseline, closed rename/delete/create; zero discrepancies. Decoder fallback masks reset/delta proof. Initial PowerShell mock-root serialization was subsequently corrected in the harness; this report is not reset-branch acceptance."
+}

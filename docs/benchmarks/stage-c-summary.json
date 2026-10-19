@@ -1,0 +1,71 @@
+{
+  "stage": "C",
+  "status": "Features verified; performance acceptance partial",
+  "artifact_sha256": "4F9AAE190E1132C93F250B34C98226C53AA97D66906B960358BFB61F9E208D1A",
+  "artifact_bytes": 19855872,
+  "million_file_queries": [
+    {
+      "query": "atlas limit:200",
+      "runs": 30,
+      "warmups": 3,
+      "ui_median_before_ms": 15.63005,
+      "ui_median_after_ms": 13.33385,
+      "ui_p95_before_ms": 17.993599999999997,
+      "ui_p95_after_ms": 18.5505,
+      "worker_p95_after_ms": 2.9976,
+      "worker_samples": 30
+    },
+    {
+      "query": "orbit limit:200",
+      "runs": 30,
+      "warmups": 3,
+      "ui_median_before_ms": 16.6748,
+      "ui_median_after_ms": 13.52215,
+      "ui_p95_before_ms": 18.3265,
+      "ui_p95_after_ms": 19.7035,
+      "worker_p95_after_ms": 3.5436,
+      "worker_samples": 30
+    },
+    {
+      "query": "pixel limit:200",
+      "runs": 30,
+      "warmups": 3,
+      "ui_median_before_ms": 14.20245,
+      "ui_median_after_ms": 15.7585,
+      "ui_p95_before_ms": 17.364500000000003,
+      "ui_p95_after_ms": 19.2308,
+      "worker_p95_after_ms": 3.1844,
+      "worker_samples": 30
+    }
+  ],
+  "warm_launch_median_before_ms": 317.9514,
+  "warm_launch_median_after_ms": 253.2324,
+  "warm_launch_after_samples_ms": [
+    247.177,
+    255.715,
+    253.2324,
+    253.9744,
+    250.1409
+  ],
+  "private_commit_after_search_bytes": 110100480,
+  "private_commit_before_search_bytes": 115658752,
+  "idle": {
+    "quiet_foreground": true,
+    "working_set_bytes": 127176704,
+    "redraws": 0,
+    "tabs": 3,
+    "cpu_ms": 0,
+    "private_commit_bytes": 125759488,
+    "seconds": 20.0034696
+  },
+  "app_tests": 48,
+  "native_checks": 9,
+  "cold_system_cache_verified": false,
+  "packaging": false,
+  "limitations": [
+    "Full native input-to-present p95 exceeds 16 ms.",
+    "No true cold-system-cache launch measurement.",
+    "Native visual checks use SDR at 125%; physical HDR/mixed-DPI not checked.",
+    "Memory is a snapshot, not a long-duration leak test."
+  ]
+}

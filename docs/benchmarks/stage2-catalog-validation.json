@@ -1,0 +1,45 @@
+{
+    "checked_utc":  "2026-10-12T13:33:52.9555815Z",
+    "checks":  [
+                   {
+                       "command":  "cargo fmt --all",
+                       "exit_code":  0,
+                       "wall_ms":  7268.0758000000005
+                   },
+                   {
+                       "command":  "cargo test --workspace --all-features --locked",
+                       "exit_code":  0,
+                       "wall_ms":  22679.2938
+                   },
+                   {
+                       "command":  "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+                       "exit_code":  0,
+                       "wall_ms":  8267.240600000001
+                   },
+                   {
+                       "command":  "cargo check --workspace --locked",
+                       "exit_code":  0,
+                       "wall_ms":  6933.0170000000007
+                   },
+                   {
+                       "command":  "cargo fmt --all -- --check",
+                       "exit_code":  0,
+                       "wall_ms":  5170.9949000000006
+                   }
+               ],
+    "buffered_pipe_benchmark":  [
+                                    {
+                                        "wall_ms":  5694.2002,
+                                        "buffered":  false,
+                                        "directories":  278212,
+                                        "files":  556424
+                                    },
+                                    {
+                                        "wall_ms":  726.4784,
+                                        "buffered":  true,
+                                        "directories":  278212,
+                                        "files":  556424
+                                    }
+                                ],
+    "note":  "The explicit real-pipe performance test passed separately. This is not an NTFS indexing or fsearch parity result."
+}

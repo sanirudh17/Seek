@@ -1,0 +1,132 @@
+{
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\stage3-check-639275099251460618",
+    "pid":  12200,
+    "checks":  [
+                   {
+                       "name":  "Ordinary-user window and complete fixture index",
+                       "passed":  true,
+                       "detail":  {
+                                      "entries":  2072,
+                                      "skipped":  0,
+                                      "catch_up_ms":  59.2238
+                                  }
+                   },
+                   {
+                       "name":  "Right expands 2,049 direct children from the index",
+                       "passed":  true,
+                       "detail":  {
+                                      "max_depth":  1,
+                                      "rows":  2050
+                                  }
+                   },
+                   {
+                       "name":  "Virtualized expanded list",
+                       "passed":  true,
+                       "detail":  {
+                                      "realized_rows":  21,
+                                      "logical_rows":  2050
+                                  }
+                   },
+                   {
+                       "name":  "Nested expansion follows sibling sort and indentation",
+                       "passed":  true,
+                       "detail":  {
+                                      "first_rows":  [
+                                                         "Expansion",
+                                                         "Nested",
+                                                         "deep.txt",
+                                                         "child-2047.txt",
+                                                         "child-2046.txt"
+                                                     ],
+                                      "depths":  [
+                                                     0,
+                                                     1,
+                                                     2,
+                                                     1,
+                                                     1
+                                                 ]
+                                  }
+                   },
+                   {
+                       "name":  "Left collapses selected subfolder",
+                       "passed":  true,
+                       "detail":  {
+                                      "rows":  2050
+                                  }
+                   },
+                   {
+                       "name":  "Expanded contents follow hidden-files setting",
+                       "passed":  true,
+                       "detail":  {
+                                      "rows":  2051
+                                  }
+                   },
+                   {
+                       "name":  "Disclosure clicks collapse and expand",
+                       "passed":  true,
+                       "detail":  {
+                                      "rows":  2051
+                                  }
+                   },
+                   {
+                       "name":  "Real image preview and Space panel toggle",
+                       "passed":  true,
+                       "detail":  {
+                                      "name":  "Picture.png",
+                                      "edge":  480,
+                                      "details":  false,
+                                      "image":  true
+                                  }
+                   },
+                   {
+                       "name":  "Icons view activates",
+                       "passed":  true,
+                       "detail":  {
+                                      "view":  "Icons"
+                                  }
+                   },
+                   {
+                       "name":  "Gallery view activates",
+                       "passed":  true,
+                       "detail":  {
+                                      "view":  "Gallery"
+                                  }
+                   },
+                   {
+                       "name":  "List view activates",
+                       "passed":  true,
+                       "detail":  {
+                                      "view":  "List"
+                                  }
+                   },
+                   {
+                       "name":  "Real SVG preview",
+                       "passed":  true,
+                       "detail":  {
+                                      "name":  "Picture.svg",
+                                      "edge":  480,
+                                      "details":  false,
+                                      "image":  true
+                                  }
+                   },
+                   {
+                       "name":  "Windows video provider queried",
+                       "passed":  true,
+                       "detail":  {
+                                      "name":  "Preview.mp4",
+                                      "edge":  480,
+                                      "details":  false,
+                                      "image":  true
+                                  }
+                   },
+                   {
+                       "name":  "Markdown uses text icon and worker text preview",
+                       "passed":  true,
+                       "detail":  {
+
+                                  }
+                   }
+               ],
+    "failure":  "Cannot convert argument \"hwnd\", with value: \"\", for \"FromHandle\" to type \"System.IntPtr\": \"Cannot convert null to type \"System.IntPtr\".\""
+}

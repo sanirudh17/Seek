@@ -1,0 +1,21 @@
+{
+  "source": "Windows dxdiag XML, captured 2026-10-16",
+  "system_dpi": "120 DPI (125 percent)",
+  "user_dpi": "120 DPI (125 percent)",
+  "display_devices": [
+    {
+      "CardName": "AMD Radeon 740M Graphics",
+      "CurrentMode": "1920 x 1080 (32 bit) (144Hz)",
+      "HDRSupport": "Not Supported",
+      "MonitorName": "Generic PnP Monitor",
+      "AdvancedColorEnabled": "0",
+      "AdvancedColorSupported": "1"
+    },
+    {
+      "CardName": "NVIDIA GeForce RTX 4050 Laptop GPU",
+      "CurrentMode": "Unknown",
+      "HDRSupport": "Unknown"
+    }
+  ],
+  "hdr_visual_test": "unavailable: active display reports HDR Not Supported; no display settings changed"
+}

@@ -1,0 +1,17 @@
+[
+  {
+    "command": "cargo fmt --all",
+    "exit_code": 0,
+    "seconds": 4.532
+  },
+  {
+    "command": "cargo clippy --workspace --all-targets --all-features --locked --offline -- -D warnings",
+    "exit_code": 0,
+    "seconds": 7.557
+  },
+  {
+    "command": "cargo build --workspace --all-features --locked --offline",
+    "exit_code": 0,
+    "seconds": 7.002
+  }
+]

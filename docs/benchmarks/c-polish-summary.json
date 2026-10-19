@@ -1,0 +1,155 @@
+{
+  "release_sha256": "3AAB07193CB67876BD71BEA6FC26C69229B034468A52655FF7C46BC824EA39F8",
+  "bytes": 19876864,
+  "files": 1000000,
+  "samples_per_query": 30,
+  "warmups_per_query": 3,
+  "native_input_to_present_ms": {
+    "ordinary": [
+      {
+        "query": "atlas limit:200",
+        "median_ms": 8.25875,
+        "p95_ms": 11.2429
+      },
+      {
+        "query": "orbit limit:200",
+        "median_ms": 6.93365,
+        "p95_ms": 11.707
+      },
+      {
+        "query": "pixel limit:200",
+        "median_ms": 7.415,
+        "p95_ms": 10.7271
+      }
+    ],
+    "accessibility": [
+      {
+        "query": "atlas limit:200",
+        "median_ms": 10.69985,
+        "p95_ms": 14.426599999999999
+      },
+      {
+        "query": "orbit limit:200",
+        "median_ms": 10.74205,
+        "p95_ms": 15.188
+      },
+      {
+        "query": "pixel limit:200",
+        "median_ms": 10.70755,
+        "p95_ms": 14.1323
+      }
+    ],
+    "old_release_no_uia_control": [
+      {
+        "query": "atlas limit:200",
+        "median_ms": 10.08715,
+        "p95_ms": 14.374400000000001
+      },
+      {
+        "query": "orbit limit:200",
+        "median_ms": 10.138900000000001,
+        "p95_ms": 13.5491
+      },
+      {
+        "query": "pixel limit:200",
+        "median_ms": 9.83785,
+        "p95_ms": 14.181600000000001
+      }
+    ]
+  },
+  "warm_cached_present_median_ms": 227.9624,
+  "cold_file_cache_cached_present_ms": 303.664,
+  "cold_file_cache_up_to_date_ms": 3403.7202,
+  "memory": {
+    "before": [
+      {
+        "media_cache": null,
+        "working_set_bytes": 136273920,
+        "name": "one-tab-warm-preview",
+        "private_commit_bytes": 128110592
+      },
+      {
+        "media_cache": null,
+        "working_set_bytes": 161804288,
+        "name": "three-tabs-warm-preview",
+        "private_commit_bytes": 151408640
+      },
+      {
+        "media_cache": null,
+        "working_set_bytes": 233394176,
+        "name": "three-tabs-after-12-previews",
+        "private_commit_bytes": 228655104
+      },
+      {
+        "media_cache": null,
+        "working_set_bytes": 235827200,
+        "name": "one-tab-after-close",
+        "private_commit_bytes": 230715392
+      }
+    ],
+    "after": [
+      {
+        "media_cache": [
+          22,
+          2442259,
+          1,
+          1
+        ],
+        "working_set_bytes": 101629952,
+        "name": "one-tab-warm-preview",
+        "private_commit_bytes": 103309312
+      },
+      {
+        "media_cache": [
+          96,
+          4884627,
+          1,
+          1
+        ],
+        "working_set_bytes": 117125120,
+        "name": "three-tabs-warm-preview",
+        "private_commit_bytes": 116436992
+      },
+      {
+        "media_cache": [
+          96,
+          4884627,
+          1,
+          1
+        ],
+        "working_set_bytes": 120320000,
+        "name": "three-tabs-after-12-previews",
+        "private_commit_bytes": 120815616
+      },
+      {
+        "media_cache": [
+          96,
+          4884608,
+          1,
+          1
+        ],
+        "working_set_bytes": 122568704,
+        "name": "one-tab-after-close",
+        "private_commit_bytes": 122368000
+      }
+    ]
+  },
+  "idle": {
+    "quiet_foreground": true,
+    "working_set_bytes": 122036224,
+    "redraws": 0,
+    "tabs": 3,
+    "cpu_ms": 0,
+    "private_commit_bytes": 121831424,
+    "seconds": 20.0476425
+  },
+  "native_checks": 16,
+  "rust_checks": 49,
+  "limitations": [
+    "Present return excludes DWM scanout.",
+    "Old control used no UIA calls but predates the accessibility_active diagnostic.",
+    "One cold Windows file-cache purge sample; not a fresh boot or cold SSD/controller cache.",
+    "No physical mixed-DPI/HDR check, high-speed capture of preview transitions, full-drive memory test, or long-duration leak proof.",
+    "Focus-interrupted timing runs and incomplete debug profiling attempts are excluded."
+  ]
+}

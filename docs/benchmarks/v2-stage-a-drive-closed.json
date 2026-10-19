@@ -1,0 +1,8 @@
+{
+    "data":  "%USERPROFILE%\\Seek\\.bench-data\\v2-a-drive-truth-639277431268392765",
+    "scope":  "Whole real C: index; independent truth of an owned Downloads subtree only. Other changing C: files are not independently certified. No test file permanently deleted; no helper installation change.",
+    "source_profile":  ".bench-data/v2-a-profile-639277393861799935",
+    "sha256":  "6AE62D62C7E158BD045A9C0B85DD8550408DFCD2D76D4C70BFE69E188BE75F77",
+    "fixture":  "%USERPROFILE%\\Downloads\\redacted-6ed5d88a5264",
+    "cli":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek-cli.exe"
+}

@@ -1,0 +1,98 @@
+{
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\task1-639278970299370333",
+    "drive_alias":  true,
+    "cold_index":  false,
+    "fresh_no_settings":  false,
+    "folders":  [
+                    {
+                        "expected":  4,
+                        "extra":  0,
+                        "actual":  4,
+                        "index_ready":  true,
+                        "button":  "Z:\\",
+                        "path":  "Z:\\",
+                        "query_to_present_ms":  15.0105,
+                        "missing":  0
+                    }
+                ],
+    "events":  [
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\Downloads",
+                                      "rows":  540,
+                                      "error":  null,
+                                      "elapsed_ms":  3.2719
+                                  },
+                       "entry_ms":  56.3536
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\OneDrive\\Desktop",
+                                      "rows":  19,
+                                      "error":  null,
+                                      "elapsed_ms":  0.3431
+                                  },
+                       "entry_ms":  56.747400000000006
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\OneDrive\\Documents",
+                                      "rows":  134,
+                                      "error":  null,
+                                      "elapsed_ms":  0.8997999999999999
+                                  },
+                       "entry_ms":  57.6675
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\OneDrive\\Pictures",
+                                      "rows":  16,
+                                      "error":  null,
+                                      "elapsed_ms":  0.30820000000000003
+                                  },
+                       "entry_ms":  58.005599999999994
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\Videos",
+                                      "rows":  8,
+                                      "error":  null,
+                                      "elapsed_ms":  0.2399
+                                  },
+                       "entry_ms":  58.272
+                   },
+                   {
+                       "interaction":  "folder_metadata",
+                       "detail":  {
+                                      "folder":  "%USERPROFILE%\\Expense Tracker\\Music",
+                                      "rows":  2,
+                                      "error":  null,
+                                      "elapsed_ms":  0.21359999999999998
+                                  },
+                       "entry_ms":  58.514900000000004
+                   },
+                   {
+                       "interaction":  "folder_view",
+                       "detail":  {
+                                      "scope":  "Z:\\",
+                                      "generation":  1,
+                                      "rows":  4,
+                                      "message":  "Folder contents",
+                                      "index_ready":  true
+                                  },
+                       "entry_ms":  4500.1993999999995
+                   }
+               ],
+    "checks":  [
+                   {
+                       "name":  "Closing quits",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "31C770A811F8414CC921FDAFD1953ACFBFB034C5F71F28155A8C81040D1C7C46"
+}

@@ -1,0 +1,306 @@
+{
+  "date": "2026-10-18",
+  "build": "release, optimized fat LTO, all features",
+  "icon_commit": "d69ba9d",
+  "release_sha256": "4F2C1B5D05826697FD02DD782D5D114B9C1BA0E46E9C9D9754A0741207676BF0",
+  "release_bytes": 19586048,
+  "scope": "current-user Windows Known Folder Downloads and Documents; no real Seek profile read",
+  "baseline": [
+    {
+      "query": "note",
+      "first_result_ms": 354.9593,
+      "elapsed_ms": 23240.364,
+      "checked": 437,
+      "total": 437,
+      "skipped": 533,
+      "unreadable": 2,
+      "finished": true,
+      "cancelled": false,
+      "matches": 150
+    },
+    {
+      "query": "rudkin",
+      "first_result_ms": 22503.6954,
+      "elapsed_ms": 23027.9047,
+      "checked": 437,
+      "total": 437,
+      "skipped": 533,
+      "unreadable": 2,
+      "finished": true,
+      "cancelled": false,
+      "matches": 1
+    }
+  ],
+  "after": [
+    {
+      "query": "note",
+      "first_result_ms": 547.7748,
+      "first_quick_ms": 546.9747,
+      "quick_matches": 122,
+      "elapsed_ms": 40439.993299999995,
+      "checked": 437,
+      "total": 437,
+      "skipped": 533,
+      "unreadable": 2,
+      "finished": true,
+      "cancelled": false,
+      "matches": 150
+    },
+    {
+      "query": "rudkin",
+      "first_result_ms": 258.08,
+      "first_quick_ms": 258.0358,
+      "quick_matches": 1,
+      "elapsed_ms": 25760.6277,
+      "checked": 437,
+      "total": 437,
+      "skipped": 533,
+      "unreadable": 2,
+      "finished": true,
+      "cancelled": false,
+      "matches": 1
+    }
+  ],
+  "older_match_modified_utc": "2026-01-18T05:45:40.772464+00:00",
+  "final_sets_equal_baseline": [
+    true,
+    true
+  ],
+  "final_duplicate_paths": [
+    0,
+    0
+  ],
+  "warm_control": {
+    "direct": {
+      "query": "note",
+      "first_result_ms": 425.00100000000003,
+      "first_quick_ms": null,
+      "quick_matches": 0,
+      "elapsed_ms": 28821.643200000002,
+      "checked": 437,
+      "total": 437,
+      "skipped": 533,
+      "unreadable": 2,
+      "finished": true,
+      "cancelled": false,
+      "matches": 150
+    },
+    "quick": {
+      "query": "note",
+      "first_result_ms": 259.6702,
+      "first_quick_ms": 258.3755,
+      "quick_matches": 122,
+      "elapsed_ms": 28738.8614,
+      "checked": 437,
+      "total": 437,
+      "skipped": 533,
+      "unreadable": 2,
+      "finished": true,
+      "cancelled": false,
+      "matches": 150
+    }
+  },
+  "catalog_gap_snapshot": {
+    "catalog_note_matches": 121,
+    "direct_note_matches": 150,
+    "embedded_only_pdf": 14,
+    "embedded_only_txt": 1,
+    "whole_prefix_md_without_registered_handler": 6,
+    "whole_prefix_py_without_registered_handler": 6,
+    "word_misses": 2,
+    "word_requery": [
+      {
+        "tested_body_terms": 7,
+        "catalog_hits": 7,
+        "note_hit": true
+      },
+      {
+        "tested_body_terms": 7,
+        "catalog_hits": 4,
+        "note_hit": false
+      }
+    ],
+    "cause_of_remaining_word_coverage_gap": "not established"
+  },
+  "cache_evaluation": {
+    "diagnostic": "No disk cache built. RAM repeat is a lower bound, not measured disk-cache latency.",
+    "eligible": 437,
+    "readable": 435,
+    "unreadable": 2,
+    "skipped": 533,
+    "memory_cap_reached": false,
+    "elapsed_ms": 29748.175799999997,
+    "pdf_docx_raw_text_bytes": 5804048,
+    "estimated_key_record_bytes": 32254,
+    "per_file_deflated_zip_bytes_in_ram": 2036903,
+    "formats": {
+      "": {
+        "attempted": 1,
+        "readable": 1,
+        "input_bytes": 11558,
+        "text_bytes": 11558,
+        "extract_ms": 0.26689999999999997
+      },
+      "csv": {
+        "attempted": 1,
+        "readable": 1,
+        "input_bytes": 1623,
+        "text_bytes": 1623,
+        "extract_ms": 0.2087
+      },
+      "docx": {
+        "attempted": 86,
+        "readable": 86,
+        "input_bytes": 23861253,
+        "text_bytes": 2463572,
+        "extract_ms": 285.6993
+      },
+      "ini": {
+        "attempted": 4,
+        "readable": 4,
+        "input_bytes": 868,
+        "text_bytes": 516,
+        "extract_ms": 1.4201000000000001
+      },
+      "json": {
+        "attempted": 3,
+        "readable": 3,
+        "input_bytes": 562,
+        "text_bytes": 562,
+        "extract_ms": 0.9954000000000001
+      },
+      "log": {
+        "attempted": 2,
+        "readable": 2,
+        "input_bytes": 0,
+        "text_bytes": 0,
+        "extract_ms": 0.5407
+      },
+      "md": {
+        "attempted": 10,
+        "readable": 10,
+        "input_bytes": 709065,
+        "text_bytes": 709065,
+        "extract_ms": 5.137499999999999
+      },
+      "pdf": {
+        "attempted": 280,
+        "readable": 278,
+        "input_bytes": 205351869,
+        "text_bytes": 3340476,
+        "extract_ms": 28865.45640000001
+      },
+      "ps1": {
+        "attempted": 2,
+        "readable": 2,
+        "input_bytes": 13418,
+        "text_bytes": 13418,
+        "extract_ms": 0.8009999999999999
+      },
+      "py": {
+        "attempted": 8,
+        "readable": 8,
+        "input_bytes": 37480,
+        "text_bytes": 37480,
+        "extract_ms": 2.185
+      },
+      "txt": {
+        "attempted": 40,
+        "readable": 40,
+        "input_bytes": 173581,
+        "text_bytes": 173581,
+        "extract_ms": 16.975299999999997
+      }
+    },
+    "queries": [
+      {
+        "query": "note",
+        "matches": 150,
+        "ram_repeat_median_ms": 17.8312,
+        "ram_repeat_p95_ms": 18.613999999999997,
+        "catalog_matches": 121,
+        "direct_only_by_extension_prefix_compatible_then_embedded_only": {
+          "docx": [
+            2,
+            0
+          ],
+          "md": [
+            6,
+            0
+          ],
+          "pdf": [
+            0,
+            14
+          ],
+          "py": [
+            6,
+            0
+          ],
+          "txt": [
+            0,
+            1
+          ]
+        }
+      },
+      {
+        "query": "rudkin",
+        "matches": 1,
+        "ram_repeat_median_ms": 16.9926,
+        "ram_repeat_p95_ms": 18.8171,
+        "catalog_matches": 1,
+        "direct_only_by_extension_prefix_compatible_then_embedded_only": {}
+      }
+    ]
+  },
+  "checks": {
+    "rust_content": {
+      "passed": 10,
+      "total": 10
+    },
+    "debug_desktop": {
+      "passed": 9,
+      "total": 9
+    },
+    "release_accuracy": {
+      "passed": 10,
+      "total": 10
+    },
+    "release_ui": [
+      {
+        "name": "Release UI shows labelled quick matches",
+        "passed": true
+      },
+      {
+        "name": "Complete replaces quick label with all 150 matches",
+        "passed": true
+      },
+      {
+        "name": "Release closes and quits after complete scan",
+        "passed": true
+      }
+    ],
+    "strict_clippy": true,
+    "normal_features_check": true,
+    "fmt": true,
+    "icon_seven_frames": true,
+    "native_release_icon_light_dark_16_32": true
+  },
+  "process_idle_sample": {
+    "elapsed_ms": 10011.8789,
+    "cpu_ms": 0,
+    "exit_code": 0,
+    "foreground_quiet_not_asserted": true
+  },
+  "limits": [
+    "Single samples, warm control one pair; not a cold-cache or universal latency result",
+    "First post-build common-word scan slower; root cause of native-filter/system variation not isolated",
+    "Two PDFs unreadable and skipped entries remain explicitly disclosed",
+    "Disk cache not implemented; RAM repeat is not measured disk-cache latency",
+    "Physical HDR/mixed DPI and other machines not checked",
+    "Large Excel preview request outside the two-task scope"
+  ],
+  "no_stage_c": true,
+  "no_packaging": true,
+  "no_framework_updates": true,
+  "persistent_text_cache_built": false
+}

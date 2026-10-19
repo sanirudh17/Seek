@@ -1,0 +1,487 @@
+{
+    "data":  "%USERPROFILE%\\Seek\\.bench-data\\stage4-drive-639277439786882941",
+    "root":  "C:\\",
+    "sha256":  "B19977E61E50EE660DB21F8B7DE470A87F60B1258E1D03B8DBA1E1FFE8EF5DFE",
+    "samples":  [
+                    {
+                        "exit_code":  0,
+                        "priority_present_ms":  355.6123,
+                        "run":  1,
+                        "priority_status":  {
+                                                "ready":  true,
+                                                "catching_up":  true,
+                                                "entries":  3377672,
+                                                "dirs":  304322,
+                                                "index_bytes":  187318579,
+                                                "skipped":  330,
+                                                "catch_up_ms":  0.0,
+                                                "error":  null,
+                                                "source":  "walker",
+                                                "helper_note":  null,
+                                                "journal_batches":  0,
+                                                "journal_directories":  0,
+                                                "journal_resets":  0,
+                                                "journal_reconciliations":  0,
+                                                "ntfs_fallbacks":  0,
+                                                "scan_profiles":  [
+
+                                                                  ],
+                                                "progress":  {
+                                                                 "phase":  "Replaying journal",
+                                                                 "completed":  177,
+                                                                 "total":  null,
+                                                                 "priority_ready":  true,
+                                                                 "priority_ms":  219.2829,
+                                                                 "full_relist_done":  false,
+                                                                 "read_ms":  173.7022999999999,
+                                                                 "apply_ms":  12.395399999999997,
+                                                                 "load_ms":  54.483,
+                                                                 "plan_ms":  0.4876,
+                                                                 "connect_ms":  1.0376,
+                                                                 "save_ms":  0.0
+                                                             }
+                                            },
+                        "close_ms":  148.4386,
+                        "working_set_bytes":  220446720,
+                        "correct_present_ms":  32651.4688,
+                        "cached_present_ms":  319.0017,
+                        "private_commit_bytes":  128589824,
+                        "status":  {
+                                       "ready":  true,
+                                       "catching_up":  false,
+                                       "entries":  3398218,
+                                       "dirs":  305907,
+                                       "index_bytes":  188050227,
+                                       "skipped":  332,
+                                       "catch_up_ms":  32454.9642,
+                                       "error":  null,
+                                       "source":  "ntfs + usn",
+                                       "helper_note":  "Conservative USN reconciliation: launch replay exceeded its event budget",
+                                       "journal_batches":  256,
+                                       "journal_directories":  274,
+                                       "journal_resets":  0,
+                                       "journal_reconciliations":  1,
+                                       "ntfs_fallbacks":  0,
+                                       "scan_profiles":  [
+
+                                                         ],
+                                       "progress":  {
+                                                        "phase":  "Replaying journal",
+                                                        "completed":  177,
+                                                        "total":  null,
+                                                        "priority_ready":  true,
+                                                        "priority_ms":  219.2829,
+                                                        "full_relist_done":  false,
+                                                        "read_ms":  23023.258899999968,
+                                                        "apply_ms":  4523.149500000008,
+                                                        "load_ms":  54.483,
+                                                        "plan_ms":  0.4876,
+                                                        "connect_ms":  1.0376,
+                                                        "save_ms":  4803.6956
+                                                    }
+                                   },
+                        "private_working_set_bytes":  52854784,
+                        "milestones":  [
+                                           {
+                                               "phase":  "entry",
+                                               "entry_ms":  0.2037
+                                           },
+                                           {
+                                               "phase":  "windows_platform_start",
+                                               "entry_ms":  0.5627
+                                           },
+                                           {
+                                               "phase":  "backend_spawned",
+                                               "entry_ms":  0.7432
+                                           },
+                                           {
+                                               "phase":  "search_worker_started",
+                                               "entry_ms":  0.8001
+                                           },
+                                           {
+                                               "phase":  "known_folders_resolved",
+                                               "entry_ms":  4.0679
+                                           },
+                                           {
+                                               "phase":  "direct_write_ready",
+                                               "entry_ms":  4.9959
+                                           },
+                                           {
+                                               "phase":  "gpui_application_created",
+                                               "entry_ms":  31.983900000000002
+                                           },
+                                           {
+                                               "phase":  "directx_start",
+                                               "entry_ms":  32.0355
+                                           },
+                                           {
+                                               "phase":  "cached_search_started",
+                                               "entry_ms":  97.6489
+                                           },
+                                           {
+                                               "phase":  "directx_devices_ready",
+                                               "entry_ms":  110.6778
+                                           },
+                                           {
+                                               "phase":  "cached_rows_materialized",
+                                               "entry_ms":  111.051
+                                           },
+                                           {
+                                               "phase":  "directx_ready",
+                                               "entry_ms":  111.3502
+                                           },
+                                           {
+                                               "phase":  "gpui_finish_launching",
+                                               "entry_ms":  111.3641
+                                           },
+                                           {
+                                               "phase":  "kit_initialized",
+                                               "entry_ms":  115.39739999999999
+                                           },
+                                           {
+                                               "phase":  "startup_assets_ready",
+                                               "entry_ms":  178.5983
+                                           },
+                                           {
+                                               "phase":  "window_bounds_ready",
+                                               "entry_ms":  178.7679
+                                           },
+                                           {
+                                               "phase":  "shell_constructing",
+                                               "entry_ms":  239.52100000000002
+                                           },
+                                           {
+                                               "phase":  "shell_constructed",
+                                               "entry_ms":  240.0101
+                                           },
+                                           {
+                                               "phase":  "window_opened",
+                                               "entry_ms":  248.54080000000002
+                                           }
+                                       ],
+                        "cached_catching_up":  true,
+                        "catch_up_ms":  32454.9642
+                    },
+                    {
+                        "exit_code":  0,
+                        "priority_present_ms":  372.9397,
+                        "run":  2,
+                        "priority_status":  {
+                                                "ready":  true,
+                                                "catching_up":  true,
+                                                "entries":  3398213,
+                                                "dirs":  305907,
+                                                "index_bytes":  188050227,
+                                                "skipped":  330,
+                                                "catch_up_ms":  0.0,
+                                                "error":  null,
+                                                "source":  "walker",
+                                                "helper_note":  null,
+                                                "journal_batches":  0,
+                                                "journal_directories":  0,
+                                                "journal_resets":  0,
+                                                "journal_reconciliations":  0,
+                                                "ntfs_fallbacks":  0,
+                                                "scan_profiles":  [
+
+                                                                  ],
+                                                "progress":  {
+                                                                 "phase":  "Replaying journal",
+                                                                 "completed":  177,
+                                                                 "total":  null,
+                                                                 "priority_ready":  true,
+                                                                 "priority_ms":  252.2185,
+                                                                 "full_relist_done":  false,
+                                                                 "read_ms":  202.83769999999993,
+                                                                 "apply_ms":  17.653899999999986,
+                                                                 "load_ms":  52.870599999999996,
+                                                                 "plan_ms":  0.5955,
+                                                                 "connect_ms":  0.6095999999999999,
+                                                                 "save_ms":  0.0
+                                                             }
+                                            },
+                        "close_ms":  86.6558,
+                        "working_set_bytes":  252092416,
+                        "correct_present_ms":  2291.3704,
+                        "cached_present_ms":  347.1982,
+                        "private_commit_bytes":  140754944,
+                        "status":  {
+                                       "ready":  true,
+                                       "catching_up":  false,
+                                       "entries":  3398219,
+                                       "dirs":  305907,
+                                       "index_bytes":  188051011,
+                                       "skipped":  333,
+                                       "catch_up_ms":  2178.4255,
+                                       "error":  null,
+                                       "source":  "ntfs + usn",
+                                       "helper_note":  null,
+                                       "journal_batches":  102,
+                                       "journal_directories":  158,
+                                       "journal_resets":  0,
+                                       "journal_reconciliations":  0,
+                                       "ntfs_fallbacks":  0,
+                                       "scan_profiles":  [
+
+                                                         ],
+                                       "progress":  {
+                                                        "phase":  "Replaying journal",
+                                                        "completed":  177,
+                                                        "total":  null,
+                                                        "priority_ready":  true,
+                                                        "priority_ms":  252.2185,
+                                                        "full_relist_done":  false,
+                                                        "read_ms":  246.22529999999992,
+                                                        "apply_ms":  58.22090000000002,
+                                                        "load_ms":  52.870599999999996,
+                                                        "plan_ms":  0.5955,
+                                                        "connect_ms":  0.6095999999999999,
+                                                        "save_ms":  1841.0336
+                                                    }
+                                   },
+                        "private_working_set_bytes":  60104704,
+                        "milestones":  [
+                                           {
+                                               "phase":  "entry",
+                                               "entry_ms":  0.5106
+                                           },
+                                           {
+                                               "phase":  "windows_platform_start",
+                                               "entry_ms":  0.8082
+                                           },
+                                           {
+                                               "phase":  "backend_spawned",
+                                               "entry_ms":  1.3084
+                                           },
+                                           {
+                                               "phase":  "search_worker_started",
+                                               "entry_ms":  1.6005
+                                           },
+                                           {
+                                               "phase":  "known_folders_resolved",
+                                               "entry_ms":  4.9397
+                                           },
+                                           {
+                                               "phase":  "direct_write_ready",
+                                               "entry_ms":  5.2075000000000005
+                                           },
+                                           {
+                                               "phase":  "gpui_application_created",
+                                               "entry_ms":  52.4495
+                                           },
+                                           {
+                                               "phase":  "directx_start",
+                                               "entry_ms":  52.6812
+                                           },
+                                           {
+                                               "phase":  "cached_search_started",
+                                               "entry_ms":  89.03460000000001
+                                           },
+                                           {
+                                               "phase":  "cached_rows_materialized",
+                                               "entry_ms":  102.6794
+                                           },
+                                           {
+                                               "phase":  "directx_devices_ready",
+                                               "entry_ms":  147.5797
+                                           },
+                                           {
+                                               "phase":  "directx_ready",
+                                               "entry_ms":  147.98590000000002
+                                           },
+                                           {
+                                               "phase":  "gpui_finish_launching",
+                                               "entry_ms":  147.9949
+                                           },
+                                           {
+                                               "phase":  "kit_initialized",
+                                               "entry_ms":  166.9178
+                                           },
+                                           {
+                                               "phase":  "startup_assets_ready",
+                                               "entry_ms":  219.8178
+                                           },
+                                           {
+                                               "phase":  "window_bounds_ready",
+                                               "entry_ms":  220.8943
+                                           },
+                                           {
+                                               "phase":  "shell_constructing",
+                                               "entry_ms":  278.5874
+                                           },
+                                           {
+                                               "phase":  "shell_constructed",
+                                               "entry_ms":  279.5151
+                                           },
+                                           {
+                                               "phase":  "window_opened",
+                                               "entry_ms":  290.8377
+                                           }
+                                       ],
+                        "cached_catching_up":  true,
+                        "catch_up_ms":  2178.4255
+                    },
+                    {
+                        "exit_code":  0,
+                        "priority_present_ms":  315.9868,
+                        "run":  3,
+                        "priority_status":  {
+                                                "ready":  true,
+                                                "catching_up":  true,
+                                                "entries":  3398220,
+                                                "dirs":  305907,
+                                                "index_bytes":  188051011,
+                                                "skipped":  333,
+                                                "catch_up_ms":  0.0,
+                                                "error":  null,
+                                                "source":  "ntfs + usn",
+                                                "helper_note":  null,
+                                                "journal_batches":  1,
+                                                "journal_directories":  13,
+                                                "journal_resets":  0,
+                                                "journal_reconciliations":  0,
+                                                "ntfs_fallbacks":  0,
+                                                "scan_profiles":  [
+
+                                                                  ],
+                                                "progress":  {
+                                                                 "phase":  "Replaying journal",
+                                                                 "completed":  177,
+                                                                 "total":  null,
+                                                                 "priority_ready":  true,
+                                                                 "priority_ms":  118.58399999999999,
+                                                                 "full_relist_done":  false,
+                                                                 "read_ms":  76.89599999999999,
+                                                                 "apply_ms":  11.127699999999999,
+                                                                 "load_ms":  58.674299999999995,
+                                                                 "plan_ms":  11.397499999999999,
+                                                                 "connect_ms":  2.8319,
+                                                                 "save_ms":  0.0
+                                                             }
+                                            },
+                        "close_ms":  101.248,
+                        "working_set_bytes":  249008128,
+                        "correct_present_ms":  2142.7048,
+                        "cached_present_ms":  315.9868,
+                        "private_commit_bytes":  137576448,
+                        "status":  {
+                                       "ready":  true,
+                                       "catching_up":  false,
+                                       "entries":  3398220,
+                                       "dirs":  305909,
+                                       "index_bytes":  188051075,
+                                       "skipped":  333,
+                                       "catch_up_ms":  2033.2791000000002,
+                                       "error":  null,
+                                       "source":  "ntfs + usn",
+                                       "helper_note":  null,
+                                       "journal_batches":  66,
+                                       "journal_directories":  80,
+                                       "journal_resets":  0,
+                                       "journal_reconciliations":  0,
+                                       "ntfs_fallbacks":  0,
+                                       "scan_profiles":  [
+
+                                                         ],
+                                       "progress":  {
+                                                        "phase":  "Replaying journal",
+                                                        "completed":  177,
+                                                        "total":  null,
+                                                        "priority_ready":  true,
+                                                        "priority_ms":  118.58399999999999,
+                                                        "full_relist_done":  false,
+                                                        "read_ms":  110.75270000000002,
+                                                        "apply_ms":  28.274499999999993,
+                                                        "load_ms":  58.674299999999995,
+                                                        "plan_ms":  11.397499999999999,
+                                                        "connect_ms":  2.8319,
+                                                        "save_ms":  1842.7341
+                                                    }
+                                   },
+                        "private_working_set_bytes":  57847808,
+                        "milestones":  [
+                                           {
+                                               "phase":  "entry",
+                                               "entry_ms":  0.152
+                                           },
+                                           {
+                                               "phase":  "windows_platform_start",
+                                               "entry_ms":  0.3546
+                                           },
+                                           {
+                                               "phase":  "backend_spawned",
+                                               "entry_ms":  0.6042000000000001
+                                           },
+                                           {
+                                               "phase":  "search_worker_started",
+                                               "entry_ms":  0.6565
+                                           },
+                                           {
+                                               "phase":  "known_folders_resolved",
+                                               "entry_ms":  4.2712
+                                           },
+                                           {
+                                               "phase":  "direct_write_ready",
+                                               "entry_ms":  4.823799999999999
+                                           },
+                                           {
+                                               "phase":  "gpui_application_created",
+                                               "entry_ms":  27.3787
+                                           },
+                                           {
+                                               "phase":  "directx_start",
+                                               "entry_ms":  27.4257
+                                           },
+                                           {
+                                               "phase":  "cached_search_started",
+                                               "entry_ms":  99.5954
+                                           },
+                                           {
+                                               "phase":  "cached_rows_materialized",
+                                               "entry_ms":  117.8911
+                                           },
+                                           {
+                                               "phase":  "directx_devices_ready",
+                                               "entry_ms":  117.9869
+                                           },
+                                           {
+                                               "phase":  "directx_ready",
+                                               "entry_ms":  118.4446
+                                           },
+                                           {
+                                               "phase":  "gpui_finish_launching",
+                                               "entry_ms":  118.4526
+                                           },
+                                           {
+                                               "phase":  "kit_initialized",
+                                               "entry_ms":  122.9752
+                                           },
+                                           {
+                                               "phase":  "startup_assets_ready",
+                                               "entry_ms":  206.3452
+                                           },
+                                           {
+                                               "phase":  "window_bounds_ready",
+                                               "entry_ms":  206.4862
+                                           },
+                                           {
+                                               "phase":  "shell_constructing",
+                                               "entry_ms":  265.8501
+                                           },
+                                           {
+                                               "phase":  "shell_constructed",
+                                               "entry_ms":  266.1838
+                                           },
+                                           {
+                                               "phase":  "window_opened",
+                                               "entry_ms":  273.1978
+                                           }
+                                       ],
+                        "cached_catching_up":  true,
+                        "catch_up_ms":  2033.2791000000002
+                    }
+                ],
+    "measurement":  "Ordinary-user app, copied real saved profile, process creation through DirectX Present return; user-restricted memory pipe prevents trace-write feedback. Windows caches not flushed; not physical scanout. Real user files read-only; installed helper not modified.",
+    "walker":  false,
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe"
+}

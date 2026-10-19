@@ -1,0 +1,122 @@
+{
+    "data":  "%USERPROFILE%\\Seek\\.bench-data\\stage4-drive-639277401644954131",
+    "root":  "C:\\",
+    "sha256":  "8AD37A41061F218E4C5A39A2CEFE47FDFA38D8CAD61643835CECB2F6C111FF31",
+    "samples":  [
+                    {
+                        "exit_code":  0,
+                        "priority_present_ms":  null,
+                        "run":  1,
+                        "priority_status":  null,
+                        "close_ms":  220.09210000000002,
+                        "working_set_bytes":  247861248,
+                        "correct_present_ms":  4182.408,
+                        "cached_present_ms":  463.7385,
+                        "private_commit_bytes":  110026752,
+                        "status":  {
+                                       "ready":  true,
+                                       "catching_up":  false,
+                                       "entries":  3361975,
+                                       "dirs":  303424,
+                                       "index_bytes":  186963783,
+                                       "skipped":  614,
+                                       "catch_up_ms":  4030.8871000000004,
+                                       "error":  null,
+                                       "source":  "ntfs + usn",
+                                       "helper_note":  null,
+                                       "journal_batches":  32,
+                                       "journal_directories":  642,
+                                       "journal_resets":  0,
+                                       "journal_reconciliations":  0,
+                                       "ntfs_fallbacks":  0,
+                                       "scan_profiles":  [
+
+                                                         ]
+                                   },
+                        "private_working_set_bytes":  57389056,
+                        "milestones":  [
+                                           {
+                                               "phase":  "entry",
+                                               "entry_ms":  0.6359
+                                           },
+                                           {
+                                               "phase":  "windows_platform_start",
+                                               "entry_ms":  1.0315999999999999
+                                           },
+                                           {
+                                               "phase":  "backend_spawned",
+                                               "entry_ms":  1.288
+                                           },
+                                           {
+                                               "phase":  "search_worker_started",
+                                               "entry_ms":  1.3656
+                                           },
+                                           {
+                                               "phase":  "known_folders_resolved",
+                                               "entry_ms":  7.926799999999999
+                                           },
+                                           {
+                                               "phase":  "direct_write_ready",
+                                               "entry_ms":  8.4503
+                                           },
+                                           {
+                                               "phase":  "gpui_application_created",
+                                               "entry_ms":  37.5621
+                                           },
+                                           {
+                                               "phase":  "directx_start",
+                                               "entry_ms":  37.6318
+                                           },
+                                           {
+                                               "phase":  "directx_devices_ready",
+                                               "entry_ms":  151.6941
+                                           },
+                                           {
+                                               "phase":  "directx_ready",
+                                               "entry_ms":  152.2581
+                                           },
+                                           {
+                                               "phase":  "gpui_finish_launching",
+                                               "entry_ms":  152.28040000000001
+                                           },
+                                           {
+                                               "phase":  "kit_initialized",
+                                               "entry_ms":  158.572
+                                           },
+                                           {
+                                               "phase":  "cached_search_started",
+                                               "entry_ms":  161.25709999999998
+                                           },
+                                           {
+                                               "phase":  "cached_rows_materialized",
+                                               "entry_ms":  175.0246
+                                           },
+                                           {
+                                               "phase":  "startup_assets_ready",
+                                               "entry_ms":  272.5936
+                                           },
+                                           {
+                                               "phase":  "window_bounds_ready",
+                                               "entry_ms":  272.79019999999997
+                                           },
+                                           {
+                                               "phase":  "shell_constructing",
+                                               "entry_ms":  368.4989
+                                           },
+                                           {
+                                               "phase":  "shell_constructed",
+                                               "entry_ms":  369.145
+                                           },
+                                           {
+                                               "phase":  "window_opened",
+                                               "entry_ms":  388.5099
+                                           }
+                                       ],
+                        "cached_catching_up":  true,
+                        "catch_up_ms":  4030.8871000000004
+                    }
+                ],
+    "measurement":  "Ordinary-user app, copied real saved profile, process creation through DirectX Present return; user-restricted memory pipe prevents trace-write feedback. Windows caches not flushed; not physical scanout. Real user files read-only; installed helper not modified.",
+    "walker":  false,
+    "executable":  "%USERPROFILE%\\Seek\\.references\\v2-stage-a-baseline\\seek.exe"
+}

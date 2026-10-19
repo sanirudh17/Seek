@@ -1,0 +1,27 @@
+{
+    "started_utc":  "2026-10-12T15:17:33.2964194Z",
+    "commands":  [
+                     {
+                         "wall_ms":  43350.392,
+                         "command":  "cargo test --workspace --all-features --locked",
+                         "exit_code":  0
+                     },
+                     {
+                         "wall_ms":  9587.7918,
+                         "command":  "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+                         "exit_code":  0
+                     },
+                     {
+                         "wall_ms":  4032.5922,
+                         "command":  "cargo check --workspace --locked",
+                         "exit_code":  0
+                     },
+                     {
+                         "wall_ms":  10875.475400000001,
+                         "command":  "cargo fmt --all -- --check",
+                         "exit_code":  0
+                     }
+                 ],
+    "focused_native_test":  "Ordinary file-ID opens reject changed sequence and deleted IDs, preserve identity across rename",
+    "previous_compile_error":  "WalkerSource return type adjusted after adding scan timing result; corrected before checks"
+}

@@ -1,0 +1,22 @@
+{
+    "checks":  [
+                   {
+                       "name":  "Fixture is ready",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Missing row Allowed",
+                       "passed":  false
+                   }
+               ],
+    "sha256":  "F1AA1785000E77B741E37E6DEF6F966618A1A63C309EDD8E17ACB05FEAD9D0E0",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-check-639277615220608368",
+    "captures":  [
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-actions-light.png",
+                     "%USERPROFILE%\\Seek\\.impeccable\\review\\v2-stage-b-suggestions-light.png"
+                 ],
+    "content_observations":  [
+
+                             ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe"
+}

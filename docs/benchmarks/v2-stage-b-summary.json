@@ -1,0 +1,102 @@
+{
+  "stage": "B",
+  "closed": "2026-10-17",
+  "release_sha256": "72AD5AB678DDF453E158CD60CD2C89153E0528006A3ACFA327084D0E4F2548DF",
+  "release_bytes": 17971712,
+  "release_build_seconds": 365,
+  "focused_new_rust_tests_passed": 7,
+  "debug_desktop_checks_passed": 9,
+  "release_smoke_checks_passed": 4,
+  "debug_sha256": "BAF1B8C03EE3E33BE33715B1F7503D1745F6E86569E722A6F790A33D1616EB3C",
+  "release_content_observations": [
+    {
+      "interaction": "content_search",
+      "detail": {
+        "checked": 7,
+        "skipped": 2,
+        "errors": 0,
+        "limited": false,
+        "cancelled": false,
+        "elapsed_ms": 115.7935,
+        "matches": 1
+      },
+      "entry_ms": 10789.7642
+    },
+    {
+      "interaction": "content_search",
+      "detail": {
+        "checked": 8,
+        "skipped": 2,
+        "errors": 0,
+        "limited": false,
+        "cancelled": false,
+        "elapsed_ms": 55.4707,
+        "matches": 2
+      },
+      "entry_ms": 12141.862700000001
+    }
+  ],
+  "idle": [
+    {
+      "files": 10000,
+      "sha256": "72AD5AB678DDF453E158CD60CD2C89153E0528006A3ACFA327084D0E4F2548DF",
+      "longest_quiet_foreground": {
+        "kind": "quiet-foreground",
+        "start_ms": 69.64370000000001,
+        "wall_ms": 29992.326,
+        "cpu_ms": 0,
+        "frames": 0
+      },
+      "sustained_foreground_idle_passed": true,
+      "private_working_set_bytes": 25038848,
+      "private_commit_bytes": 83079168,
+      "close_ms": 419.37730000000005,
+      "exit_code": 0
+    },
+    {
+      "files": 1000000,
+      "sha256": "72AD5AB678DDF453E158CD60CD2C89153E0528006A3ACFA327084D0E4F2548DF",
+      "longest_quiet_foreground": {
+        "kind": "quiet-foreground",
+        "start_ms": 92.4477,
+        "wall_ms": 27305.6201,
+        "cpu_ms": 0,
+        "frames": 0
+      },
+      "sustained_foreground_idle_passed": true,
+      "private_working_set_bytes": 40529920,
+      "private_commit_bytes": 87826432,
+      "close_ms": 329.53290000000004,
+      "exit_code": 0
+    }
+  ],
+  "checks": {
+    "format": true,
+    "strict_app_clippy_all_targets_all_features": true,
+    "normal_features": true
+  },
+  "external_drag": {
+    "supported": false,
+    "experiment": "stopped after source handoff was not cleanly established",
+    "source_preserved": true,
+    "browser_chat_attempted": false
+  },
+  "visual_review": "Independent reviewer reported no material scoped defect in seven static 125% SDR captures; formal final disposition was not received before closeout.",
+  "known_limits": [
+    "Physical HDR and mixed-DPI movement unverified",
+    "No-helper whole-C catch-up remains slow as measured in Stage A",
+    "Content scan bounded to configured local scopes, with visible skipped/unreadable/limit counts",
+    "No OCR; PDF requires a registered text filter",
+    "Conservative reparse-point skipping includes provider-backed cached placeholders",
+    "Cooperative filesystem deadlines may be exceeded by blocking system calls",
+    "Stage C and packaging not started"
+  ],
+  "reports": [
+    "v2-stage-b-ui.json",
+    "v2-stage-b-release-smoke.json",
+    "v2-stage-b-pdf-probe.json",
+    "v2-stage-b-drag-experiment.json",
+    "v2-stage-b-idle-10000.json",
+    "v2-stage-b-idle-million.json"
+  ]
+}

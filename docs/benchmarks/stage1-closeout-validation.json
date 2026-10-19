@@ -1,0 +1,17 @@
+﻿{
+    "captured_at":  "2026-10-11T12:00:36.8320756Z",
+    "elapsed_seconds":  29.207420199999998,
+    "tests":  12,
+    "commands":  [
+                     "cargo test --workspace --all-features --locked",
+                     "cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+                     "cargo fmt --all -- --check",
+                     "cargo build --workspace --locked"
+                 ],
+    "exit_codes":  [
+                       0,
+                       0,
+                       0,
+                       0
+                   ]
+}

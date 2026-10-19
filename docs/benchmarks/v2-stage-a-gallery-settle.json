@@ -1,0 +1,8 @@
+﻿{
+    "sha256":  "3B702CE00C76CEAB367CF3AEF22C7FCE69BECA73C67709AA0CD027C57B5F5E7B",
+    "name":  "Gallery thumbnail requests settle",
+    "cpu_ms":  93.75,
+    "preview_replies_after":  32,
+    "preview_replies_before":  32,
+    "wall_seconds":  5
+}

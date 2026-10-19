@@ -1,0 +1,54 @@
+{
+    "source_preserved":  true,
+    "checks":  [
+                   {
+                       "name":  "Browser input receives actual file bytes",
+                       "passed":  true
+                   },
+                   {
+                       "name":  "Browser drop receives actual file bytes",
+                       "passed":  true
+                   }
+               ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe",
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-ole-639278532706270810",
+    "method":  "Fresh native UIA row/window bounds. One continuous native pointer drag with 1500 ms held over an empty owned Explorer target. Only COPY offered.",
+    "utc":  "2026-10-17T17:01:21.4322543Z",
+    "events":  [
+                   {
+                       "interaction":  "ole_start",
+                       "detail":  {
+                                      "files":  1
+                                  },
+                       "entry_ms":  3953.7706999999996
+                   },
+                   {
+                       "interaction":  "ole_result",
+                       "detail":  {
+                                      "hresult":  262400,
+                                      "effect":  1
+                                  },
+                       "entry_ms":  5715.3155
+                   },
+                   {
+                       "interaction":  "ole_start",
+                       "detail":  {
+                                      "files":  1
+                                  },
+                       "entry_ms":  7715.5446999999995
+                   },
+                   {
+                       "interaction":  "ole_result",
+                       "detail":  {
+                                      "hresult":  262400,
+                                      "effect":  1
+                                  },
+                       "entry_ms":  9485.966400000001
+                   }
+               ],
+    "sha256":  "631F3FCF21FED95838F68D7D82E3ECF559A0ACACDD9FA9DC5C94446DB425B936",
+    "target":  "Browser",
+    "target_bounds":  "1220,40,700,700",
+    "source_bounds":  "0,40,1218,700",
+    "passed":  true
+}

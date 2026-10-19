@@ -1,0 +1,172 @@
+[
+  {
+    "name": "final-stress-walker",
+    "command": [
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek-cli.exe",
+      "stress",
+      "--files",
+      "10000",
+      "--source",
+      "walker",
+      "--output",
+      "docs/benchmarks/stage4-final-stress-walker.json"
+    ],
+    "seconds": 23.992,
+    "exit_code": 0,
+    "app_sha256": "6f07b9f048ccddc9192db9f2acf9300137d3a144a033250dac133135a6bbd8d7",
+    "cli_sha256": "494bdb6d2840a6508f1ef0537e9599695f8e0ede6f58ce737f53815ee0f7f1e3"
+  },
+  {
+    "name": "final-stress-helper",
+    "command": [
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek-cli.exe",
+      "stress",
+      "--files",
+      "10000",
+      "--source",
+      "helper",
+      "--output",
+      "docs/benchmarks/stage4-final-stress-helper.json"
+    ],
+    "seconds": 76.371,
+    "exit_code": 0,
+    "app_sha256": "6f07b9f048ccddc9192db9f2acf9300137d3a144a033250dac133135a6bbd8d7",
+    "cli_sha256": "494bdb6d2840a6508f1ef0537e9599695f8e0ede6f58ce737f53815ee0f7f1e3"
+  },
+  {
+    "name": "final-bench-10000",
+    "command": [
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek-cli.exe",
+      "bench",
+      "--files",
+      "10000",
+      "--runs",
+      "30",
+      "--extended",
+      "--reuse-dataset",
+      "--source",
+      "walker",
+      "--ui-executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "--output",
+      "docs/benchmarks/stage4-final-bench-10000.json"
+    ],
+    "seconds": 55.231,
+    "exit_code": 0,
+    "app_sha256": "6f07b9f048ccddc9192db9f2acf9300137d3a144a033250dac133135a6bbd8d7",
+    "cli_sha256": "494bdb6d2840a6508f1ef0537e9599695f8e0ede6f58ce737f53815ee0f7f1e3"
+  },
+  {
+    "name": "final-bench-1000000",
+    "command": [
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek-cli.exe",
+      "bench",
+      "--files",
+      "1000000",
+      "--runs",
+      "30",
+      "--extended",
+      "--reuse-dataset",
+      "--source",
+      "walker",
+      "--ui-executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "--output",
+      "docs/benchmarks/stage4-final-bench-1000000.json"
+    ],
+    "seconds": 56.323,
+    "exit_code": 0,
+    "app_sha256": "6f07b9f048ccddc9192db9f2acf9300137d3a144a033250dac133135a6bbd8d7",
+    "cli_sha256": "494bdb6d2840a6508f1ef0537e9599695f8e0ede6f58ce737f53815ee0f7f1e3"
+  },
+  {
+    "name": "final-startup-10000",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/measure-startup.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-Files",
+      "10000",
+      "-Runs",
+      "5",
+      "-IdleSeconds",
+      "0",
+      "-Walker",
+      "-Output",
+      "docs/benchmarks/stage4-final-startup-10000.json"
+    ],
+    "seconds": 3.717,
+    "exit_code": 0,
+    "app_sha256": "6f07b9f048ccddc9192db9f2acf9300137d3a144a033250dac133135a6bbd8d7",
+    "cli_sha256": "494bdb6d2840a6508f1ef0537e9599695f8e0ede6f58ce737f53815ee0f7f1e3"
+  },
+  {
+    "name": "final-startup-1000000",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/measure-startup.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-Files",
+      "1000000",
+      "-Runs",
+      "5",
+      "-IdleSeconds",
+      "0",
+      "-Walker",
+      "-Output",
+      "docs/benchmarks/stage4-final-startup-1000000.json"
+    ],
+    "seconds": 9.27,
+    "exit_code": 0,
+    "app_sha256": "6f07b9f048ccddc9192db9f2acf9300137d3a144a033250dac133135a6bbd8d7",
+    "cli_sha256": "494bdb6d2840a6508f1ef0537e9599695f8e0ede6f58ce737f53815ee0f7f1e3"
+  },
+  {
+    "name": "ui-release",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/check-stage4-ui.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-Output",
+      "docs/benchmarks/stage4-ui-release.json"
+    ],
+    "seconds": 73.335,
+    "exit_code": 0,
+    "app_sha256": "6f07b9f048ccddc9192db9f2acf9300137d3a144a033250dac133135a6bbd8d7",
+    "cli_sha256": "494bdb6d2840a6508f1ef0537e9599695f8e0ede6f58ce737f53815ee0f7f1e3"
+  },
+  {
+    "name": "settings-release",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/check-stage3-settings.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-Output",
+      "docs/benchmarks/stage4-settings-release.json"
+    ],
+    "seconds": 67.035,
+    "exit_code": 0,
+    "app_sha256": "6f07b9f048ccddc9192db9f2acf9300137d3a144a033250dac133135a6bbd8d7",
+    "cli_sha256": "494bdb6d2840a6508f1ef0537e9599695f8e0ede6f58ce737f53815ee0f7f1e3"
+  }
+]

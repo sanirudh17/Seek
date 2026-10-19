@@ -1,0 +1,20 @@
+{
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\v2-stage-b-ole-639277615030699926",
+    "method":  "Fresh native UIA row/window bounds. One continuous native pointer drag with 600 ms held over an empty owned Explorer target. Only COPY offered.",
+    "explorer_copy_passed":  false,
+    "utc":  "2026-10-16T15:31:50.1285102Z",
+    "source_preserved":  true,
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe",
+    "events":  [
+                   {
+                       "interaction":  "ole_result",
+                       "detail":  {
+                                      "result":  {
+                                                     "Ok":  "released before leaving source"
+                                                 }
+                                  },
+                       "entry_ms":  4399.347
+                   }
+               ],
+    "sha256":  "F1AA1785000E77B741E37E6DEF6F966618A1A63C309EDD8E17ACB05FEAD9D0E0"
+}

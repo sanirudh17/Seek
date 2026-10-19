@@ -1,0 +1,52 @@
+[
+  {
+    "name": "fmt",
+    "command": [
+      "cargo",
+      "fmt",
+      "--all",
+      "--",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 18.595,
+    "app_sha256": "aed4dac8897e283bec4f7dc05d54313ddb060e1664fca4e58b84b062884cb3c4"
+  },
+  {
+    "name": "release-ui",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/check-stage4-navigation.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-Output",
+      "docs/benchmarks/stage4-navigation-release-ui.json"
+    ],
+    "exit_code": 0,
+    "seconds": 25.836,
+    "app_sha256": "aed4dac8897e283bec4f7dc05d54313ddb060e1664fca4e58b84b062884cb3c4"
+  },
+  {
+    "name": "real-folders",
+    "command": [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      "scripts/check-stage4-navigation.ps1",
+      "-Executable",
+      "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\release\\seek.exe",
+      "-RealProfile",
+      "-Output",
+      "docs/benchmarks/stage4-navigation-real-folders.json"
+    ],
+    "exit_code": 0,
+    "seconds": 35.944,
+    "app_sha256": "aed4dac8897e283bec4f7dc05d54313ddb060e1664fca4e58b84b062884cb3c4"
+  }
+]

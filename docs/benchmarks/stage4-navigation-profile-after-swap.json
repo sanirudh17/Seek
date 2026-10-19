@@ -1,0 +1,137 @@
+{
+    "fixture":  "%USERPROFILE%\\Seek\\.bench-data\\navigation-639276867920786357",
+    "real_profile_copy":  true,
+    "exit_code":  0,
+    "timings":  [
+                    {
+                        "rows":  488,
+                        "catching_up":  true,
+                        "location":  "Downloads",
+                        "request_to_present_ms":  37.597
+                    },
+                    {
+                        "rows":  17,
+                        "catching_up":  true,
+                        "location":  "Desktop",
+                        "request_to_present_ms":  22.2488
+                    },
+                    {
+                        "rows":  134,
+                        "catching_up":  true,
+                        "location":  "Documents",
+                        "request_to_present_ms":  24.0386
+                    },
+                    {
+                        "rows":  16,
+                        "catching_up":  true,
+                        "location":  "Pictures",
+                        "request_to_present_ms":  19.265500000000003
+                    },
+                    {
+                        "rows":  8,
+                        "catching_up":  true,
+                        "location":  "Videos",
+                        "request_to_present_ms":  14.7201
+                    },
+                    {
+                        "rows":  488,
+                        "catching_up":  true,
+                        "location":  "Downloads",
+                        "request_to_present_ms":  30.1344
+                    }
+                ],
+    "profiles":  [
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  0.0996,
+                                        "stages_ms":  [
+                                                          0.0011,
+                                                          2.4472,
+                                                          0.044199999999999996
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  4067.3217
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Desktop",
+                                        "queued_ms":  0.13899999999999998,
+                                        "stages_ms":  [
+                                                          0.0013,
+                                                          1.2884,
+                                                          0.0294
+                                                      ],
+                                        "rows":  17
+                                    },
+                         "entry_ms":  5876.761
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Documents",
+                                        "queued_ms":  0.1145,
+                                        "stages_ms":  [
+                                                          0.0012,
+                                                          0.7092999999999999,
+                                                          0.036199999999999996
+                                                      ],
+                                        "rows":  134
+                                    },
+                         "entry_ms":  7736.3665
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Pictures",
+                                        "queued_ms":  0.11230000000000001,
+                                        "stages_ms":  [
+                                                          0.0011,
+                                                          0.0999,
+                                                          0.019700000000000002
+                                                      ],
+                                        "rows":  16
+                                    },
+                         "entry_ms":  9585.1229
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Videos",
+                                        "queued_ms":  0.0863,
+                                        "stages_ms":  [
+                                                          0.0012,
+                                                          0.532,
+                                                          0.0218
+                                                      ],
+                                        "rows":  8
+                                    },
+                         "entry_ms":  11592.570500000002
+                     },
+                     {
+                         "interaction":  "browse_profile",
+                         "detail":  {
+                                        "folder":  "Downloads",
+                                        "queued_ms":  0.064,
+                                        "stages_ms":  [
+                                                          0.0011,
+                                                          1.6878,
+                                                          0.0298
+                                                      ],
+                                        "rows":  488
+                                    },
+                         "entry_ms":  13182.7973
+                     }
+                 ],
+    "executable":  "%USERPROFILE%\\Seek\\target\\x86_64-pc-windows-msvc\\debug\\seek.exe",
+    "checks":  [
+                   {
+                       "name":  "Real sidebar folders present cached indexed contents",
+                       "passed":  true
+                   }
+               ],
+    "sha256":  "B34E84079B03FF125FB4A7D245B966A444B68D687923837765B93925A1A96828"
+}

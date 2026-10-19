@@ -14,19 +14,9 @@ Only Windows 11 x64 and the current account were verified. A future update from 
 
 Check by eye: Settings > Updates refresh glyph and current status; Start shortcut and app icon; installer desktop shortcut choice; uninstall's default saved-data retention. [Packaging details](docs/PACKAGING.md), [release measurements](docs/benchmarks/packaging-release.json).
 
-# Seek 1.0.0 packaging - release build verified; publication next
+# Prior packaging draft (superseded)
 
-2026-10-20. Packaging and the separately authorized GitHub updater are implemented. Version **1.0.0** and Windows product/description/version/copyright metadata are present in both executable resources; the existing icon is unchanged. Updates uses the requested **circular refresh icon**, distinct from Info. Startup checks are on by default, once per launch; manual Check now and explicitly approved Download and restart use worker-only HTTPS/checksum staging and a finite unelevated replacement/rollback worker. No resident updater, auto-install of the helper, autostart, tray, global hotkey, framework update or code signing.
-
-**Final optimized build:** a clean, separate source checkout, static MSVC runtime and stripped/path-remapped release. The final app is **19,824,640 bytes**. Its owned temporary-profile ordinary-user launch displayed the independent test file and closed normally with exit 0. Both app/helper binary scans contain **zero personal profile paths**, and import no dynamic MSVC CRT. The archive is **9,164,598 bytes**, SHA256 `b21b13215d60d611fee3e021683fecd58424c0e21527c1de21ee32f3ce1fc003`. This is not a new startup latency benchmark.
-
-**Verified:** 54 app tests, strict all-target/all-feature Clippy, normal compilation and formatting; 20 per-user installer/uninstaller checks on the candidate, plus the exact final release smoke; seven isolated update replacement/recovery checks. All six current-account Known Folder sidebar labels were present. Tests verified shortcut/icon/metadata, running-app overwrite refusal, Cancel/default data retention/explicit removal, optional desktop shortcut and unchanged helper registration. No production saved index, settings or document-text cache was opened as a test profile. A first UIA smoke attempt had a zero-handle harness bug; the corrected final smoke passed.
-
-**Privacy/docs:** 238 tracked text files deidentified initially, with 1,087 personal document path identities aliased across eight additional report files. Current-user variables replace executable paths in desktop scripts. Two old personal screenshots are preserved privately and omitted from public source; a diagnostic image no longer embeds its build-directory path. The public repository uses a fresh scrubbed source snapshot rather than uploading private history. Carbon/Typr-style README includes the full keyboard/mouse guide, install/uninstall/helper commands and known limits. Full notices cover 496 dependency/build packages and icon artwork, including the engine and GPUI. Third-party author attribution and the chosen public GitHub handle are retained.
-
-**Known limits / next:** only one local account is enabled, so an alternate standard-account install remains a manual check (instructions in README). This unsigned release is verified on Windows 11 x64; other OS/hardware coverage limits remain documented. Same-version worker success/rollback/tamper checks do not establish a future-version end-to-end upgrade. Final public tag/release upload and live GitHub package-download verification are the next step; no other feature work is pending in this packaging scope. [Packaging details](docs/PACKAGING.md), [numbers](docs/benchmarks/packaging-release.json).
-
-Check by eye: Settings > Updates refresh icon and status; Start menu icon and launch; optional desktop shortcut; uninstall defaults to keeping saved data. Historical packaging-not-approved notes below are superseded by the user's explicit approval and this entry.
+The pre-publication packaging draft is superseded by the public release verification at the top of this file.
 
 # Seek v2 Stage C follow-up - measured targets passed
 

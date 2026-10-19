@@ -80,7 +80,7 @@
   "install_checks": 20,
   "update_worker_checks": 7,
   "app_tests_passed": 54,
-  "live_release_test": "Pending publication",
+  "live_release_test": "The app Check now returned current-version status and a fresh public ZIP download matched SHA-256. The ignored automated live-staging test was not run; its separate test compilation was stopped.",
   "alternate_user_test": "Not performed: only one enabled local account; manual instructions in README.",
   "publication": {
     "release": "https://github.com/sanirudh17/Seek/releases/tag/v1.0.0",

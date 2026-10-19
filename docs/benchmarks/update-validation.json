@@ -10,5 +10,6 @@
   ],
   "scope": "Disposable TEMP copies only; no real install or profile touched.",
   "live_github_check": "The shipped app Check now returned Seek 1.0.0 is up to date. The downloaded public ZIP was byte-for-byte SHA-256 identical to the local artifact.",
-  "future_upgrade": "No future version exists yet; update apply between distinct versions remains unverified."
+  "future_upgrade": "No future version exists yet; update apply between distinct versions remains unverified.",
+  "automated_live_staging_test": "Not run. Its separate test executable was compiling; the build was stopped to avoid delaying the release finish. Live API status and ZIP download/checksum were verified in the app and from GitHub."
 }

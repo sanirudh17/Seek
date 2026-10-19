@@ -82,6 +82,29 @@
   "app_tests_passed": 54,
   "live_release_test": "Pending publication",
   "alternate_user_test": "Not performed: only one enabled local account; manual instructions in README.",
-  "publication": "Pending final tag and upload",
-  "old_personal_screenshots": "Two preserved privately and excluded from public snapshot."
+  "publication": {
+    "release": "https://github.com/sanirudh17/Seek/releases/tag/v1.0.0",
+    "uploaded_checksum": true,
+    "published_digest": "sha256:b21b13215d60d611fee3e021683fecd58424c0e21527c1de21ee32f3ce1fc003",
+    "live_ui": "Check now triggered against published release",
+    "zip_bytes": 9164598,
+    "zip_sha256": "b21b13215d60d611fee3e021683fecd58424c0e21527c1de21ee32f3ce1fc003",
+    "visibility": "PUBLIC",
+    "isDraft": false
+  },
+  "old_personal_screenshots": "Two preserved privately and excluded from public snapshot.",
+  "final_archive_validation": {
+    "checks": 20,
+    "all_passed": true,
+    "known_folders": 6,
+    "observed_smoke_ms_with_UIA": 1663.2168000000001,
+    "scope": "Owned temporary profile only."
+  },
+  "live_updater_ui": "Settings > Updates > Check now displayed Seek 1.0.0 is up to date for the public v1.0.0 release.",
+  "live_archive_download": {
+    "bytes": 9164598,
+    "sha256": "b21b13215d60d611fee3e021683fecd58424c0e21527c1de21ee32f3ce1fc003",
+    "matches_local": true
+  },
+  "future_update": "The live check against the current public release and public ZIP download were verified. A newer-version apply could not be tested against v1.0.0 itself."
 }

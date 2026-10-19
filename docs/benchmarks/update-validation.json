@@ -1,34 +1,14 @@
-﻿{
-    "scope":  "Owned TEMP program/data copies only; no real installation or data was touched.",
-    "limitations":  "The replacement worker is exercised with the same version and NoRestart. A future-version end-to-end automatic download/restart cannot be tested against the first public release.",
-    "checks":  [
-                   {
-                       "name":  "Verified payload replaces program files successfully",
-                       "passed":  true
-                   },
-                   {
-                       "name":  "Successful update handshakes before replacement",
-                       "passed":  true
-                   },
-                   {
-                       "name":  "success: saved data is unchanged",
-                       "passed":  true
-                   },
-                   {
-                       "name":  "Locked destination fails and restores previously replaced executable",
-                       "passed":  true
-                   },
-                   {
-                       "name":  "locked: saved data is unchanged",
-                       "passed":  true
-                   },
-                   {
-                       "name":  "Changed payload is rejected before handshake or replacement",
-                       "passed":  true
-                   },
-                   {
-                       "name":  "tampered: saved data is unchanged",
-                       "passed":  true
-                   }
-               ]
+{
+  "checks": 7,
+  "result": "PASS",
+  "cases": [
+    "same-version fixed package replaces files on an owned copy",
+    "ready handshake observed before replacement",
+    "locked file causes rollback and restores executable bytes",
+    "tampered payload is rejected before ready/replacement",
+    "owned data preserved in success, locked and tampered cases"
+  ],
+  "scope": "Disposable TEMP copies only; no real install or profile touched.",
+  "live_github_check": "The shipped app Check now returned Seek 1.0.0 is up to date. The downloaded public ZIP was byte-for-byte SHA-256 identical to the local artifact.",
+  "future_upgrade": "No future version exists yet; update apply between distinct versions remains unverified."
 }

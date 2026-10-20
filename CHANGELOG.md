@@ -3,6 +3,7 @@
 ## 1.0.1 - 2026-10-20
 
 - Added a per-user Setup EXE and native uninstaller, with an optional desktop shortcut and saved-data retention by default. The helper is never installed automatically.
+- Corrected the Setup EXE's optional test-argument error handling; the published installer now writes and registers its native uninstaller instead of falsely reporting an installation failure.
 - Enlarged the content-search location field.
 - All locations now shows labelled recent files during a first index instead of waiting for the full drive index. Early results remain provisional while the complete scan continues.
 - Fixed search-suggestion placement relative to the actual search field on resize.

@@ -1,5 +1,7 @@
 # Seek 1.0.1 - public release published
 
+Installer hotfix: the original Setup EXE could leave NSIS's error flag set after checking for an optional test-only argument, then report a false failure after writing the uninstaller. The current account's Installed apps registration was repaired to point to its existing native `Uninstall.exe`; saved data was not changed. A rebuilt Setup EXE passed all 23 owned-fixture checks and replaced the published Setup download. Its hash and new public-download verification are recorded below.
+
 2026-10-20. Enlarged the content-location field and fixed first-launch All locations remaining blank until the full drive index is ready. It now shows labelled provisional recent files while complete indexing continues. Includes the committed interaction fixes. The user approved the normal test build and now authorizes publishing this version with a native Setup EXE and changelog.
 
 **Measured:** fresh owned profiles on real C:, walker/no helper, first UI Automation result row **26,606.310 -> 2,793.024 ms** (one run each; includes polling/accessibility and uncontrolled system load; not cold cache or full-scan completion). Provisional owned-fixture rows arrived in **1.537 ms**, with the global index still unfinished.

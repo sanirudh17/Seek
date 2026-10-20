@@ -61,6 +61,9 @@ Function .onInit
   StrCpy $1 $1 "" 15
   StrCpy $RegistryId "Seek.PackagingTest.$1"
   done:
+  ; GetOptions leaves the NSIS error flag set when /FIXTURE is absent. Do not
+  ; let that optional-argument result masquerade as a later write failure.
+  ClearErrors
 FunctionEnd
 
 Section "Seek (required)" Main
@@ -94,6 +97,7 @@ Section "Seek (required)" Main
   Abort "Install failed."
   success:
   SetOutPath "$INSTDIR"
+  ClearErrors
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   IfErrors native_failed
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$RegistryId" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'

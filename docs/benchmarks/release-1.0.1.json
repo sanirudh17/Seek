@@ -4,8 +4,8 @@
   "release_url": "https://github.com/sanirudh17/Seek/releases/tag/v1.0.1",
   "artifacts": {
     "Seek-1.0.1-Setup-x64.exe": {
-      "bytes": 9526496,
-      "sha256": "7062caa5c5c14c97645dbc4a8226d1a141eb1321aa56fc624618471864c4c508"
+      "bytes": 9526501,
+      "sha256": "10e798c651b67d1624d4a1f6a0f5cb172d1cdd7e475880e249568bde483ea83e"
     },
     "Seek-1.0.1-windows-x64.zip": {
       "bytes": 9212488,
@@ -51,7 +51,7 @@
     "full_index_ready_at_first_rows": false
   },
   "installer": {
-    "installer_sha256": "7062CAA5C5C14C97645DBC4A8226D1A141EB1321AA56FC624618471864C4C508",
+    "installer_sha256": "10E798C651B67D1624D4A1F6A0F5CB172D1CDD7E475880E249568BDE483EA83E",
     "test_scope": "Marked TEMP fixtures and unique HKCU registrations only. No production profile or installation changed.",
     "alternate_account": "Not verified; only the current ordinary-user account was used.",
     "checks": [
@@ -341,8 +341,15 @@
     "No new idle CPU, process memory or full UI latency claims.",
     "Complete old-client Download and restart interaction not tested; worker and live package staging are separate checks."
   ],
+  "installer_hotfix": {
+    "cause": "Optional GetOptions /FIXTURE parsing left NSIS's error flag set, so a later IfErrors could report WriteUninstaller failure after a successful write.",
+    "fix": "ClearErrors after optional argument parsing and immediately before WriteUninstaller.",
+    "native_installer_checks_passed": 23,
+    "current_install_registration_repaired": true,
+    "saved_data_changed": false
+  },
   "publication_verification": {
-    "status": "Published; fresh EXE and ZIP downloads match local release artifacts byte for byte.",
+    "status": "Replacement installer published; fresh EXE and ZIP downloads match the current release assets.",
     "url": "https://github.com/sanirudh17/Seek/releases/tag/v1.0.1",
     "api_http_status": 200,
     "api_download_seconds": 0.435,

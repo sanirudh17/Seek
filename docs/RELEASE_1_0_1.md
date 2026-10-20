@@ -1,6 +1,6 @@
 # Seek 1.0.1
 
-2026-10-20. Public release [v1.0.1](https://github.com/sanirudh17/Seek/releases/tag/v1.0.1) is published with a native Setup EXE. Fresh GitHub downloads of the EXE and ZIP match the locally built artifacts byte for byte.
+2026-10-20. Public release [v1.0.1](https://github.com/sanirudh17/Seek/releases/tag/v1.0.1) includes a native Setup EXE. The first EXE falsely reported failure because NSIS's error flag could remain set after an absent optional `/FIXTURE` argument; `Uninstall.exe` had been written, but the native Installed apps registration was skipped. The flag is now cleared before the uninstaller write/check. The replacement EXE passes all 23 installer checks and is the current release download.
 
 ## Changes and cause
 
@@ -10,7 +10,7 @@ Without a saved index, All locations previously waited for the full drive namesp
 
 The EXE installer uses NSIS 3.12 with RequestExecutionLevel user, current-account paths, optional desktop shortcut, Start shortcut, HKCU Installed apps registration and a native uninstaller. Saved data defaults to Keep; explicit deletion is separate. Unexpected program files are retained, and a previously opted-in helper is retained and reported. The installer never installs the helper. Replacing an existing installation requires approval; silent replacement is refused. The updater's own install scripts are recognized during uninstall, and existing desktop-shortcut ownership survives replacement.
 
-A separate ZIP remains for compatibility with the already shipped updater. The recommended download is **Seek-1.0.1-Setup-x64.exe**. The EXE, ZIP and UTF-8/BOM-free SHA256SUMS have matching version/checksums. A final checksum-format check caught and fixed a one-line PowerShell array-unwrapping issue before upload; the tested EXE/ZIP bytes were unchanged by that correction.
+A separate ZIP remains for compatibility with the already shipped updater. The recommended download is **Seek-1.0.1-Setup-x64.exe**. The replacement EXE, ZIP and UTF-8/BOM-free SHA256SUMS have matching version/checksums. A final checksum-format check caught and fixed a one-line PowerShell array-unwrapping issue before the original upload.
 
 ## Verification
 
@@ -20,6 +20,7 @@ A separate ZIP remains for compatibility with the already shipped updater. The r
 - Owned unfinished-index fixture: All locations supplied provisional rows after **1.537 ms**, while full-index ready was false.
 - Real C:, fresh owned profiles, helper disabled: first UI Automation row **26,606.310 ms before**, **2,793.024 ms after**. These are single-run observations including polling/accessibility and uncontrolled system load, not full-scan or cold-cache timings. The after run used the packaged static-runtime release; do not treat this as a controlled compiler-flag-only comparison or claim sub-second paint.
 - Final EXE: **23 native installer checks passed**, including per-user registration, native uninstaller, default data retention, explicit owned-data removal, unexpected-file preservation, silent overwrite refusal, shortcut removal and unchanged helper registration.
+- The currently installed account's Installed apps registration was repaired to point to its existing native uninstaller. Saved data was not modified.
 - Final package: **21 checks passed**, including metadata/icon, normal owned-profile launch/close, all six current-user Known Folder labels, desktop ownership on replacement, running-app refusal and clean script uninstall.
 - **7 update-worker checks passed** for replacement, handshake, locked-file rollback, tampered-payload rejection and saved-data preservation. Native installer tests also cover removal of updater-staged install scripts.
 - The full live update staging test failed twice with WinHTTP error **12002** (timeout). Direct HTTPS checks succeeded: GitHub API **0.435 s**; ZIP download **1.013 s**, **9,212,488 bytes**. The app's native WinHTTP download and staging path remains unverified.

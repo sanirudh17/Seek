@@ -45,6 +45,9 @@ try{
  & (Join-Path $package 'Install.ps1') -TestRoot $base -NonInteractive -DesktopShortcut
  $m=Get-Content (Join-Path $program 'install-manifest.json') -Raw|ConvertFrom-Json
  $registration=Get-ItemProperty $key
+ & (Join-Path $package 'Install.ps1') -TestRoot $base -NonInteractive -Replace -NoDesktopShortcut
+ $m=Get-Content (Join-Path $program 'install-manifest.json') -Raw|ConvertFrom-Json
+ Check 'Replacing program files preserves ownership of an existing desktop shortcut' ([bool]$m.desktop_shortcut -and (Test-Path -LiteralPath $m.desktop_shortcut))
  Check 'Current-user Installed apps registration, version and target' ($registration.DisplayVersion -eq [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $package 'seek.exe')).FileVersion -and $registration.InstallLocation -eq $program)
  $shell=New-Object -ComObject WScript.Shell
  Check 'Start and optional desktop shortcuts use the installed icon/executable' (@(@($m.start_shortcut,$m.desktop_shortcut)|Where-Object{$shell.CreateShortcut($_).TargetPath -ne (Join-Path $program 'seek.exe') -or $shell.CreateShortcut($_).IconLocation -notlike '*seek.ico*'}).Count -eq 0)

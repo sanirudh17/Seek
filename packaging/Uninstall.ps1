@@ -33,7 +33,7 @@ $id=if($m.test_root){'Seek.PackagingTest.'+(Split-Path $m.test_root -Leaf).Subst
 if($m.registry_id -ne $id){throw 'Unexpected uninstall registry key'}
 Remove-Item -LiteralPath ('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\'+$id) -Force -ErrorAction SilentlyContinue
 # Delete only known package files; never recursively remove a program directory.
-foreach($file in @('seek.exe','seek-helper.exe','seek.ico','README.md','LICENSE','THIRD-PARTY-NOTICES.txt','Uninstall.ps1','Uninstall.cmd','Update.ps1','install-manifest.json')){
+foreach($file in @('seek.exe','seek-helper.exe','seek.ico','README.md','LICENSE','THIRD-PARTY-NOTICES.txt','Install.ps1','Install.cmd','Uninstall.ps1','Uninstall.cmd','Update.ps1','install-manifest.json')){
  $path=Join-Path $install $file
  if(Test-Path -LiteralPath $path){Remove-Item -LiteralPath $path -Force}
 }

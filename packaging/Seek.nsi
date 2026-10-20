@@ -72,7 +72,7 @@ Section "Seek (required)" Main
   StrCpy $ExtraArgs "-DesktopShortcut"
   StrCmp $Fixture "" +2
   StrCpy $ExtraArgs '$ExtraArgs -TestRoot "$Fixture" -NonInteractive'
-  IfFileExists "$INSTDIR\seek.exe" 0 install
+  IfFileExists "$INSTDIR\*.*" 0 install
   IfSilent reject 0
   MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 "Replace the existing Seek program files? Your saved index, settings and document text will be kept. Close Seek before continuing." IDYES install
   reject:

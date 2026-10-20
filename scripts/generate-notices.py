@@ -123,6 +123,11 @@ def main():
     # Asset-specific attribution is additional to the crates' code licenses.
     f = ROOT / 'vendor/gpui-component/crates/assets/LICENSE-LUCIDE'
     blocks.append('\nLucide icon artwork\n' + f.read_text() + '\n')
+    nsis = ROOT / 'packaging/NSIS-LICENSE.txt'
+    blocks.append('\n' + '=' * 78 + '\nNSIS installer and uninstaller stubs and plug-ins\n'
+                  'Upstream: https://nsis.sourceforge.io/\n'
+                  'Used with zlib compression (not the LZMA or bzip2 module).\n\n'
+                  + nsis.read_text(encoding='utf-8') + '\n')
     args.output.write_text(''.join(blocks), encoding='utf-8')
     print(f'Included {len(shipping)} packages; {args.output.stat().st_size} notice bytes')
 

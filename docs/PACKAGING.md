@@ -1,3 +1,9 @@
+# Seek 1.0.1: Setup EXE
+
+The recommended download is **Seek-1.0.1-Setup-x64.exe**, built with NSIS 3.12. It installs without elevation into the current user's Programs folder, adds Start/optional Desktop shortcuts and an Installed apps entry with a native uninstaller. Uninstall defaults to retaining saved data, preserves unexpected files and reports a retained opt-in helper. The helper is never installed by setup. See [1.0.1 validation](RELEASE_1_0_1.md) and [CHANGELOG](../CHANGELOG.md).
+
+The separate ZIP is retained for the existing in-app updater and portable use. An installation updated from 1.0.0 through that ZIP can retain its legacy script uninstaller; running the Setup EXE provides the native uninstaller. No code signing or framework update.
+
 ﻿# Seek 1.0.0 packaging and updater verification
 
 2026-10-20. Packaging is explicitly approved; the later request also authorizes startup update checks and a Settings update page. No framework revision, application icon or indexing/content feature was changed for packaging.

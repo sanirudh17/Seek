@@ -1,4 +1,4 @@
-﻿param([Parameter(Mandatory=$true)][string]$PackageDirectory,[string]$Output='docs/benchmarks/update-validation.json')
+param([Parameter(Mandatory=$true)][string]$PackageDirectory,[string]$Output='docs/benchmarks/update-validation.json')
 $ErrorActionPreference='Stop'
 $package=(Resolve-Path -LiteralPath $PackageDirectory).Path
 $files=@('seek.exe','seek-helper.exe','seek.ico','README.md','LICENSE','THIRD-PARTY-NOTICES.txt','Install.ps1','Install.cmd','Uninstall.ps1','Uninstall.cmd','Update.ps1')
@@ -40,6 +40,6 @@ foreach($mode in @('success','locked','tampered')){
  }
  Check ($mode+': saved data is unchanged') ((Get-Content (Join-Path $data 'retain') -Raw) -eq 'saved user data')
 }
-@{checks=$checks;scope='Owned TEMP program/data copies only; no real installation or data was touched.';limitations='The replacement worker is exercised with the same version and NoRestart. A future-version end-to-end automatic download/restart cannot be tested against the first public release.'}|ConvertTo-Json -Depth 5|Set-Content -LiteralPath $Output -Encoding UTF8
+@{checks=$checks;scope='Owned TEMP program/data copies only; no real installation or data was touched.';limitations='Disposable replacement/rollback checks use NoRestart; the full old-client Download and restart interaction is not exercised.'}|ConvertTo-Json -Depth 5|Set-Content -LiteralPath $Output -Encoding UTF8
 'PASS '+$checks.Count+' update replacement checks'
 exit 0

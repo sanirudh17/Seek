@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/sanirudh17/Seek/v1.0.0/app/assets/seek-icon-source.png" width="112" height="112" alt="Seek icon" />
+  <img src="app/assets/seek-icon-source.png" width="112" height="112" alt="Seek icon" />
 </p>
 
 <h1 align="center">Seek</h1>

@@ -14,7 +14,7 @@ A separate ZIP remains for compatibility with the already shipped updater. The r
 
 ## Verification
 
-[Measured report](benchmarks/release-1.0.1.json). The clean separate source checkout at `8489a91` built the optimized app/helper in 843 seconds with a static MSVC runtime and remapped paths. Later packaging-only commits did not change the Rust executable. The app is 19,951,104 bytes, with 1.0.1 Windows metadata. App/helper imports need no dynamic MSVC CRT; neither contains the personal build-profile path. No framework or dependency version was updated.
+[Measured report](benchmarks/release-1.0.1.json). The clean separate source checkout at `60501e7` built the optimized app/helper in 843 seconds with a static MSVC runtime and remapped paths. Later packaging-only commits did not change the Rust executable. The app is 19,951,104 bytes, with 1.0.1 Windows metadata. App/helper imports need no dynamic MSVC CRT; neither contains the personal build-profile path. No framework or dependency version was updated.
 
 - **65 Rust tests passed**, one live-release test initially ignored; strict all-target/all-feature Clippy and formatting passed.
 - Owned unfinished-index fixture: All locations supplied provisional rows after **1.537 ms**, while full-index ready was false.

@@ -13,10 +13,10 @@
     },
     "SHA256SUMS.txt": {
       "bytes": 184,
-      "sha256": "856df2feb1892d312e31fbc34519a452a30cc7c570977062bf5f22fd280f544b"
+      "sha256": "eeb8bbbff0ae3049b71772a424762ee652f736a7bce2655643c6a858c6857de5"
     }
   },
-  "binary_source_commit": "8489a91",
+  "binary_source_commit": "60501e7",
   "clean_separate_release_build": true,
   "release_build_seconds": 843,
   "framework_or_dependency_updates": false,

@@ -1,6 +1,6 @@
 # Seek 1.0.1
 
-2026-10-20. The user authorized the version bump, public release and a native Setup EXE. The release is ready for upload; post-publication download verification is recorded separately after upload.
+2026-10-20. Public release [v1.0.1](https://github.com/sanirudh17/Seek/releases/tag/v1.0.1) is published with a native Setup EXE. Fresh GitHub downloads of the EXE and ZIP match the locally built artifacts byte for byte.
 
 ## Changes and cause
 
@@ -22,6 +22,7 @@ A separate ZIP remains for compatibility with the already shipped updater. The r
 - Final EXE: **23 native installer checks passed**, including per-user registration, native uninstaller, default data retention, explicit owned-data removal, unexpected-file preservation, silent overwrite refusal, shortcut removal and unchanged helper registration.
 - Final package: **21 checks passed**, including metadata/icon, normal owned-profile launch/close, all six current-user Known Folder labels, desktop ownership on replacement, running-app refusal and clean script uninstall.
 - **7 update-worker checks passed** for replacement, handshake, locked-file rollback, tampered-payload rejection and saved-data preservation. Native installer tests also cover removal of updater-staged install scripts.
+- The full live update staging test failed twice with WinHTTP error **12002** (timeout). Direct HTTPS checks succeeded: GitHub API **0.435 s**; ZIP download **1.013 s**, **9,212,488 bytes**. The app's native WinHTTP download and staging path remains unverified.
 
 Only one enabled local account exists. No second-account test, Light field recheck, physical HDR/mixed-DPI, full old-client Download and restart, full-drive completion benchmark, fresh idle/memory/UI-tail benchmark or cold-system-cache measurement was performed here. Historical measurements remain historical. All destructive checks used marked disposable TEMP fixtures; production Seek data, installed program and helper were untouched.
 

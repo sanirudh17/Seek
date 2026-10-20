@@ -1,4 +1,4 @@
-# Seek 1.0.1 - validated artifacts, release upload in progress
+# Seek 1.0.1 - public release published
 
 2026-10-20. Enlarged the content-location field and fixed first-launch All locations remaining blank until the full drive index is ready. It now shows labelled provisional recent files while complete indexing continues. Includes the committed interaction fixes. The user approved the normal test build and now authorizes publishing this version with a native Setup EXE and changelog.
 
@@ -6,9 +6,9 @@
 
 **Verified:** 65 Rust tests, strict Clippy/formatting, 23 native installer checks, 21 package checks and 7 update-worker checks. The larger field was inspected in Dark; Light was not rechecked after observed user interaction changed the window state. Only one enabled local account exists. Clean separate release build, 1.0.1 metadata, unchanged icon, static runtime and no personal binary profile paths. No framework upgrade, real profile test, helper change or administrator action.
 
-**Distribution:** Setup EXE **9,526,496 bytes**, SHA-256 `7062caa5c5c14c97645dbc4a8226d1a141eb1321aa56fc624618471864c4c508`; updater ZIP **9,212,488 bytes**, SHA-256 `cf75cdc8788f92e711ce43af20f304be4aedf64fb25e9f4b7c403866911e62c8`. The EXE installs per user and offers a native uninstaller with default data retention. The ZIP supports existing in-app updates. Both checksums have separate valid lines. Full old-client update/restart, a second account, Light recheck and new idle/memory/frame timings remain unverified.
+**Distribution:** Public release [v1.0.1](https://github.com/sanirudh17/Seek/releases/tag/v1.0.1) is published. Setup EXE **9,526,496 bytes**, SHA-256 `7062caa5c5c14c97645dbc4a8226d1a141eb1321aa56fc624618471864c4c508`; updater ZIP **9,212,488 bytes**, SHA-256 `cf75cdc8788f92e711ce43af20f304be4aedf64fb25e9f4b7c403866911e62c8`. Fresh downloads match both artifacts. The EXE installs per user and offers a native uninstaller with default data retention. GitHub currently attributes the eight release preparation commits to the generic `Seek contributors` identity; this closeout commit uses the repository owner's verified `sanirudh17` no-reply address so the owner is credited going forward. Native WinHTTP staging of the ZIP timed out twice with Windows error 12002, although direct HTTPS downloads of the API and ZIP both succeeded; the full in-app update flow remains unverified. A second account, Light recheck and new idle/memory/frame timings also remain unverified.
 
-Next: upload and verify a fresh public download, then user check by eye: larger field, provisional All locations label, installer desktop option and uninstall data retention. [Release report](docs/RELEASE_1_0_1.md), [measurements](docs/benchmarks/release-1.0.1.json), [changelog](CHANGELOG.md). Earlier build holds below are historical and superseded by this approval.
+Check by eye: larger field, provisional All locations label, installer desktop option and uninstall data retention. The full in-app update download remains unverified after WinHTTP timeout 12002; API and ZIP downloads succeed through direct HTTPS. [Release report](docs/RELEASE_1_0_1.md), [measurements](docs/benchmarks/release-1.0.1.json), [changelog](CHANGELOG.md). Earlier build holds below are historical and superseded by this approval.
 
 # Seek 1.0.0 - public release verified
 

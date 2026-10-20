@@ -341,5 +341,14 @@
     "No new idle CPU, process memory or full UI latency claims.",
     "Complete old-client Download and restart interaction not tested; worker and live package staging are separate checks."
   ],
-  "publication_verification": "Pending upload and fresh public download equality."
+  "publication_verification": {
+    "status": "Published; fresh EXE and ZIP downloads match local release artifacts byte for byte.",
+    "url": "https://github.com/sanirudh17/Seek/releases/tag/v1.0.1",
+    "api_http_status": 200,
+    "api_download_seconds": 0.435,
+    "zip_http_status": 200,
+    "zip_download_seconds": 1.013,
+    "zip_bytes": 9212488,
+    "native_winhttp_live_staging": "Failed twice with Windows error 12002 (timeout); full in-app download/staging remains unverified."
+  }
 }

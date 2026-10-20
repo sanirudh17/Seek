@@ -85,86 +85,107 @@ impl Fingerprint {
 #[derive(Clone)]
 pub struct Worker {
     desired: Arc<Mutex<HashMap<Key, u64>>>,
-    tx: async_channel::Sender<()>,
+    tx: [async_channel::Sender<()>; 2],
     epoch: Arc<std::sync::atomic::AtomicU64>,
-    revalidate: Arc<std::sync::atomic::AtomicBool>,
+    revalidate: [Arc<std::sync::atomic::AtomicBool>; 2],
 }
 impl Worker {
     pub fn start(data: PathBuf) -> (Self, async_channel::Receiver<Reply>) {
         let desired = Arc::new(Mutex::new(HashMap::<Key, u64>::new()));
-        let work = desired.clone();
         let epoch = Arc::new(std::sync::atomic::AtomicU64::new(0));
-        let revalidate = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let validation = revalidate.clone();
-        let (tx, rx) = async_channel::bounded(1);
-        let (result, updates) = async_channel::bounded(16);
-        std::thread::Builder::new()
-            .name("seek-previews".into())
-            .spawn(move || {
-                use windows::Win32::System::Com::*;
-                let initialized = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) }.is_ok();
-                unsafe {
-                    windows_sys::Win32::System::Threading::SetThreadPriority(
-                        windows_sys::Win32::System::Threading::GetCurrentThread(),
-                        windows_sys::Win32::System::Threading::THREAD_PRIORITY_BELOW_NORMAL,
-                    );
-                }
-                let mut completed = HashMap::<Key, (u64, Fingerprint)>::new();
-                while rx.recv_blocking().is_ok() {
-                    let check_changes = validation.swap(false, std::sync::atomic::Ordering::AcqRel);
-                    let current = work.lock().unwrap().clone();
-                    completed.retain(|k, (stamp, _)| current.get(k) == Some(stamp));
-                    let mut pending: Vec<_> = current.into_iter().collect();
-                    pending.sort_by_key(|(k, _)| {
-                        (std::cmp::Reverse(k.details), std::cmp::Reverse(k.edge))
-                    });
-                    for (key, stamp) in pending {
-                        if work.lock().unwrap().get(&key) != Some(&stamp) {
-                            continue;
-                        }
-                        if completed.contains_key(&key) && !check_changes {
-                            continue;
-                        }
-                        let fingerprint = Fingerprint::read(&key, &data);
-                        if completed
-                            .get(&key)
-                            .is_some_and(|(_, old)| *old == fingerprint)
-                        {
-                            continue;
-                        }
-                        let value = if key.details {
-                            Value::Details(details(&key, &data))
-                        } else {
-                            Value::Image(if initialized {
-                                svg_preview(&key).or_else(|| thumbnail(&key).ok())
-                            } else {
-                                None
+        let revalidate: [_; 2] =
+            std::array::from_fn(|_| Arc::new(std::sync::atomic::AtomicBool::new(false)));
+        let channels: [_; 2] = std::array::from_fn(|_| async_channel::bounded(1));
+        let tx = [channels[0].0.clone(), channels[1].0.clone()];
+        let (result, updates) = async_channel::bounded(32);
+        for (lane, (_, rx)) in channels.into_iter().enumerate() {
+            let work = desired.clone();
+            let validation = revalidate[lane].clone();
+            let result = result.clone();
+            let data = data.clone();
+            std::thread::Builder::new()
+                .name(
+                    if lane == 0 {
+                        "seek-row-icons"
+                    } else {
+                        "seek-previews"
+                    }
+                    .into(),
+                )
+                .spawn(move || {
+                    use windows::Win32::System::Com::*;
+                    let initialized =
+                        unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) }.is_ok();
+                    unsafe {
+                        windows_sys::Win32::System::Threading::SetThreadPriority(
+                            windows_sys::Win32::System::Threading::GetCurrentThread(),
+                            windows_sys::Win32::System::Threading::THREAD_PRIORITY_BELOW_NORMAL,
+                        );
+                    }
+                    let mut completed = HashMap::<Key, (u64, Fingerprint)>::new();
+                    while rx.recv_blocking().is_ok() {
+                        let check_changes =
+                            validation.swap(false, std::sync::atomic::Ordering::AcqRel);
+                        let current: HashMap<_, _> = work
+                            .lock()
+                            .unwrap()
+                            .iter()
+                            .filter(|(k, _)| {
+                                usize::from(k.details || k.edge >= PREVIEW_EDGE) == lane
                             })
-                        };
-                        // Shared keys keep their stamp while other rows load or appear.
-                        // Removed/re-added keys get a new stamp and reject stale replies.
-                        if work.lock().unwrap().get(&key) == Some(&stamp) {
-                            completed.insert(key.clone(), (stamp, fingerprint));
-                            if result
-                                .send_blocking(Reply {
-                                    key,
-                                    value,
-                                    epoch: stamp,
-                                })
-                                .is_err()
+                            .map(|(k, v)| (k.clone(), *v))
+                            .collect();
+                        completed.retain(|k, (stamp, _)| current.get(k) == Some(stamp));
+                        let mut pending: Vec<_> = current.into_iter().collect();
+                        pending.sort_by_key(|(k, _)| (k.details, k.edge));
+                        for (key, stamp) in pending {
+                            if work.lock().unwrap().get(&key) != Some(&stamp) {
+                                continue;
+                            }
+                            if completed.contains_key(&key) && !check_changes {
+                                continue;
+                            }
+                            let fingerprint = Fingerprint::read(&key, &data);
+                            if completed
+                                .get(&key)
+                                .is_some_and(|(_, old)| *old == fingerprint)
                             {
-                                break;
+                                continue;
+                            }
+                            let value = if key.details {
+                                Value::Details(details(&key, &data))
+                            } else {
+                                Value::Image(if initialized {
+                                    svg_preview(&key).or_else(|| thumbnail(&key).ok())
+                                } else {
+                                    None
+                                })
+                            };
+                            // Shared keys keep their stamp while other rows load or appear.
+                            // Removed/re-added keys get a new stamp and reject stale replies.
+                            if work.lock().unwrap().get(&key) == Some(&stamp) {
+                                completed.insert(key.clone(), (stamp, fingerprint));
+                                if result
+                                    .send_blocking(Reply {
+                                        key,
+                                        value,
+                                        epoch: stamp,
+                                    })
+                                    .is_err()
+                                {
+                                    break;
+                                }
                             }
                         }
                     }
-                }
-                if initialized {
-                    unsafe {
-                        CoUninitialize();
+                    if initialized {
+                        unsafe {
+                            CoUninitialize();
+                        }
                     }
-                }
-            })
-            .expect("preview worker");
+                })
+                .expect("preview worker");
+        }
         (
             Self {
                 desired,
@@ -185,12 +206,17 @@ impl Worker {
         for key in keys {
             current.entry(key).or_insert(stamp);
         }
-        let _ = self.tx.force_send(());
+        for tx in &self.tx {
+            let _ = tx.force_send(());
+        }
     }
     pub fn force(&self) {
-        self.revalidate
-            .store(true, std::sync::atomic::Ordering::Release);
-        let _ = self.tx.force_send(());
+        for validation in &self.revalidate {
+            validation.store(true, std::sync::atomic::Ordering::Release);
+        }
+        for tx in &self.tx {
+            let _ = tx.force_send(());
+        }
     }
     pub fn accepts(&self, key: &Key, epoch: u64) -> bool {
         self.desired.lock().unwrap().get(key) == Some(&epoch)
@@ -206,7 +232,7 @@ pub struct Cache {
 }
 impl Default for Cache {
     fn default() -> Self {
-        Self::new(96, 32 * 1024 * 1024)
+        Self::new(512, 32 * 1024 * 1024)
     }
 }
 impl Cache {
@@ -324,17 +350,19 @@ fn details(key: &Key, data: &std::path::Path) -> Details {
                 .to_string()
         })
         .unwrap_or_else(|| "Not opened in Seek".into());
-    let text = if !key.folder && matches!(icons::kind(&key.path, false), Kind::Text | Kind::Code) {
-        read_text(&key.path).ok()
-    } else {
-        None
+    let preview = (!key.folder && matches!(icons::kind(&key.path, false), Kind::Text | Kind::Code))
+        .then(|| read_text(&key.path));
+    let (text, error) = match preview {
+        Some(Ok(text)) => (Some(text), None),
+        Some(Err(e)) => (None, Some(format!("Text preview unavailable: {e}"))),
+        None => (None, None),
     };
     Details {
         created: date(meta.created()),
         modified: date(meta.modified()),
         opened,
         text,
-        error: None,
+        error,
     }
 }
 pub fn record_open(data: &std::path::Path, path: &std::path::Path) {
@@ -367,24 +395,8 @@ pub fn read_text(path: &std::path::Path) -> std::io::Result<String> {
     std::fs::File::open(path)?
         .take(8192)
         .read_to_end(&mut bytes)?;
-    let text = if bytes.starts_with(&[0xff, 0xfe]) || bytes.starts_with(&[0xfe, 0xff]) {
-        let le = bytes[0] == 0xff;
-        String::from_utf16_lossy(
-            &bytes[2..]
-                .chunks_exact(2)
-                .map(|b| {
-                    if le {
-                        u16::from_le_bytes([b[0], b[1]])
-                    } else {
-                        u16::from_be_bytes([b[0], b[1]])
-                    }
-                })
-                .collect::<Vec<_>>(),
-        )
-    } else {
-        String::from_utf8_lossy(bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(&bytes))
-            .into_owned()
-    };
+    let text = crate::text_decode::decode(&bytes, bytes.len() == 8192)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
     Ok(text.lines().take(80).collect::<Vec<_>>().join("\n"))
 }
 pub(crate) fn thumbnail(key: &Key) -> windows::core::Result<Arc<RenderImage>> {
@@ -657,6 +669,37 @@ fn svg_preview(key: &Key) -> Option<Arc<RenderImage>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn text_preview_preserves_encoded_symbols_and_rejects_binary_logs() {
+        let temp = tempfile::tempdir().unwrap();
+        let file = temp.path().join("Owned.log");
+        let text = "Header\nRésumé — € 中文 🦀\nEnd";
+        for little in [true, false] {
+            let bytes: Vec<_> = text
+                .encode_utf16()
+                .flat_map(|w| {
+                    if little {
+                        w.to_le_bytes()
+                    } else {
+                        w.to_be_bytes()
+                    }
+                })
+                .collect();
+            std::fs::write(&file, bytes).unwrap();
+            assert_eq!(read_text(&file).unwrap(), text);
+        }
+        std::fs::write(&file, b"GPU log\0\x81\x02\xffdebug").unwrap();
+        assert_eq!(
+            read_text(&file).unwrap_err().kind(),
+            std::io::ErrorKind::InvalidData
+        );
+        // An 8-KiB preview may end inside a multi-byte character.
+        let bounded = format!("{}🦀", "a".repeat(8190));
+        std::fs::write(&file, bounded).unwrap();
+        let preview = read_text(&file).unwrap();
+        assert_eq!(preview.len(), 8190);
+        assert!(!preview.contains('\u{fffd}'));
+    }
     #[test]
     fn windows_bitmap_preserves_red_green_and_blue_in_gpui_bgra_order() {
         use windows::Win32::Graphics::Gdi::*;

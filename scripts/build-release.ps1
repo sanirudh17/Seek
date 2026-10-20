@@ -30,5 +30,6 @@ try{
  [IO.Compression.ZipFile]::CreateFromDirectory($folder,$zip,[IO.Compression.CompressionLevel]::Optimal,$true)
  $hash=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
  [IO.File]::WriteAllText((Join-Path $output 'SHA256SUMS.txt'),($hash+'  '+(Split-Path $zip -Leaf)+"`n"),[Text.UTF8Encoding]::new($false))
- Write-Host ('Package: '+$zip)
+ Write-Host ('Update package: '+$zip)
+ & (Join-Path $PSScriptRoot 'build-installer.ps1') -PackageDirectory $folder
 }finally{Pop-Location}

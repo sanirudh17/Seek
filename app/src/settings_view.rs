@@ -397,7 +397,7 @@ impl Seek {
             .flex()
             .flex_col()
             .gap_2()
-            .child(Input::new(&self.content_locations_input).small())
+            .child(Input::new(&self.content_locations_input).large().w_full())
             .child(
                 control("save-content-locations", "Save content locations", p, cx).on_click(
                     cx.listener(|this, _, window, cx| {

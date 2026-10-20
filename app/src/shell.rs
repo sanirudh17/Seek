@@ -80,7 +80,7 @@ pub struct Startup {
 struct Rows {
     empty_message: String,
     columns: Vec<Column>,
-    rows: Vec<Row>,
+    rows: Arc<Vec<Row>>,
     sort: Option<(usize, ColumnSort)>,
     query: String,
     content: bool,
@@ -90,12 +90,13 @@ struct Rows {
     media: media::Worker,
     visible: Arc<Mutex<std::collections::HashSet<media::Key>>>,
     extra: Arc<Mutex<std::collections::HashSet<media::Key>>>,
-    base_rows: Vec<Row>,
+    base_rows: Arc<Vec<Row>>,
     children: std::collections::HashMap<PathBuf, Vec<Row>>,
     expanded: std::collections::HashSet<PathBuf>,
     depths: Vec<usize>,
     selection: Option<PathBuf>,
     selected_many: std::collections::HashSet<PathBuf>,
+    selection_anchor: Option<PathBuf>,
     drag_paths: Arc<Vec<PathBuf>>,
     owner: WeakEntity<Seek>,
     visible_range: std::ops::Range<usize>,
@@ -107,7 +108,9 @@ impl Rows {
             .iter()
             .skip(self.visible_range.start)
             .take(self.visible_range.len())
-            .filter(|row| interface::needs_shell(row))
+            .filter(|row| {
+                interface::needs_shell(row) && row.file.kind & 3 != seek_engine::walk::KIND_DIR
+            })
             .map(|row| media::Key::new(row, 32, false))
             .collect();
         *self.visible.lock().unwrap() = keys;
@@ -115,12 +118,14 @@ impl Rows {
     }
     fn sorted(&mut self) {
         let _profile = crate::metrics::span("sort_rows");
-        (self.rows, self.depths) = crate::tree::flatten(
+        let (rows, depths) = crate::tree::flatten(
             &self.base_rows,
             &mut self.children,
             &self.expanded,
             self.sort,
         );
+        self.rows = Arc::new(rows);
+        self.depths = depths;
     }
 }
 impl TableDelegate for Rows {
@@ -133,6 +138,9 @@ impl TableDelegate for Rows {
         let Some(row) = self.rows.get(i) else {
             return div().id(("empty-row", i));
         };
+        let p = crate::appearance::palette(&self.preferences, cx);
+        let chosen = self.selected_many.contains(&row.file.path);
+        let caret = self.selection.as_ref() == Some(&row.file.path);
         let owner = self.owner.clone();
         let folder = row.file.path.clone();
         let paths = if self.selected_many.contains(&folder) {
@@ -150,7 +158,25 @@ impl TableDelegate for Rows {
         };
         div()
             .id(("file-row", i))
-            .aria_label(row.name.clone())
+            .aria_label(format!(
+                "{}{}",
+                row.name,
+                if chosen { " selected" } else { "" }
+            ))
+            .relative()
+            .child(
+                div()
+                    .absolute()
+                    .inset_0()
+                    .bg(if chosen {
+                        p.accent.opacity(0.18)
+                    } else {
+                        rgba(0).into()
+                    })
+                    .when(caret && !chosen, |d| {
+                        d.border_1().border_color(p.muted.opacity(0.5))
+                    }),
+            )
             .on_drag(drag, |drag, _, window, cx| {
                 let _ = window;
                 cx.new(|_| drag.clone())
@@ -158,35 +184,24 @@ impl TableDelegate for Rows {
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |table, event: &MouseDownEvent, window, cx| {
-                    let anchor = table.selected_row().unwrap_or(i);
+                    let current = table.selected_row();
                     let data = table.delegate_mut();
-                    let path = data.rows[i].file.path.clone();
-                    if event.modifiers.control {
-                        if !data.selected_many.remove(&path) {
-                            data.selected_many.insert(path.clone());
-                        }
-                    } else if event.modifiers.shift {
-                        data.selected_many.clear();
-                        for row in &data.rows[anchor.min(i)..=anchor.max(i)] {
-                            data.selected_many.insert(row.file.path.clone());
-                        }
-                    } else if data.selected_many.len() <= 1 || !data.selected_many.contains(&path) {
-                        data.selected_many.clear();
-                        data.selected_many.insert(path);
-                    }
-                    if event.modifiers.control || event.modifiers.shift {
-                        let primary = data
-                            .rows
-                            .iter()
-                            .position(|r| data.selected_many.contains(&r.file.path));
-                        if let Some(primary) = primary {
-                            table.set_selected_row(primary, cx);
-                        } else {
-                            table.clear_selection(cx);
-                        }
-                        table.focus_handle(cx).focus(window, cx);
-                        cx.stop_propagation();
-                    }
+                    crate::selection::change(
+                        &data.rows,
+                        &mut data.selected_many,
+                        &mut data.selection_anchor,
+                        current,
+                        i,
+                        crate::selection::Input {
+                            shift: event.modifiers.shift,
+                            control: event.modifiers.control,
+                            keyboard: false,
+                        },
+                    );
+                    table.set_selected_row(i, cx);
+                    table.focus_handle(cx).focus(window, cx);
+                    // Keep the clicked row as the caret, not the first selected row.
+                    // The native click still supplies double-click/open behavior.
                     let data = table.delegate_mut();
                     data.drag_paths = Arc::new(data.selected_many.iter().cloned().collect());
                     cx.notify();
@@ -269,8 +284,7 @@ impl TableDelegate for Rows {
     ) -> impl IntoElement {
         let _profile = crate::metrics::span("render_cell");
         let p = crate::appearance::palette(&self.preferences, cx);
-        let selected = self.selection.as_ref() == Some(&self.rows[row].file.path)
-            || self.selected_many.contains(&self.rows[row].file.path);
+        let selected = self.selected_many.contains(&self.rows[row].file.path);
         let depth = self.depths.get(row).copied().unwrap_or(0);
         let row = &self.rows[row];
         if column == 0 {
@@ -389,6 +403,10 @@ pub struct Seek {
     next_tab_id: usize,
     restoring_input: Option<String>,
     pending_tab_restore: Option<tabs::Tab>,
+    tab_motion: u64,
+    closing_tab: Option<tabs::Closing>,
+    motion_enabled: bool,
+    tab_motion_started: std::time::Instant,
     backend: Backend,
     input: Entity<InputState>,
     table: Entity<TableState<Rows>>,
@@ -443,6 +461,7 @@ pub struct Seek {
     suggestion_dismiss: Option<Subscription>,
     suggestion_origin: Point<Pixels>,
     suggestion_width: Pixels,
+    suggestions_at_search: bool,
     content_mode: bool,
     content_failures: Vec<crate::content::Failure>,
     content_locations_input: Entity<InputState>,
@@ -524,7 +543,7 @@ impl Seek {
                         Column::new("kind", "Type").width(px(130.)).sortable(),
                         Column::new("folder", "Folder").width(px(250.)).sortable(),
                     ],
-                    rows: vec![],
+                    rows: Arc::new(vec![]),
                     sort: None,
                     query: String::new(),
                     content: false,
@@ -534,12 +553,13 @@ impl Seek {
                     media: media.clone(),
                     visible: visible.clone(),
                     extra: extra.clone(),
-                    base_rows: vec![],
+                    base_rows: Arc::new(vec![]),
                     children: Default::default(),
                     expanded: Default::default(),
                     depths: vec![],
                     selection: None,
                     selected_many: Default::default(),
+                    selection_anchor: None,
                     drag_paths: Arc::new(vec![]),
                     owner,
                     visible_range: 0..0,
@@ -565,7 +585,13 @@ impl Seek {
                 }
             }),
             cx.observe_window_appearance(window,|this,window,cx|{if this.preferences.theme==Appearance::System{crate::appearance::apply(&this.preferences,Some(window),cx);cx.notify();}}),
-            cx.observe_window_bounds(window, move |_, window, _| {
+            cx.observe_window_activation(window,|this,window,cx| {
+                if window.is_window_active(){this.motion_enabled=crate::instance::motion_enabled();this.table.update(cx,|_,cx|cx.notify());cx.notify();}
+            }),
+            cx.observe_window_bounds(window, move |this, window, cx| {
+                this.table.update(cx,|_,cx|cx.notify());
+                if !this.suggestions_at_search {this.suggestions=None;}
+                cx.notify();
                 *remembered.lock().unwrap() = window.window_bounds();
             }),
             cx.subscribe_in(&input, window, |this, _, event, window, cx| {
@@ -666,13 +692,33 @@ impl Seek {
         })
         .detach();
         cx.spawn_in(window, async move |this, cx| {
-            while let Ok(reply) = file_replies.recv().await {
+            while let Ok(mut reply) = file_replies.recv().await {
+                // Coalesce already available callbacks into one table update;
+                // large selections must not sort/repaint once per deleted file.
+                while !reply.finished {
+                    let Ok(next) = file_replies.try_recv() else { break; };
+                    reply.removed.extend(next.removed);
+                    reply.refresh.extend(next.refresh);
+                    if next.result.is_err() { reply.result = next.result; }
+                    if next.progress.is_some() { reply.progress = next.progress; }
+                    reply.finished = next.finished;
+                }
+                reply.removed.sort();reply.removed.dedup();
+                reply.refresh.sort();reply.refresh.dedup();
                 if this
                     .update_in(cx, |this, _, cx| {
                         #[cfg(feature="benchmarks")]
                         crate::metrics::interaction("file_operation",serde_json::json!({"success":reply.result.is_ok(),"error":reply.result.as_ref().err(),"refresh_count":reply.refresh.len()}));
-                        this.message = reply.result.err();
-                        let _ = this.backend.tx.send(Command::RefreshParents(reply.refresh));
+                        if !reply.removed.is_empty() {
+                            this.remove_confirmed_files(&reply.removed,cx);
+                            let _=this.backend.tx.send(Command::FilesRemoved(reply.removed));
+                            this.submit(cx); // Cancel earlier replies before stale indexed rows can return.
+                        }
+                        if let Some((done,total))=reply.progress {this.message=Some(format!("Updating files: {done} of {total}"));}
+                        if reply.finished {
+                            this.message=reply.result.err();
+                            let _ = this.backend.tx.send(Command::RefreshParents(reply.refresh));
+                        }
                         cx.notify();
                     })
                     .is_err()
@@ -690,6 +736,10 @@ impl Seek {
             next_tab_id: 1,
             restoring_input: None,
             pending_tab_restore: None,
+            tab_motion: 0,
+            closing_tab: None,
+            motion_enabled: crate::instance::motion_enabled(),
+            tab_motion_started: std::time::Instant::now(),
             backend,
             input,
             table,
@@ -745,7 +795,8 @@ impl Seek {
             normal_results: None,
             suggestions: None,
             suggestion_dismiss: None,
-            suggestion_origin: point(px(188.), px(52.)),
+            suggestion_origin: Point::default(),
+            suggestions_at_search: false,
             suggestion_width: px(420.),
             content_mode: false,
             content_failures: vec![],
@@ -899,7 +950,7 @@ impl Seek {
                 .message
                 .clone()
                 .unwrap_or_else(|| "No matching files".into());
-            table.delegate_mut().base_rows = update.rows;
+            table.delegate_mut().base_rows = Arc::new(update.rows);
             table.delegate_mut().children = update.children;
             table.delegate_mut().query = text;
             table.delegate_mut().content = self.content_mode;
@@ -1015,8 +1066,8 @@ impl Seek {
         });
         self.table.update(cx, |table, cx| {
             let rows = table.delegate_mut();
-            rows.base_rows.clear();
-            rows.rows.clear();
+            rows.base_rows = Arc::new(vec![]);
+            rows.rows = Arc::new(vec![]);
             rows.empty_message = "Indexing this folder...".into();
             table.refresh(cx);
         });
@@ -1072,6 +1123,63 @@ impl Seek {
         cx.notify();
         cx.stop_propagation();
     }
+    fn button_keys(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+        if !matches!(event.keystroke.key.as_str(), "left" | "right")
+            || event.keystroke.modifiers.control
+            || event.keystroke.modifiers.alt
+        {
+            return;
+        }
+        if self.permanent_delete.is_some()
+            || gpui_component::WindowExt::has_active_dialog(window, cx)
+        {
+            return;
+        }
+        if self.edit.as_ref().is_some_and(|e| {
+            e.input
+                .read(cx)
+                .focus_handle(cx)
+                .contains_focused(window, cx)
+        }) {
+            return;
+        }
+        if self
+            .input
+            .read(cx)
+            .focus_handle(cx)
+            .contains_focused(window, cx)
+            || self
+                .table
+                .read(cx)
+                .focus_handle(cx)
+                .contains_focused(window, cx)
+        {
+            return;
+        }
+        if [
+            &self.accent_input,
+            &self.locations_input,
+            &self.exclusions_input,
+            &self.content_locations_input,
+        ]
+        .iter()
+        .any(|i| i.read(cx).focus_handle(cx).contains_focused(window, cx))
+        {
+            return;
+        }
+        for _ in 0..128 {
+            if event.keystroke.key == "left" {
+                window.focus_prev(cx);
+            } else {
+                window.focus_next(cx);
+            }
+            if !self.settings || self.settings_focus.contains_focused(window, cx) {
+                break;
+            }
+        }
+        cx.stop_propagation();
+        cx.notify();
+    }
     fn keys(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
         use gpui_component::WindowExt;
         if self.permanent_delete.is_some() {
@@ -1086,10 +1194,30 @@ impl Seek {
             "key_route",
             serde_json::json!({"key":event.keystroke.key,"control":event.keystroke.modifiers.control,"platform":event.keystroke.modifiers.platform,"input":self.input.read(cx).focus_handle(cx).is_focused(window),"list":self.table.read(cx).focus_handle(cx).is_focused(window)}),
         );
-        if self.edit.is_some() {
+        if let Some(edit) = self.edit.as_ref() {
             match event.keystroke.key.as_str() {
+                "left" | "right"
+                    if !edit
+                        .input
+                        .read(cx)
+                        .focus_handle(cx)
+                        .contains_focused(window, cx) =>
+                {
+                    let next = if edit.cancel_focus.is_focused(window) {
+                        edit.save_focus.clone()
+                    } else {
+                        edit.cancel_focus.clone()
+                    };
+                    window.focus(&next, cx);
+                    cx.stop_propagation();
+                }
                 "enter" => {
-                    self.finish_edit(window, cx);
+                    if edit.cancel_focus.is_focused(window) {
+                        self.edit = None;
+                        cx.notify();
+                    } else {
+                        self.finish_edit(window, cx);
+                    }
                     cx.stop_propagation();
                 }
                 "escape" => {
@@ -1170,22 +1298,40 @@ impl Seek {
             }
         }
         match key {
-            "up" | "down" => {
-                self.table
-                    .update(cx, |table, _| table.delegate_mut().selected_many.clear());
+            "up" | "down" | "left" | "right"
+                if list_focused
+                    && (matches!(key, "up" | "down")
+                        || self.view != View::List
+                        || modifiers.shift
+                        || modifiers.control) =>
+            {
                 let count = self.table.read(cx).delegate().rows.len();
-                if count != 0 {
-                    let current = self.table.read(cx).selected_row();
-                    let next = if key == "down" {
-                        current.map_or(0, |i| (i + 1).min(count - 1))
-                    } else {
-                        current.unwrap_or(1).saturating_sub(1)
-                    };
+                let columns = if self.view == View::List {
+                    1
+                } else {
+                    self.grid_columns
+                };
+                let current = self.table.read(cx).selected_row();
+                if let Some(next) = crate::selection::next(current, count, key, columns) {
                     self.table.update(cx, |table, cx| {
+                        let data = table.delegate_mut();
+                        crate::selection::change(
+                            &data.rows,
+                            &mut data.selected_many,
+                            &mut data.selection_anchor,
+                            current,
+                            next,
+                            crate::selection::Input {
+                                shift: modifiers.shift,
+                                control: modifiers.control,
+                                keyboard: true,
+                            },
+                        );
+                        data.drag_paths = Arc::new(data.selected_many.iter().cloned().collect());
                         table.set_selected_row(next, cx);
                         table.scroll_to_row(next, cx);
+                        cx.notify();
                     });
-                    self.table.read(cx).focus_handle(cx).focus(window, cx);
                     if self.view != View::List {
                         self.grid_scroll
                             .scroll_to_item(next / self.grid_columns, ScrollStrategy::Center);

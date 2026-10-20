@@ -20,9 +20,11 @@ pub(super) enum Action {
     Properties,
 }
 pub(super) struct Edit {
-    input: Entity<InputState>,
+    pub(super) input: Entity<InputState>,
     path: Option<PathBuf>,
     folder: PathBuf,
+    pub(super) cancel_focus: FocusHandle,
+    pub(super) save_focus: FocusHandle,
 }
 #[derive(Clone)]
 pub(super) struct FilesDrag {
@@ -218,9 +220,10 @@ impl Seek {
             .or_else(|| self.selected(cx).map(|r| r.file.path));
         let selected_paths = {
             let data = self.table.read(cx).delegate();
-            if path
-                .as_ref()
-                .is_some_and(|p| data.selected_many.contains(p))
+            if !data.selected_many.is_empty()
+                && target
+                    .as_ref()
+                    .is_none_or(|p| data.selected_many.contains(p))
             {
                 data.rows
                     .iter()
@@ -228,9 +231,23 @@ impl Seek {
                     .map(|r| r.file.path.clone())
                     .collect::<Vec<_>>()
             } else {
-                path.clone().into_iter().collect()
+                // A keyboard caret is not a selection (Ctrl+arrow, or the last
+                // Ctrl+click deselecting an item). Context-menu targets remain explicit.
+                target.clone().into_iter().collect()
             }
         };
+        if selected_paths.is_empty()
+            && matches!(
+                action,
+                Action::DeletePermanently
+                    | Action::Recycle
+                    | Action::Copy
+                    | Action::Cut
+                    | Action::Rename
+            )
+        {
+            return;
+        }
         let folder = self.destination(target.as_ref(), cx);
         if matches!(action, Action::DeletePermanently) {
             use gpui_component::WindowExt;
@@ -238,20 +255,21 @@ impl Seek {
                 return;
             }
             let cancel = cx.focus_handle();
+            let delete = cx.focus_handle();
             self.permanent_delete = Some(super::permanent_delete::Confirmation {
                 paths: selected_paths,
                 root: cx.focus_handle(),
                 cancel: cancel.clone(),
-                delete: cx.focus_handle(),
+                delete: delete.clone(),
                 restore: window.focused(cx),
             });
-            window.focus(&cancel, cx);
+            window.focus(&delete, cx);
             cx.notify();
             let owner = cx.entity().downgrade();
             window.defer(cx, move |window, cx| {
                 let _ = owner.update(cx, |this, cx| {
                     if let Some(confirm) = &this.permanent_delete {
-                        window.focus(&confirm.cancel, cx);
+                        window.focus(&confirm.delete, cx);
                     }
                 });
             });
@@ -289,6 +307,8 @@ impl Seek {
                 input,
                 path,
                 folder,
+                cancel_focus: cx.focus_handle(),
+                save_focus: cx.focus_handle(),
             });
             cx.notify();
             return;
@@ -461,7 +481,8 @@ impl Seek {
             menu
         });
         self.suggestion_width = px(420.);
-        self.attach_suggestions(menu, point(px(188.), px(52.)), window, cx);
+        self.attach_suggestions(menu, Point::default(), window, cx);
+        self.suggestions_at_search = true;
     }
     pub(super) fn set_content_mode(
         &mut self,
@@ -500,6 +521,7 @@ impl Seek {
                     cx.notify();
                 }),
             );
+        self.suggestions_at_search = false;
         self.suggestion_origin = origin;
         self.suggestions = Some(menu);
         cx.notify();
@@ -621,11 +643,37 @@ impl Seek {
             })
             .into_any_element()
     }
+    pub(super) fn search_suggestions(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+        if self.suggestions_at_search
+            && let Some(menu) = &self.suggestions
+            && (self.input.read(cx).focus_handle(cx).is_focused(window)
+                || menu.focus_handle(cx).contains_focused(window, cx))
+        {
+            // The parent is the actual search field. Flex centering, sidebar and
+            // window resizing therefore move this popup in the same layout pass.
+            return deferred(
+                div()
+                    .absolute()
+                    .top(px(36.))
+                    .left_0()
+                    .w_full()
+                    .max_w(px(420.))
+                    .child(menu.clone()),
+            )
+            .with_priority(gpui_base::POPUP_PRIORITY)
+            .into_any_element();
+        }
+        div().into_any_element()
+    }
     pub(super) fn daily_overlays(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         // Size the overlay to the window, not the zero-height trailing flex
         // child. Otherwise the edit sheet can land below a restored window.
+        if self.suggestions.is_none() && self.edit.is_none() && self.permanent_delete.is_none() {
+            return div().into_any_element();
+        }
         let mut layer = div().absolute().inset_0();
         if let Some(menu) = &self.suggestions
+            && !self.suggestions_at_search
             && (self.input.read(cx).focus_handle(cx).is_focused(window)
                 || menu.focus_handle(cx).contains_focused(window, cx))
         {
@@ -672,6 +720,7 @@ impl Seek {
                                     .gap_2()
                                     .child(
                                         Button::new("cancel-file-edit")
+                                            .track_focus(&edit.cancel_focus)
                                             .accessibility_label("Cancel")
                                             .child(interface::button_text("Cancel"))
                                             .on_click(cx.listener(|this, _, _, cx| {
@@ -681,6 +730,7 @@ impl Seek {
                                     )
                                     .child(
                                         Button::new("save-file-edit")
+                                            .track_focus(&edit.save_focus)
                                             .accessibility_label("Save")
                                             .child(interface::button_text("Save"))
                                             .on_click(cx.listener(|this, _, window, cx| {

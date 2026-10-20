@@ -20,7 +20,7 @@ foreach($mode in @('success','locked','tampered')){
  $hashes=@{}
  foreach($file in $files){Copy-Item -LiteralPath (Join-Path $package $file) -Destination $payload;$hashes[$file]=(Get-FileHash (Join-Path $payload $file)).Hash}
  $request=Join-Path $stage 'request.json'
- @{product='Seek';version='1.0.0';stage=$stage;target=$target;parent_pid=0;data=$data;root='';walker=$true;hashes=$hashes}|ConvertTo-Json -Depth 5|Set-Content -LiteralPath $request -Encoding UTF8
+ @{product='Seek';version=[Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $package 'seek.exe')).FileVersion;stage=$stage;target=$target;parent_pid=0;data=$data;root='';walker=$true;hashes=$hashes}|ConvertTo-Json -Depth 5|Set-Content -LiteralPath $request -Encoding UTF8
  $lock=$null
  if($mode -eq 'locked'){$lock=[IO.File]::Open((Join-Path $target 'seek-helper.exe'),[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)}
  if($mode -eq 'tampered'){[IO.File]::AppendAllText((Join-Path $payload 'README.md'),'tampered')}

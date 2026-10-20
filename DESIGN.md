@@ -262,3 +262,12 @@ Controls have small rounded corners; shared theme radii are in the frontmatter. 
 - **Don't** duplicate the Gallery preview in the inspector or leave an empty inspector taking space.
 - **Don't** infer visual acceptance or universal blur support from code, tests or API success.
 - **Don't** expand the authorized narrow interface corrections into indexing redesign, dependency upgrades or additional features.
+
+
+## Unreleased interaction follow-up (2026-10-20)
+
+Source implementation awaiting an approved app build: suggestions belong to the actual search-field layout, rather than a screen-coordinate offset. Tab content appears independently of motion: 140 ms tab insertion, 120 ms active-tab wash and 100 ms closing-slot contraction; no result-list fade or stagger. Windows client-area animation preference disables spatial effects. No motion dependency or framework update. Up to eight inactive view snapshots share immutable rendered rows, bounded by 8 MiB per view and 24 MiB overall; evicted views reload normally.
+
+List/grid multi-selection uses a stable range anchor and an independent caret. Selected rows use the existing accent wash; Ctrl-moving the caret leaves the selection unchanged. Permanent deletion now initially focuses the red Delete permanently button, explicitly requested by the user; Left/Right or Tab toggles Cancel/Delete, Escape cancels, and the captured selection remains one-shot. Rename/new-folder buttons also support arrows while their text fields retain text navigation.
+
+Windows 11 system Desktop Acrylic replaces legacy accent blur where supported, with the existing fallback on older systems. Native API acceptance does not establish visual correctness during transitions. Painted-frame timing, restored/maximized popup alignment, Light/Dark focus styling, wheel routing and transition appearance still require the user's approved build. Do not label these visually verified from source tests.

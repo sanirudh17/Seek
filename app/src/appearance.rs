@@ -137,7 +137,7 @@ pub fn apply(settings: &Settings, window: Option<&mut Window>, cx: &mut App) {
         t.colors.table = rgba(0).into();
         t.colors.table_head_foreground = p.muted;
         t.colors.table_even = p.stripe;
-        t.colors.table_active = p.accent.opacity(0.18);
+        t.colors.table_active = rgba(0).into();
         t.colors.table_hover = p.hover;
         t.colors.table_row_border = Hsla::from(rgba(0x00000000));
         t.colors.input = p.line;
@@ -163,7 +163,7 @@ pub fn apply(settings: &Settings, window: Option<&mut Window>, cx: &mut App) {
         t.colors.list = rgba(0).into();
         t.colors.list_even = p.stripe;
         t.tokens.table_even = Hsla::from(rgba(0)).into();
-        t.tokens.table_active = p.accent.opacity(0.18).into();
+        t.tokens.table_active = Hsla::from(rgba(0)).into();
         t.tokens.table_head = p.chrome.into();
         t.tokens.table = Hsla::from(rgba(0)).into();
         t.tokens.table_even = Hsla::from(rgba(0)).into();

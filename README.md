@@ -17,7 +17,7 @@ Find a file, inspect it, and get back to work.</p>
 
 Seek searches filenames using a local index and renders a compact native GPUI interface. It runs as your ordinary Windows account. There is no account sign-in, AI model, telemetry service, tray, global hotkey, app autostart or resident updater process. Closing the last tab quits Seek. The optional indexing helper is a separate, explicitly installed service.
 
-**1.0.0** includes tabs, folder browsing, file actions, filename/type filters, on-demand content search, and previews in the resizable information panel. The default sidebar uses the current account's Windows Known Folders, including redirected OneDrive locations. Your index and settings are never part of the download.
+**1.0.1** includes tabs, folder browsing, file actions, filename/type filters, on-demand content search, and previews in the resizable information panel. The default sidebar uses the current account's Windows Known Folders, including redirected OneDrive locations. Your index and settings are never part of the download. See [CHANGELOG](CHANGELOG.md).
 
 ## Contents
 
@@ -35,26 +35,26 @@ Seek searches filenames using a local index and renders a compact native GPUI in
 
 ## Download and install
 
-Download **Seek-1.0.0-windows-x64.zip** from [Releases](https://github.com/sanirudh17/Seek/releases/latest). Requires x64 Windows; the release is tested on Windows 11. Windows 10 and physical HDR/mixed-DPI setups have not been verified on this release.
+Download **[Seek-1.0.1-Setup-x64.exe](https://github.com/sanirudh17/Seek/releases/download/v1.0.1/Seek-1.0.1-Setup-x64.exe)** from [Releases](https://github.com/sanirudh17/Seek/releases/latest). Requires x64 Windows; tested on Windows 11. Windows 10 and physical HDR/mixed-DPI setups remain unverified.
 
-1. Extract the ZIP completely. Do not run files from inside the compressed-folder viewer.
-2. Open the extracted `Seek-1.0.0-windows-x64` folder and double-click **Install.cmd** normally, without **Run as administrator**.
+1. Double-click the installer normally, without **Run as administrator**.
+2. Accept the license. If Seek is already installed, close it and approve replacing its program files; saved data is retained.
 3. Choose whether to add a desktop shortcut. A Start menu shortcut is always created.
 4. Open **Seek** from Start.
 
-The program installs in `%LOCALAPPDATA%\Programs\Seek` and registers in **Settings > Apps > Installed apps** for this account only. It does not install the helper service. Existing program files and shortcuts require replacement approval; saved data is retained. The package is unsigned as requested, so Windows may display reputation warnings, and managed computers may restrict PowerShell scripts.
+The program installs in `%LOCALAPPDATA%\Programs\Seek` and registers in **Settings > Apps > Installed apps** for this account only, with a native uninstaller. It does not install the helper service. Existing program files and shortcuts require replacement approval; saved data is retained. The package is unsigned, so Windows may display reputation warnings, and managed computers may restrict the bundled PowerShell install scripts.
 
-Alternatively, run `seek.exe` in the extracted folder without installing. Portable means the binaries can move: saved data still goes under your current account's `%LOCALAPPDATA%\Seek`, not beside the executable.
+The separate `Seek-1.0.1-windows-x64.zip` asset supports the existing in-app updater and portable use. The normal download is the **Setup EXE**. Portable saved data still goes under your current account's `%LOCALAPPDATA%\Seek`, not beside the executable.
 
 To verify the download against the separately supplied `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash .\Seek-1.0.0-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\Seek-1.0.1-Setup-x64.exe -Algorithm SHA256
 ```
 
 ## Everyday use
 
-Choose Downloads, Desktop, Documents, Pictures, Videos, Music or a drive in the sidebar. Type a filename or a fragment in the search field. Use the **Name contains** suggestion for literal matching, or choose a matching **Type** suggestion. Remove a filter using its chip's cross; the chip dropdown changes its type.
+Choose Downloads, Desktop, Documents, Pictures, Videos, Music or a drive in the sidebar. On a first launch without a saved index, All locations shows labelled recent files from priority folders while the full drive scan continues. These early results are provisional; filename searches become complete when indexing finishes. Type a filename or a fragment in the search field. Use the **Name contains** suggestion for literal matching, or choose a matching **Type** suggestion. Remove a filter using its chip's cross; the chip dropdown changes its type.
 
 The view controls select List, Icons or Gallery. Click a column heading to sort. Folders can expand inline in List. The toolbar actions menu provides **All items**, **Largest files** and **Largest folders**; select **All items** to return from a largest-items view. Largest views show up to 200 indexed candidates; indexed size values can be approximate, with exact metadata loaded for selected/visible items where available.
 
@@ -86,11 +86,13 @@ Shortcuts act inside the focused Seek window, not globally. File operations requ
 | **Ctrl+Shift+C** | Copy the selected item's full path. |
 | **F2** | Rename the selected file/folder. |
 | **Delete** | Move the selected items to the Recycle Bin. |
-| **Shift+Delete** | Open permanent-delete confirmation. Cancel has default focus; only **Delete permanently** confirms. |
+| **Shift+Delete** | Open permanent-delete confirmation. **Delete permanently** has default focus; Enter confirms. Left/Right or Tab switches to Cancel; Escape cancels. |
 | **F5** | Rerun the current content search. |
 | **Escape** | Dismiss suggestions/Settings or cancel the current dialog; otherwise clear the active search state. |
 | **Tab / Shift+Tab** | Move keyboard focus between dialog controls; Escape cancels permanent deletion. |
-| **Ctrl+click / Shift+click** | Toggle a selected row / extend the selected range. |
+| **Ctrl+click / Shift+click** | Toggle a selected row / extend a range from its original anchor. |
+| **Shift+arrows / Ctrl+arrows** | Extend a selection / move the caret without changing selected items. In Icons/Gallery, Up/Down moves by a grid row. |
+| **Left / Right on buttons** | Move between buttons; in rename/new-folder input fields these keys still edit text. |
 | **Double-click** | Open a file or folder. |
 | **Drag the info panel's left border** | Resize the panel; its width is remembered. |
 
@@ -144,13 +146,15 @@ It targets the current account's helper, not another user's service. Do not dele
 
 When a newer stable Windows release exists, choose **Download and restart**. This explicitly approves replacing program files and closing all session tabs. Seek downloads via HTTPS, validates the SHA-256 checksum and fixed package contents, prepares a backup, closes, applies the update and restarts without elevation. Saved index/settings/document text and the separately opted-in helper service are preserved. Failed preparation leaves Seek open; apply failures attempt to restore previous files and keep a diagnostic result in the temporary update folder. The unsigned package checksum detects corruption; it is not a publisher signature, so update trust depends on the GitHub repository.
 
-For a manual update, close Seek, download/extract a newer package, and run its Install.cmd. Approve replacement of program files; saved data stays in your profile.
+For a manual update, close Seek, download the newer Setup EXE and run it. Approve replacement of program files; saved data stays in your profile.
 
-Uninstall through **Windows Settings > Apps > Installed apps > Seek**, or run **Uninstall.cmd** in `%LOCALAPPDATA%\Programs\Seek`. Confirm removal of program files and shortcuts. A separate **default-No** prompt asks whether to delete the saved index, settings and document-text cache. Choose No to keep them. Unexpected extra files in the program folder are preserved. The uninstaller does not silently remove an already opted-in helper: it asks you to remove it in Settings first or explicitly continue keeping the service.
+Uninstall through **Windows Settings > Apps > Installed apps > Seek**, or run **Uninstall.exe** in `%LOCALAPPDATA%\Programs\Seek`. Confirm removal of program files and shortcuts. A separate **default-No** prompt asks whether to delete the saved index, settings and document-text cache. Choose No to keep them. Unexpected extra files in the program folder are preserved. The native uninstaller retains an already opted-in helper and says so; remove that service in Seek Settings first if desired. The legacy Uninstall.cmd remains available for older installations.
 
 For an uninstalled portable copy, remove its extracted program folder yourself. Its profile data is separate; remove `%LOCALAPPDATA%\Seek` only if you intend to discard all saved data. Recycle personal files through Explorer rather than deleting a similarly named document folder.
 
 ## Building from source
+
+Creating the Setup EXE also requires [NSIS 3](https://nsis.sourceforge.io/) (`makensis.exe`); the installer/uninstaller use zlib compression.
 
 Use Rust **1.96.0 x86_64-pc-windows-msvc**, Visual Studio 2022 Build Tools with **Desktop development with C++**, and Windows SDK **10.0.26100.0**, including `rc.exe` and `fxc.exe`. The toolchain and framework revisions are pinned; do not update them merely to build a release.
 
@@ -158,7 +162,7 @@ Use Rust **1.96.0 x86_64-pc-windows-msvc**, Visual Studio 2022 Build Tools with 
 # Clone the public source and select the release.
 git clone https://github.com/sanirudh17/Seek.git
 cd Seek
-git checkout v1.0.0
+git checkout v1.0.1
 
 # Install the pinned compiler and developer checks.
 rustup toolchain install 1.96.0-x86_64-pc-windows-msvc --component rustfmt --component clippy

@@ -5,7 +5,7 @@ exclude = ["vendor/gpui-component", "vendor/gpui-windows"]
 
 [workspace.package]
 edition = "2024"
-version = "1.0.0"
+version = "1.0.1"
 license = "MIT"
 
 [workspace.dependencies]

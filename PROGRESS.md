@@ -1,3 +1,9 @@
+# Seek 1.0.1 release preparation
+
+2026-10-20. The user approved the fixes, version bump, public release and a Setup EXE. Source now enlarges the content-location input and shows explicitly provisional recent files in All locations while a fresh full-drive index builds. Includes the committed post-release interaction fixes and native per-user installer/uninstaller. No framework upgrades.
+
+First-view baseline on real C: with a fresh owned profile and walker mode: 26,606.310 ms to the first UI Automation result row (one run, polling/accessibility overhead included; not cold system cache). After-build comparison and final installer tests are pending. The full scan remains authoritative. Release artifacts will be built from this clean separate source checkout. No production Seek data profile or helper service is changed by tests.
+
 # Seek 1.0.0 - public release verified
 
 2026-10-20. Public release **v1.0.0** is published at https://github.com/sanirudh17/Seek/releases/tag/v1.0.0. The published ZIP is **9,164,598 bytes**; SHA-256 `b21b13215d60d611fee3e021683fecd58424c0e21527c1de21ee32f3ce1fc003`. A fresh download from GitHub matched the local ZIP exactly. The app Settings Updates Check now displayed **Seek 1.0.0 is up to date** for the live public release. The UI uses a circular refresh icon, distinct from the Info panel.

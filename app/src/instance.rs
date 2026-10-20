@@ -148,9 +148,149 @@ pub fn caption_theme(window: &gpui::Window, dark: bool) {
         }
     }
 }
-pub fn apply_backdrop(window: &gpui::Window, _glass: bool, dark: bool) {
-    // Leave native backdrop composition to GPUI, as Zeron does. Extending a
-    // second DWM frame underneath it can paint native caption glyphs twice.
+pub fn apply_backdrop(window: &gpui::Window, glass: bool, dark: bool) {
     caption_theme(window, dark);
     round(window);
+    if let Some(hwnd) = hwnd(window) {
+        system_acrylic(hwnd, glass);
+    }
+}
+
+// Windows 11's system material remains compositor-owned across maximize,
+// restore and activation. The older accent policy can disappear while DWM
+// animates the window. Unsupported systems retain GPUI's existing fallback.
+// No second extended client frame or native caption is introduced.
+fn system_acrylic(hwnd: HWND, glass: bool) -> bool {
+    let material = if glass { 3u32 } else { 1u32 }; // DWMSBT_TRANSIENTWINDOW / NONE
+    let result = unsafe {
+        windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute(
+            hwnd,
+            38,
+            (&material as *const u32).cast(),
+            4,
+        )
+    };
+    if result < 0 {
+        return false;
+    }
+    if !glass {
+        return true;
+    }
+    #[repr(C)]
+    struct Policy {
+        state: u32,
+        flags: u32,
+        color: u32,
+        animation: u32,
+    }
+    #[repr(C)]
+    struct Attribute {
+        attribute: u32,
+        data: *mut std::ffi::c_void,
+        size: usize,
+    }
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetModuleHandleW(name: *const u16) -> *mut std::ffi::c_void;
+        fn GetProcAddress(module: *mut std::ffi::c_void, name: *const u8) -> *mut std::ffi::c_void;
+    }
+    let module = unsafe { GetModuleHandleW(windows::core::w!("user32.dll").as_ptr()) };
+    let address =
+        unsafe { GetProcAddress(module, c"SetWindowCompositionAttribute".as_ptr().cast()) };
+    if address.is_null() {
+        let none = 1u32;
+        unsafe {
+            windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute(
+                hwnd,
+                38,
+                (&none as *const u32).cast(),
+                4,
+            );
+        }
+        return false;
+    }
+    let set: unsafe extern "system" fn(HWND, *mut Attribute) -> i32 =
+        unsafe { std::mem::transmute(address) };
+    let mut policy = Policy {
+        state: 0,
+        flags: 2,
+        color: 0,
+        animation: 0,
+    };
+    let mut data = Attribute {
+        attribute: 19,
+        data: (&mut policy as *mut Policy).cast(),
+        size: std::mem::size_of::<Policy>(),
+    };
+    let applied = unsafe { set(hwnd, &mut data) != 0 };
+    if !applied {
+        let none = 1u32;
+        unsafe {
+            windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute(
+                hwnd,
+                38,
+                (&none as *const u32).cast(),
+                4,
+            );
+        }
+    }
+    applied
+}
+
+pub fn motion_enabled() -> bool {
+    let mut enabled = 1i32;
+    unsafe {
+        SystemParametersInfoW(
+            SPI_GETCLIENTAREAANIMATION,
+            0,
+            (&mut enabled as *mut i32).cast(),
+            0,
+        );
+    }
+    enabled != 0
+}
+
+#[cfg(test)]
+mod material_tests {
+    use super::*;
+    #[test]
+    fn compositor_material_can_be_applied_and_removed_on_an_owned_window() {
+        use windows_sys::Win32::Graphics::Dwm::DwmGetWindowAttribute;
+        unsafe {
+            let window = CreateWindowExW(
+                0,
+                windows::core::w!("STATIC").as_ptr(),
+                windows::core::w!("Seek material test").as_ptr(),
+                WS_OVERLAPPEDWINDOW,
+                0,
+                0,
+                320,
+                240,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null(),
+            );
+            assert!(!window.is_null());
+            let applied = system_acrylic(window, true);
+            if applied {
+                let mut material = 0u32;
+                let result =
+                    DwmGetWindowAttribute(window, 38, (&mut material as *mut u32).cast(), 4);
+                assert!(result >= 0);
+                assert_eq!(material, 3);
+                assert!(system_acrylic(window, false));
+                assert!(
+                    DwmGetWindowAttribute(window, 38, (&mut material as *mut u32).cast(), 4) >= 0
+                );
+                assert_eq!(material, 1);
+                println!(
+                    "DWM system acrylic: set/read/remove passed on a hidden owned window; transitions not visually tested"
+                );
+            } else {
+                println!("DWM system acrylic unavailable; existing legacy fallback retained");
+            }
+            assert_ne!(DestroyWindow(window), 0);
+        }
+    }
 }

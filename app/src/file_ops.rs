@@ -43,6 +43,9 @@ pub enum Operation {
 pub struct Reply {
     pub result: Result<(), String>,
     pub refresh: Vec<PathBuf>,
+    pub removed: Vec<PathBuf>,
+    pub finished: bool,
+    pub progress: Option<(u32, u32)>,
 }
 #[derive(Clone)]
 pub struct Worker {
@@ -87,6 +90,9 @@ impl Worker {
                         let _ = out.send_blocking(Reply {
                             result: Err("Cannot initialize Windows file operations".into()),
                             refresh: vec![],
+                            removed: vec![],
+                            finished: true,
+                            progress: None,
                         });
                         return;
                     }
@@ -98,10 +104,36 @@ impl Worker {
                         loop {
                             match rx.try_recv() {
                                 Ok((op, owner)) => {
+                                    let targets = match &op {
+                                        Operation::Recycle { paths }
+                                        | Operation::DeletePermanently { paths } => paths.clone(),
+                                        _ => vec![],
+                                    };
                                     let mut refresh = vec![];
                                     let result =
-                                        execute(op, owner, &mut refresh).map_err(|e| e.to_string());
-                                    if out.send_blocking(Reply { result, refresh }).is_err() {
+                                        execute(op, owner, &mut refresh, Some(out.clone()))
+                                            .map_err(|e| e.to_string());
+                                    if out
+                                        .send_blocking(Reply {
+                                            result,
+                                            refresh,
+                                            // Some shell providers omit per-item notifications.
+                                            // Never remove a failed or cancelled target from the UI.
+                                            removed: targets
+                                                .into_iter()
+                                                .filter(|path| {
+                                                    std::fs::symlink_metadata(path).is_err_and(
+                                                        |e| {
+                                                            e.kind() == std::io::ErrorKind::NotFound
+                                                        },
+                                                    )
+                                                })
+                                                .collect(),
+                                            finished: true,
+                                            progress: None,
+                                        })
+                                        .is_err()
+                                    {
                                         break 'messages;
                                     }
                                 }
@@ -195,7 +227,12 @@ pub fn valid_name(name: &str) -> bool {
 fn invalid(message: &str) -> windows::core::Error {
     windows::core::Error::new(windows::Win32::Foundation::E_INVALIDARG, message)
 }
-fn execute(op: Operation, owner: usize, refresh: &mut Vec<PathBuf>) -> windows::core::Result<()> {
+fn execute(
+    op: Operation,
+    owner: usize,
+    refresh: &mut Vec<PathBuf>,
+    updates: Option<async_channel::Sender<Reply>>,
+) -> windows::core::Result<()> {
     match op {
         Operation::Clipboard { paths, cut } => clipboard_write(&paths, cut, owner),
         Operation::Dialog { path, properties } => {
@@ -235,16 +272,27 @@ fn execute(op: Operation, owner: usize, refresh: &mut Vec<PathBuf>) -> windows::
             let files: IFileOperation =
                 CoCreateInstance(&FileOperation, None, CLSCTX_INPROC_SERVER)?;
             files.SetOwnerWindow(HWND(owner as _))?;
+            if let Some(updates) = updates {
+                let targets = match &op {
+                    Operation::Recycle { paths } | Operation::DeletePermanently { paths } => {
+                        paths.clone()
+                    }
+                    _ => vec![],
+                };
+                let sink: IFileOperationProgressSink =
+                    crate::file_progress::OperationProgress { updates, targets }.into();
+                files.Advise(&sink)?;
+            }
+            // The Shell owns its progress, error, access and cancellation dialogs.
+            // Do not hide failures or turn one denied item into a silent abort.
             // Permanent deletion is reached only after the separate GPUI confirmation.
             let flags = if matches!(&op, Operation::DeletePermanently { .. }) {
-                FOF_NOCONFIRMATION | FOF_NOERRORUI | FOFX_EARLYFAILURE
+                FOF_NOCONFIRMATION
             } else {
                 FOFX_ADDUNDORECORD
                     | FOFX_RECYCLEONDELETE
                     | FOF_WANTNUKEWARNING
                     | FOF_NOCONFIRMMKDIR
-                    | FOF_NOERRORUI
-                    | FOFX_EARLYFAILURE
                     | if matches!(&op, Operation::Recycle { .. }) {
                         FOF_NOCONFIRMATION
                     } else {
@@ -252,6 +300,11 @@ fn execute(op: Operation, owner: usize, refresh: &mut Vec<PathBuf>) -> windows::
                     }
             };
             files.SetOperationFlags(flags)?;
+            let _ = files.SetProgressMessage(match &op {
+                Operation::DeletePermanently { .. } => w!("Deleting permanently..."),
+                Operation::Recycle { .. } => w!("Moving to Recycle Bin..."),
+                _ => w!("Updating files..."),
+            });
             let op = match op {
                 Operation::Paste { folder } => {
                     let (paths, cut) = clipboard_read()?;
@@ -515,7 +568,9 @@ mod operation_tests {
             match rx.try_recv() {
                 Ok(reply) => {
                     reply.result.unwrap();
-                    return;
+                    if reply.finished {
+                        return;
+                    }
                 }
                 Err(async_channel::TryRecvError::Empty) => {
                     assert!(std::time::Instant::now() < until, "Operation timed out");
@@ -524,6 +579,77 @@ mod operation_tests {
                 Err(e) => panic!("{e}"),
             }
         }
+    }
+    #[test]
+    fn permanent_delete_reports_confirmed_items_before_finishing() {
+        let temp = tempfile::tempdir().unwrap();
+        let keep = temp.path().join("Keep.txt");
+        std::fs::write(&keep, "untouched").unwrap();
+        let folder = temp.path().join("Owned folder");
+        std::fs::create_dir(&folder).unwrap();
+        std::fs::write(folder.join("Nested.txt"), "owned").unwrap();
+        let file = temp.path().join("Résumé 🐈.txt");
+        std::fs::write(&file, "owned").unwrap();
+        let paths = vec![file, folder];
+        let (worker, rx) = Worker::start();
+        let began = std::time::Instant::now();
+        worker
+            .send(
+                Operation::DeletePermanently {
+                    paths: paths.clone(),
+                },
+                0,
+            )
+            .unwrap();
+        let mut confirmed = std::collections::HashSet::new();
+        let mut all_confirmed = std::collections::HashSet::new();
+        let mut first = None;
+        let mut progress = 0;
+        loop {
+            match rx.try_recv() {
+                Ok(reply) => {
+                    reply.result.unwrap();
+                    if reply.progress.is_some() {
+                        progress += 1;
+                    }
+                    for path in reply.removed {
+                        assert!(!path.exists());
+                        assert!(paths.iter().any(|p| {
+                            seek_engine::paths::internal(p)
+                                .eq_ignore_ascii_case(&seek_engine::paths::internal(&path))
+                        }));
+                        all_confirmed.insert(seek_engine::paths::internal(&path));
+                        if !reply.finished {
+                            first.get_or_insert_with(|| began.elapsed());
+                            confirmed.insert(seek_engine::paths::internal(&path));
+                        }
+                    }
+                    if reply.finished {
+                        break;
+                    }
+                }
+                Err(async_channel::TryRecvError::Empty) => {
+                    assert!(began.elapsed().as_secs() < 30);
+                    std::thread::sleep(std::time::Duration::from_millis(1));
+                }
+                Err(e) => panic!("{e}"),
+            }
+        }
+        assert!(
+            !confirmed.is_empty(),
+            "file callbacks must reach the UI before final completion"
+        );
+        // Windows may report a directory's PostDelete before removing its
+        // directory entry. The final existence check is authoritative there.
+        assert_eq!(all_confirmed.len(), paths.len());
+        assert_eq!(std::fs::read_to_string(&keep).unwrap(), "untouched");
+        assert!(paths.iter().all(|p| !p.exists()));
+        println!(
+            "native delete: first confirmed {:.3} ms, finished {:.3} ms, {} progress callbacks",
+            first.unwrap().as_secs_f64() * 1000.,
+            began.elapsed().as_secs_f64() * 1000.,
+            progress
+        );
     }
     #[test]
     fn shell_worker_creates_renames_moves_and_recycles_only_owned_files() {

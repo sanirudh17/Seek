@@ -45,12 +45,12 @@ try{
  & (Join-Path $package 'Install.ps1') -TestRoot $base -NonInteractive -DesktopShortcut
  $m=Get-Content (Join-Path $program 'install-manifest.json') -Raw|ConvertFrom-Json
  $registration=Get-ItemProperty $key
- Check 'Current-user Installed apps registration, version and target' ($registration.DisplayVersion -eq '1.0.0' -and $registration.InstallLocation -eq $program)
+ Check 'Current-user Installed apps registration, version and target' ($registration.DisplayVersion -eq [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $package 'seek.exe')).FileVersion -and $registration.InstallLocation -eq $program)
  $shell=New-Object -ComObject WScript.Shell
  Check 'Start and optional desktop shortcuts use the installed icon/executable' (@(@($m.start_shortcut,$m.desktop_shortcut)|Where-Object{$shell.CreateShortcut($_).TargetPath -ne (Join-Path $program 'seek.exe') -or $shell.CreateShortcut($_).IconLocation -notlike '*seek.ico*'}).Count -eq 0)
  foreach($name in @('seek.exe','seek-helper.exe')){
   $v=[Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $program $name))
-  Check ($name+' has 1.0.0 metadata and Seek product name') ($v.FileVersion -eq '1.0.0' -and $v.ProductName -eq 'Seek')
+  Check ($name+' has matching release metadata and Seek product name') ($v.FileVersion -eq [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $package 'seek.exe')).FileVersion -and $v.ProductName -eq 'Seek')
  }
  Check 'Installed icon is byte-identical to the packaged icon' ((Get-FileHash (Join-Path $program 'seek.ico')).Hash -eq (Get-FileHash (Join-Path $package 'seek.ico')).Hash)
  $watch=[Diagnostics.Stopwatch]::StartNew()

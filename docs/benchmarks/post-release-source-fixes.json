@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-20",
+  "state": "source fixes; normal app build awaiting user approval",
+  "app_built": false,
+  "packaging_or_publication": false,
+  "framework_or_dependency_updates": false,
+  "verification": {
+    "distinct_tests_passed": 65,
+    "full_suite_passed": 62,
+    "full_suite_ignored": 1,
+    "additional_new_targeted_tests_passed": 3,
+    "strict_clippy": "passed",
+    "normal_feature_typecheck": "passed",
+    "format": "passed",
+    "ui_transition_or_frame_timing": "not measured; build withheld"
+  },
+  "native_delete_owned_fixture": {
+    "file_and_folder_targets": 2,
+    "untouched_sentinel": true,
+    "first_confirmed_removal_ms": 344.188,
+    "finished_ms": 447.516,
+    "progress_callbacks": 7,
+    "profile": "Rust test profile; full parallel suite; worker timings, not GUI row paint"
+  },
+  "directory_cache_owned_fixture": {
+    "files": 400,
+    "metadata_first_ms": 4.745,
+    "warm_access_p95_ms": 4.387,
+    "accesses": 100,
+    "truth": "independent std::fs::read_dir; every access equals truth",
+    "profile": "Rust test profile; full parallel suite; no GUI paint"
+  },
+  "snapshot_handoff": {
+    "rows": 12000,
+    "p95_ms": 0.0001,
+    "samples": 100,
+    "scope": "Arc snapshot/row handle cloning only; excludes capture, GPUI layout, paint, icons and revalidation"
+  },
+  "snapshot_budget": {
+    "max_snapshots": 8,
+    "per_view_mib": 8,
+    "total_estimated_mib": 24,
+    "note": "estimated retained row storage; not total process memory"
+  },
+  "dwm_api": "set/read/remove Desktop Acrylic succeeded on hidden owned window; transitions visually unverified",
+  "normal_binary_sha256_unchanged": {
+    "debug": "992D0CC39E8E1BCB3ABBF0BB6303DD2496A7DFDE90418DCA4E3D02FE5A1F1732",
+    "release": "696AA55FB716447DA69F6184E41ED12CCDC86405B662FB718A7EA9BEEA183C79"
+  },
+  "unverified": [
+    "Original screenshot AMD mixed-format log file",
+    "Small/maximized popup alignment across sidebar states",
+    "Actual new/switch/close tab input-to-paint and icons",
+    "Glass transitions on maximize/restore/taskbar/start in both themes",
+    "Button focus, wheel routing and multi-selection through real desktop input",
+    "Large native progress/cancel/permission dialogs",
+    "Foreground idle CPU and process memory after these changes",
+    "Windows 10, HDR and mixed DPI"
+  ]
+}

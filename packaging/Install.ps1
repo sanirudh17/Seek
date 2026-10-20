@@ -45,7 +45,8 @@ foreach($link in @($startLink)+$(if($DesktopShortcut){@($desktopLink)}else{@()})
  New-Item -ItemType Directory -Path (Split-Path $link) -Force|Out-Null
  $shortcut=$shell.CreateShortcut($link);$shortcut.TargetPath=$exe;$shortcut.WorkingDirectory=$install;$shortcut.IconLocation=(Join-Path $install 'seek.ico')+',0';$shortcut.Description='Seek - fast local file search';$shortcut.Save()
 }
-$manifest=@{product='Seek';version=$version;install_root=$install;data_root=$data;test_root=$test;registry_id=$id;start_shortcut=$startLink;desktop_shortcut=$(if($DesktopShortcut){$desktopLink}else{$null});files=$files}
+$ownedDesktop=$DesktopShortcut -or ((Test-Path -LiteralPath $desktopLink) -and $shell.CreateShortcut($desktopLink).TargetPath -eq $exe)
+$manifest=@{product='Seek';version=$version;install_root=$install;data_root=$data;test_root=$test;registry_id=$id;start_shortcut=$startLink;desktop_shortcut=$(if($ownedDesktop){$desktopLink}else{$null});files=$files}
 [IO.File]::WriteAllText((Join-Path $install 'install-manifest.json'),($manifest|ConvertTo-Json -Depth 4),[Text.UTF8Encoding]::new($false))
 New-Item -Path $key -Force|Out-Null
 $properties=@{DisplayName=$label;DisplayVersion=$version;Publisher='Seek contributors';InstallLocation=$install;DisplayIcon=(Join-Path $install 'seek.ico');URLInfoAbout='https://github.com/sanirudh17/Seek';UninstallString=('"'+$env:SystemRoot+'\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "'+(Join-Path $install 'Uninstall.ps1')+'"')}

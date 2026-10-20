@@ -58,7 +58,7 @@ pub enum Command {
     Changed,
     CancelContent(u64),
     ClearDocumentCache(u64),
-    BrowseFinished(PathBuf, Result<Vec<Found>, String>),
+    BrowseFinished(PathBuf, u64, Result<Vec<Found>, String>),
     Open(PathBuf, bool),
     Stop,
     HelperStatus,
@@ -66,6 +66,7 @@ pub enum Command {
     HelperFinished(Result<(), String>),
     Rebuild,
     RefreshParents(Vec<PathBuf>),
+    FilesRemoved(Vec<PathBuf>),
 }
 #[derive(Clone, Default)]
 pub struct HelperState {
@@ -159,8 +160,11 @@ pub fn start(
             let mut cache_epoch=0u64;
             let mut content_cache: Option<(Vec<Row>, String)> = None;
             let mut content_failures = Vec::new();
+            let mut removed_files=Vec::<Found>::new();
             let mut browse = crate::browse::Cache::new(tx.clone());
-            browse.prime(&favorites);
+            let mut startup_locations=favorites.iter().filter(|(_,folder)|roots.iter().any(|root|crate::file_changes::under_any(folder,std::slice::from_ref(root)))).cloned().collect::<Vec<_>>();
+            startup_locations.extend(roots.iter().map(|root|(root.display().to_string(),root.clone())));
+            browse.prime(&startup_locations);
 
             while let Ok(first) = rx.recv() {
                 let mut command = Some(first);
@@ -182,13 +186,21 @@ pub fn start(
                             if (request.content_locations!=next.content_locations || request.remember_document_text!=next.remember_document_text || request.exclusions!=next.exclusions)
                                 && let Err(error)=crate::text_cache::maintain(&crate::text_cache::Config::new(&data,next.remember_document_text),&next.content_locations,&next.exclusions){eprintln!("Cannot maintain document cache: {error}");}
                             content_cache = None;
-                            if let Some(folder)=next.scope.as_ref(){browse.invalidate(folder);}
+                            if !next.content && next.text.trim().is_empty() && next.largest.is_none() && let Some(folder)=next.scope.as_ref(){browse.refresh(folder);}
                             if !request.same_view(&next) { recent_files.clear(); }
                             request = next;
                         },
-                        Command::BrowseFinished(folder, result) => { browse.finish(folder, result); },
-                        Command::Changed => {changed.store(false, Ordering::Relaxed); cache_epoch=cache_epoch.wrapping_add(1)},
+                        Command::BrowseFinished(folder, revision, result) => { browse.finish(folder, revision, result); },
+                        Command::Changed => {changed.store(false, Ordering::Relaxed); cache_epoch=cache_epoch.wrapping_add(1);if let Some(folder)=&request.scope{browse.refresh(folder);}},
                         Command::Rebuild => { engine.rebuild(); },
+                        Command::FilesRemoved(paths)=>{
+                            content_cache=None;
+                            for path in paths {
+                                if !removed_files.iter().any(|f|f.path==path){removed_files.push(Found{path:path.clone(),kind:0,size:0,mtime:0,score:0});}
+                                if let Some(parent)=path.parent(){browse.invalidate(parent);browse.refresh(parent);}
+                                engine.refresh_parent(&path);
+                            }
+                        },
                         Command::RefreshParents(paths)=>{if !paths.is_empty(){content_cache=None;}for path in paths{browse.invalidate(&path);engine.refresh_parent(&path.join(".seek-refresh"));}},
                         Command::HelperStatus=>{
                             match seek_engine::helper::user_sid().and_then(|sid|seek_engine::helper::service_present(&sid)) {Ok(installed)=>helper.installed=installed,Err(e)=>helper.message=Some(e.to_string())}
@@ -239,9 +251,10 @@ pub fn start(
                 }
                 let work_started = Instant::now();
                 let mut dates = std::collections::HashMap::new();
-                let rows = if !request.content && request.text.trim().is_empty() && request.largest.is_none() && let Some(folder)=request.scope.as_ref() {
-                    let indexed=if status.ready && engine.has_directory(folder) {Some(engine.children(folder,request.show_hidden,&request.exclusions))}else{None};
-                    let files=if let Some(files)=indexed.filter(|f|!f.is_empty() || !status.catching_up){Some(Ok(files))}else{browse.get(folder,request.show_hidden,&request.exclusions)};
+                let mut rows = if !request.content && request.text.trim().is_empty() && request.largest.is_none() && let Some(folder)=request.scope.as_ref() {
+                    // A direct folder listing is independent of a long catch-up index write lock.
+                    // Keep its cached rows while a finite refresh validates this visit.
+                    let files=browse.get(folder,request.show_hidden,&request.exclusions);
                     match files {
                         Some(Ok(files))=>{
                             message=Some(if files.is_empty(){"This folder has no visible items.".into()}else{"Folder contents".into()});
@@ -359,6 +372,9 @@ pub fn start(
                             vec![]
                         }
                     }
+                } else if !request.content && request.text.trim().is_empty() && request.scope.is_none() && request.largest.is_none() {
+                    message=Some("Recent files · indexing all locations...".into());
+                    browse.recent(&startup_locations,request.show_hidden,&request.exclusions).into_iter().map(|file|Row::with_dates(file,&mut dates)).collect()
                 } else {
                     message=Some("Indexing files...".into());
                     vec![]
@@ -375,7 +391,15 @@ pub fn start(
                     crate::metrics::phase("cached_rows_materialized");
                     first_cached_search = false;
                 }
-                let children=if request.content {Default::default()} else {request.expanded.iter().map(|folder|(folder.clone(),engine.children(folder,request.show_hidden,&request.exclusions).into_iter().map(Row::new).collect())).collect()};
+                let mut children:std::collections::HashMap<PathBuf,Vec<Row>>=if request.content {Default::default()} else {request.expanded.iter().map(|folder|(folder.clone(),engine.children(folder,request.show_hidden,&request.exclusions).into_iter().map(Row::new).collect())).collect()};
+                // Only retain a suppression while the index still has the deleted entry.
+                // A same-path file recreated on disk is a new visible item, never hidden.
+                removed_files.retain(|f|std::fs::symlink_metadata(&f.path).is_err_and(|e|e.kind()==std::io::ErrorKind::NotFound));
+                let removed:Vec<_>=removed_files.iter().map(|f|f.path.clone()).collect();
+                rows.retain(|r|!crate::file_changes::under_any(&r.file.path,&removed));
+                for rows in children.values_mut(){rows.retain(|r|!crate::file_changes::under_any(&r.file.path,&removed));}
+                removed_files=engine.refresh_results(&removed_files,&Query::default());
+                let progress_only=message.as_deref()==Some("Indexing this folder...");
                 if result_tx
                     .force_send(Update {
                         content_failures: if request.content {content_failures.clone()} else {vec![]},
@@ -389,7 +413,7 @@ pub fn start(
                         roots: roots.clone(),
                         helper:helper.clone(),
                         children,
-                        cache_epoch,progress_only:false,
+                        cache_epoch,progress_only,
                     })
                     .is_err()
                 {
@@ -678,6 +702,45 @@ mod tests {
             }
         }
         let elapsed = began.elapsed();
+        backend.generation.store(2, Ordering::Relaxed);
+        let all_began = Instant::now();
+        backend
+            .tx
+            .send(Command::Search(Request {
+                generation: 2,
+                show_hidden: true,
+                ..Default::default()
+            }))
+            .unwrap();
+        let mut all = None;
+        while all_began.elapsed().as_secs() < 5 {
+            if let Ok(update) = updates.try_recv() {
+                if update.generation == 2 && update.rows.iter().any(|r| r.name == "marker.txt") {
+                    all = Some(update);
+                    break;
+                }
+            } else {
+                std::thread::sleep(std::time::Duration::from_millis(1));
+            }
+        }
+        let all = all.expect("All locations must populate before the full scan finishes");
+        assert!(!all.status.ready);
+        assert!(
+            all.message
+                .as_deref()
+                .unwrap()
+                .contains("indexing all locations")
+        );
+        assert!(
+            all.rows
+                .iter()
+                .all(|r| r.file.kind & 3 == seek_engine::walk::KIND_FILE)
+        );
+        println!(
+            "All locations provisional rows: {:.3} ms, index_ready={}",
+            all_began.elapsed().as_secs_f64() * 1000.,
+            all.status.ready
+        );
         backend.tx.send(Command::Stop).unwrap();
         worker.join().unwrap();
         let update = loaded.expect("folder metadata did not load");
@@ -771,6 +834,78 @@ mod tests {
         );
         expanded.scope = Some("other".into());
         assert!(!request.same_view(&expanded));
+    }
+    #[test]
+    fn confirmed_deletion_cannot_reappear_and_same_path_recreation_is_visible() {
+        let temp = tempfile::tempdir().unwrap();
+        let folder = temp.path().join("files");
+        std::fs::create_dir(&folder).unwrap();
+        let deleted = folder.join("Owned.txt");
+        let keep = folder.join("Keep.txt");
+        std::fs::write(&deleted, "old").unwrap();
+        std::fs::write(&keep, "untouched").unwrap();
+        let (backend, updates, worker) = start(
+            Some(folder.clone()),
+            temp.path().join("index"),
+            seek_engine::SourceMode::Walker,
+            vec![],
+        );
+        let ask = |generation| {
+            backend.generation.store(generation, Ordering::Relaxed);
+            backend
+                .tx
+                .send(Command::Search(Request {
+                    scope: Some(folder.clone()),
+                    generation,
+                    ..Default::default()
+                }))
+                .unwrap();
+        };
+        let wait = |generation, count| {
+            let began = Instant::now();
+            loop {
+                match updates.try_recv() {
+                    Ok(update) if update.generation == generation && !update.progress_only => {
+                        if generation == 2 {
+                            assert!(!update.rows.iter().any(|r| r.file.path == deleted));
+                        }
+                        if update.rows.len() == count {
+                            break update.rows;
+                        }
+                    }
+                    Ok(_) => {}
+                    Err(async_channel::TryRecvError::Empty) => {
+                        assert!(began.elapsed().as_secs() < 10, "folder update timed out");
+                        std::thread::sleep(std::time::Duration::from_millis(1));
+                    }
+                    Err(e) => panic!("{e}"),
+                }
+            }
+        };
+        ask(1);
+        wait(1, 2);
+        std::fs::remove_file(&deleted).unwrap();
+        backend
+            .tx
+            .send(Command::FilesRemoved(vec![deleted.clone()]))
+            .unwrap();
+        ask(2);
+        assert_eq!(wait(2, 1)[0].file.path, keep);
+        std::fs::write(&deleted, "new replacement").unwrap();
+        ask(3);
+        let rows = wait(3, 2);
+        let actual: std::collections::BTreeSet<_> = rows
+            .iter()
+            .map(|r| r.file.path.file_name().unwrap().to_owned())
+            .collect();
+        let expected = std::fs::read_dir(&folder)
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect();
+        assert_eq!(actual, expected);
+        assert_eq!(std::fs::read_to_string(&keep).unwrap(), "untouched");
+        backend.tx.send(Command::Stop).unwrap();
+        worker.join().unwrap();
     }
     #[test]
     fn indexed_children_are_direct_complete_and_obey_visibility_and_exclusions() {

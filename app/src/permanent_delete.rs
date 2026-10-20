@@ -67,7 +67,7 @@ impl Seek {
         if !event.is_held {
             match event.keystroke.key.as_str() {
                 "escape" => self.cancel_permanent_delete(window, cx),
-                "tab" => {
+                "tab" | "left" | "right" => {
                     let focus = if confirm.cancel.is_focused(window) {
                         confirm.delete.clone()
                     } else {

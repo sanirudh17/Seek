@@ -420,13 +420,29 @@ impl Seek {
         self.refresh_preview(cx);
         cx.notify();
     }
-    fn select(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {
+    fn select_modified(
+        &mut self,
+        index: usize,
+        shift: bool,
+        control: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         self.table.update(cx, |table, _| {
+            let current = table.selected_row();
             let data = table.delegate_mut();
-            data.selected_many.clear();
-            if let Some(row) = data.rows.get(index) {
-                data.selected_many.insert(row.file.path.clone());
-            }
+            crate::selection::change(
+                &data.rows,
+                &mut data.selected_many,
+                &mut data.selection_anchor,
+                current,
+                index,
+                crate::selection::Input {
+                    shift,
+                    control,
+                    keyboard: false,
+                },
+            );
             data.drag_paths = Arc::new(data.selected_many.iter().cloned().collect());
         });
         self.table.update(cx, |t, cx| t.set_selected_row(index, cx));
@@ -903,6 +919,7 @@ impl Seek {
             .child(
                 div().flex_1().min_w_0().flex().justify_center().child(
                     div()
+                        .relative()
                         .occlude()
                         .w_full()
                         .max_w(px(560.))
@@ -923,7 +940,8 @@ impl Seek {
                         } else {
                             p.line
                         })
-                        .child(search),
+                        .child(search)
+                        .child(self.search_suggestions(window, cx)),
                 ),
             )
             .child(toolbar_separator(p))
@@ -963,7 +981,7 @@ impl Seek {
                 let start = (range.start * columns).min(total);
                 let end = (range.end * columns).min(total);
                 let rows = table.delegate().rows[start..end].to_vec();
-                let selected = table.selected_row();
+                let _selected = table.selected_row();
                 // UniformList can render visible rows in separate batches.
                 // Request the whole viewport on each batch, so a later batch
                 // cannot cancel the thumbnails requested by an earlier one.
@@ -973,7 +991,7 @@ impl Seek {
                 let wanted_end = ((top + lines).max(range.end) * columns).min(total);
                 let keys = table.delegate().rows[wanted_start..wanted_end]
                     .iter()
-                    .filter(|r| needs_shell(r))
+                    .filter(|r| needs_shell(r) && r.file.kind & 3 != seek_engine::walk::KIND_DIR)
                     .map(|r| media::Key::new(r, 128, false))
                     .collect();
                 *this.visible.lock().unwrap() = keys;
@@ -998,7 +1016,7 @@ impl Seek {
                             let context_path=row.file.path.clone();
                             let context_folder=row.file.kind & 3 == seek_engine::walk::KIND_DIR;
                             let drop_path=row.file.path.clone();
-                            let chosen = selected == Some(i);
+                            let chosen = table.delegate().selected_many.contains(&row.file.path);
                             let size = if gallery { 72. } else { 96. };
                             line_view = line_view.child(
                                 div()
@@ -1054,7 +1072,7 @@ impl Seek {
                                         MouseButton::Left,
                                         cx.listener(
                                             move |this, event: &MouseDownEvent, window, cx| {
-                                                this.select(i, window, cx);
+                                                this.select_modified(i,event.modifiers.shift,event.modifiers.control, window, cx);
                                                 if event.click_count >= 2 {
                                                     this.open_selected(false, cx);
                                                 }
@@ -1723,6 +1741,7 @@ impl Render for Seek {
             .flex();
         results = results.child(
             div()
+                .id("results-scroll-fallback")
                 .flex_1()
                 .min_w_0()
                 .min_h_0()
@@ -1730,6 +1749,34 @@ impl Render for Seek {
                 .overflow_hidden()
                 .flex()
                 .flex_col()
+                .on_scroll_wheel(cx.listener(|this, event: &ScrollWheelEvent, _, cx| {
+                    if this.settings || this.edit.is_some() || this.permanent_delete.is_some() {
+                        return;
+                    }
+                    // A bubbled, otherwise unhandled wheel event must not require
+                    // keyboard focus or an extra click to reach the result list.
+                    let handle = if this.view == View::List {
+                        this.table.read(cx).vertical_scroll_handle.clone()
+                    } else {
+                        this.grid_scroll.clone()
+                    };
+                    let delta = event.delta.pixel_delta(px(20.));
+                    let mut state = handle.0.borrow_mut();
+                    let before = state.base_handle.offset();
+                    let max = state.base_handle.max_offset();
+                    let next = point(
+                        (before.x + delta.x).clamp(-max.x, px(0.)),
+                        (before.y + delta.y).clamp(-max.y, px(0.)),
+                    );
+                    if next != before {
+                        state.deferred_scroll_to_item = None;
+                        state.base_handle.set_offset(next);
+                        drop(state);
+                        this.table.update(cx, |_, cx| cx.notify());
+                        cx.notify();
+                        cx.stop_propagation();
+                    }
+                }))
                 .child(contents)
                 .child(
                     div()
@@ -1781,7 +1828,7 @@ impl Render for Seek {
             .overflow_hidden()
             .w(px(if self.sidebar { 204. } else { 0. }))
             .child(self.sidebar_view(p, cx));
-        let sidebar = if self.sidebar_motion == 0 {
+        let sidebar = if self.sidebar_motion == 0 || !self.motion_enabled {
             sidebar.into_any_element()
         } else {
             let from = self.sidebar_from;
@@ -1893,6 +1940,7 @@ impl Render for Seek {
                 .on_mouse_up(MouseButton::Left, cx.listener(Self::finish_info_resize))
                 .on_mouse_up_out(MouseButton::Left, cx.listener(Self::finish_info_resize))
                 .capture_key_down(cx.listener(Self::keys))
+                .on_key_down(cx.listener(Self::button_keys))
                 .capture_action(
                     cx.listener(|this, _: &CopyFiles, window, cx| {
                         #[cfg(feature="benchmarks")]

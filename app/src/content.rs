@@ -272,27 +272,7 @@ fn open_scoped(path: &Path, roots: &[PathBuf], exclusions: &[PathBuf]) -> std::i
     Ok(file)
 }
 fn decode(bytes: &[u8]) -> Result<String, String> {
-    if bytes.starts_with(&[0xff, 0xfe]) || bytes.starts_with(&[0xfe, 0xff]) {
-        if !bytes.len().is_multiple_of(2) {
-            return Err("Truncated UTF-16 text".into());
-        }
-        let little = bytes[0] == 0xff;
-        let words: Vec<u16> = bytes[2..]
-            .chunks_exact(2)
-            .map(|b| {
-                if little {
-                    u16::from_le_bytes([b[0], b[1]])
-                } else {
-                    u16::from_be_bytes([b[0], b[1]])
-                }
-            })
-            .collect();
-        return String::from_utf16(&words).map_err(|e| e.to_string());
-    }
-    if bytes.contains(&0) {
-        return Err("Binary text".into());
-    }
-    String::from_utf8(bytes.to_vec()).map_err(|e| e.to_string())
+    crate::text_decode::decode(bytes, false)
 }
 pub(crate) fn docx(bytes: &[u8], cancelled: &impl Fn() -> bool) -> Result<String, String> {
     use quick_xml::{Reader, events::Event};

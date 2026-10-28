@@ -9,7 +9,7 @@ use gpui_component::{
 };
 use gpui_component_assets::IconName as Glyph;
 
-fn control(
+pub(super) fn control(
     id: impl Into<ElementId>,
     label: impl Into<SharedString>,
     p: Palette,

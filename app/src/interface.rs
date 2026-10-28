@@ -318,32 +318,9 @@ impl Seek {
         cx.notify();
     }
     pub(super) fn refresh_preview(&mut self, cx: &mut Context<Self>) {
-        let mut wanted = self
-            .panel
-            .then(|| self.selected(cx))
-            .flatten()
-            .and_then(|r| crate::document_preview::Key::new(&r, 0));
-        if let (Some(old), Some(next)) = (&self.document_key, &mut wanted)
-            && old.file == next.file
-        {
-            next.page = old.page;
-        }
-        if self.document_key != wanted {
-            if let Some(Ok(old)) = self.document.take()
-                && let Some(image) = old.image
-            {
-                self.document_images_to_drop.push(image);
-            }
-            self.document_key = wanted.clone();
-            self.documents.request(wanted);
-            #[cfg(feature = "benchmarks")]
-            crate::metrics::interaction(
-                "document_request",
-                serde_json::json!({"active":self.document_key.is_some(),"retained":self.document.is_some()}),
-            );
-        }
+        self.sync_document_preview(cx);
         let mut keys = HashSet::new();
-        if (self.panel || self.view == View::Gallery)
+        if (self.panel || self.preview_enlarged || self.view == View::Gallery)
             && let Some(row) = self.selected(cx)
         {
             keys.insert(media::Key::new(&row, 0, true));
@@ -356,13 +333,66 @@ impl Seek {
         }
         let retired = self.cache.lock().unwrap().retain_previews(&keys);
         self.document_images_to_drop.extend(retired);
-        #[cfg(feature = "benchmarks")]
-        crate::metrics::interaction(
-            "preview_cache",
-            serde_json::json!({"stats":self.cache.lock().unwrap().stats()}),
-        );
         *self.extra.lock().unwrap() = keys;
         request_media(&self.media, &self.visible, &self.extra, &self.cache);
+    }
+    fn sync_document_preview(&mut self, cx: &mut Context<Self>) {
+        let mut wanted = (self.panel || self.preview_enlarged)
+            .then(|| self.selected(cx))
+            .flatten()
+            .and_then(|r| crate::document_preview::Key::new(&r, 0));
+        if let Some(key) = &mut wanted
+            && self.preview_enlarged
+        {
+            key.file.edge = crate::document_preview::ENLARGED_EDGE;
+        }
+        if let (Some(old), Some(next)) = (&self.document_key, &mut wanted)
+            && old.file.path == next.file.path
+            && old.file.mtime == next.file.mtime
+            && old.file.size == next.file.size
+        {
+            next.page = old.page;
+        }
+        if self.document_key != wanted {
+            if self.document_key.as_ref().map(|k| &k.file.path)
+                != wanted.as_ref().map(|k| &k.file.path)
+            {
+                self.document_pages = None;
+            }
+            if let Some(Ok(old)) = self.document.take()
+                && let Some(image) = old.image
+            {
+                self.document_images_to_drop.push(image);
+            }
+            self.document_key = wanted.clone();
+            self.documents.request(wanted.clone());
+            self.watch_preview(wanted, cx);
+            #[cfg(feature = "benchmarks")]
+            crate::metrics::interaction(
+                "document_request",
+                serde_json::json!({"active":self.document_key.is_some(),"retained":self.document.is_some()}),
+            );
+        }
+    }
+    fn watch_preview(&mut self, key: Option<crate::document_preview::Key>, cx: &mut Context<Self>) {
+        self.preview_watchdog = if key.is_some() {
+            cx.spawn(async move |this, cx| {
+                cx.background_executor()
+                    .timer(std::time::Duration::from_secs(6))
+                    .await;
+                let _ = this.update(cx, |this, cx| {
+                    if this.document_key == key && this.document.is_none() {
+                        this.documents.request(None);
+                        this.document = Some(Err(
+                            "Preview timed out. Try again or open the document in its app".into(),
+                        ));
+                        cx.notify();
+                    }
+                });
+            })
+        } else {
+            Task::ready(())
+        };
     }
     pub(super) fn set_view(&mut self, view: View, cx: &mut Context<Self>) {
         if self.content_mode && view != View::List {
@@ -1142,7 +1172,7 @@ impl Seek {
             list.into_any_element()
         }
     }
-    fn document_page(&mut self, page: u32, cx: &mut Context<Self>) {
+    pub(super) fn document_page(&mut self, page: u32, cx: &mut Context<Self>) {
         let Some(mut key) = self.document_key.clone() else {
             return;
         };
@@ -1153,10 +1183,35 @@ impl Seek {
             self.document_images_to_drop.push(image);
         }
         self.document_key = Some(key.clone());
-        self.documents.request(Some(key));
+        self.documents.request(Some(key.clone()));
+        self.watch_preview(Some(key), cx);
         cx.notify();
     }
-    fn document_view(&self, p: crate::appearance::Palette, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn all_page(&mut self, offset: usize, cx: &mut Context<Self>) {
+        self.all_offset = offset;
+        self.all_total = None;
+        self.message = Some("Loading all locations...".into());
+        self.table.update(cx, |table, cx| {
+            table.clear_selection(cx);
+            table.scroll_to_row(0, cx);
+            let data = table.delegate_mut();
+            data.selected_many.clear();
+            data.selection = None;
+            data.rows = Arc::new(vec![]);
+            data.base_rows = Arc::new(vec![]);
+            data.empty_message = "Loading all locations...".into();
+            table.refresh(cx);
+        });
+        self.refresh_preview(cx);
+        self.submit(cx);
+        cx.notify();
+    }
+    pub(super) fn document_view(
+        &self,
+        p: crate::appearance::Palette,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let preview = match &self.document {
             Some(Ok(preview)) => preview,
             state => {
@@ -1170,22 +1225,7 @@ impl Seek {
                         "Selected document only; files up to 32 MiB.".into(),
                     ),
                 };
-                return div()
-                    .id("document-preview-state")
-                    .role(Role::Group)
-                    .aria_label(label)
-                    .h(px(150.))
-                    .flex_shrink_0()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .text_color(p.muted)
-                    .text_size(px(12.))
-                    .child(label)
-                    .tooltip(move |window, cx| {
-                        gpui_component::tooltip::Tooltip::new(detail.clone()).build(window, cx)
-                    })
-                    .into_any_element();
+                return self.document_loading(label, detail, state.is_some(), p, window, cx);
             }
         };
         let mut view = div()
@@ -1193,11 +1233,75 @@ impl Seek {
             .flex()
             .flex_col()
             .gap_2()
-            .flex_shrink_0();
+            .flex_shrink_0()
+            .when(!self.preview_enlarged, |view| {
+                view.children(self.document_navigation(p, cx))
+            });
+        if preview.info.source.starts_with("PowerPoint") {
+            let height = if self.preview_enlarged {
+                (f32::from(window.viewport_size().height) - 200.).max(120.)
+            } else {
+                270.
+            };
+            let width = if self.preview_enlarged {
+                (f32::from(window.viewport_size().width) - 80.).max(100.)
+            } else {
+                248.
+            };
+            let mut stage = div()
+                .id("presentation-stage")
+                .h(px(height))
+                .flex_shrink_0()
+                .overflow_y_scroll()
+                .flex()
+                .flex_col()
+                .gap_3();
+            if let Some(image) = &preview.image {
+                stage = stage.child(
+                    img(image.clone())
+                        .w(px(width))
+                        .h(px((height - 60.).max(100.)))
+                        .object_fit(ObjectFit::Contain)
+                        .flex_shrink_0(),
+                );
+            }
+            if let Some(text) = &preview.info.text {
+                stage = stage.child(
+                    div()
+                        .text_size(px(if self.preview_enlarged { 16. } else { 12. }))
+                        .child(text.clone()),
+                );
+            }
+            return view
+                .child(stage)
+                .child(
+                    div()
+                        .h(px(18.))
+                        .truncate()
+                        .text_size(px(10.))
+                        .text_color(p.muted)
+                        .child(if preview.image.is_some() {
+                            "Saved first-slide image and text"
+                        } else {
+                            "Slide text · formatting and artwork not reproduced"
+                        }),
+                )
+                .into_any_element();
+        }
         if let Some(image) = &preview.image {
+            let height = if self.preview_enlarged {
+                (f32::from(window.viewport_size().height) - 180.).max(100.)
+            } else {
+                270.
+            };
+            let width = if self.preview_enlarged {
+                (f32::from(window.viewport_size().width) - 100.).max(100.)
+            } else {
+                248.
+            };
             view = view.child(
                 div()
-                    .h(px(270.))
+                    .h(px(height))
                     .w_full()
                     .flex_shrink_0()
                     .flex()
@@ -1206,74 +1310,42 @@ impl Seek {
                     .overflow_hidden()
                     .child(
                         img(image.clone())
-                            .w(px(248.))
-                            .h(px(270.))
+                            .w(px(width))
+                            .h(px(height))
                             .object_fit(ObjectFit::Contain),
-                    ),
-            );
-        }
-        if preview.info.pages > 0 {
-            let page = preview.info.page;
-            let pages = preview.info.pages;
-            let label = format!("Page {} of {}", page + 1, pages);
-            view = view.child(
-                div()
-                    .id("pdf-page-navigation")
-                    .role(Role::Group)
-                    .aria_label(label.clone())
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .gap_2()
-                    .child(
-                        Button::new("pdf-previous")
-                            .ghost()
-                            .small()
-                            .icon(Glyph::ChevronLeft)
-                            .accessibility_label("Previous PDF page")
-                            .disabled(page == 0)
-                            .on_click(cx.listener(move |this, _, _, cx| {
-                                this.document_page(page.saturating_sub(1), cx)
-                            })),
-                    )
-                    .child(div().text_size(px(11.)).text_color(p.muted).child(label))
-                    .child(
-                        Button::new("pdf-next")
-                            .ghost()
-                            .small()
-                            .icon(Glyph::ChevronRight)
-                            .accessibility_label("Next PDF page")
-                            .disabled(page + 1 >= pages)
-                            .on_click(
-                                cx.listener(move |this, _, _, cx| this.document_page(page + 1, cx)),
-                            ),
                     ),
             );
         }
         if let Some(text) = &preview.info.text {
             view = view
-                .child(
-                    div()
-                        .text_size(px(11.))
-                        .text_color(p.muted)
-                        .child("Beginning of document · text only"),
-                )
+                .child(div().text_size(px(11.)).text_color(p.muted).child(
+                    if preview.info.source.starts_with("PowerPoint") {
+                        "Slide text · formatting and artwork not reproduced"
+                    } else {
+                        "Beginning of document · text only"
+                    },
+                ))
                 .child(
                     div()
                         .id("word-text-preview")
                         .role(Role::Group)
                         .aria_label(text.clone())
-                        .max_h(px(320.))
+                        .max_h(px(if self.preview_enlarged {
+                            (f32::from(window.viewport_size().height) - 240.).max(100.)
+                        } else {
+                            320.
+                        }))
                         .overflow_y_scroll()
-                        .text_size(px(12.))
+                        .text_size(px(if self.preview_enlarged { 16. } else { 12. }))
                         .child(text.clone()),
                 )
-                .child(
-                    div()
-                        .text_size(px(10.))
-                        .text_color(p.muted)
-                        .child("Up to 100 lines / 12,000 characters."),
-                );
+                .child(div().text_size(px(10.)).text_color(p.muted).child(
+                    if preview.info.source.starts_with("PowerPoint") {
+                        "Up to 24,000 characters per slide."
+                    } else {
+                        "Up to 100 lines / 12,000 characters."
+                    },
+                ));
         }
         if let Some(sheet) = &preview.info.sheet {
             view = view
@@ -1406,6 +1478,18 @@ impl Seek {
             .gap_3()
             .overflow_y_scroll();
         if let Some(row) = self.selected(cx) {
+            panel = panel.child(
+                div().w_full().flex().justify_center().child(
+                    super::settings_view::control("enlarge-preview", "Enlarge preview", p, cx)
+                        .w(px(158.))
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.preview_enlarged = true;
+                            this.refresh_preview(cx);
+                            this.preview_focus.focus(window, cx);
+                            cx.notify();
+                        })),
+                ),
+            );
             let details = match self
                 .cache
                 .lock()
@@ -1421,7 +1505,7 @@ impl Seek {
                         || crate::document_preview::Key::new(&row, 0).is_some(),
                     |panel| {
                         if crate::document_preview::Key::new(&row, 0).is_some() {
-                            panel.child(self.document_view(p, cx))
+                            panel.child(self.document_view(p, window, cx))
                         } else {
                             panel.child(
                                 div()
@@ -1537,6 +1621,8 @@ impl Seek {
 impl Render for Seek {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let _profile = crate::metrics::span("shell_render");
+        // Restore/programmatic selection changes must also request a preview.
+        self.sync_document_preview(cx);
         for image in self.document_images_to_drop.drain(..) {
             let _ = window.drop_image(image);
         }
@@ -1666,7 +1752,7 @@ impl Render for Seek {
             .text_color(p.muted)
             .child(format!(
                 "{count} items, {selected_count} selected{}",
-                if !self.content_mode && count == 200 && (self.largest.is_some() || self.scope.is_none() || !self.input.read(cx).value().trim().is_empty()) {
+                if self.all_total.is_none() && !self.content_mode && count == 200 && (self.largest.is_some() || self.scope.is_none() || !self.input.read(cx).value().trim().is_empty()) {
                     " · showing top 200"
                 } else {
                     ""
@@ -1778,6 +1864,7 @@ impl Render for Seek {
                     }
                 }))
                 .child(contents)
+                .children(self.all_pagination(p, cx))
                 .child(
                     div()
                         .h(px(30.))
@@ -1802,7 +1889,7 @@ impl Render for Seek {
             .overflow_hidden()
             .flex()
             .flex_col()
-            .when(self.content_mode, |d| {
+            .when(self.content_mode && crate::location::address(self.input.read(cx).value().as_str()).is_none(), |d| {
                 let paths=&self.preferences.content_locations;
                 let names=paths.iter().filter_map(|p|p.file_name()).map(|n|n.to_string_lossy()).collect::<Vec<_>>();
                 let locations=if names.len()<=2 {names.join(" and ")} else {format!("{} locations",names.len())};
@@ -2011,11 +2098,15 @@ impl Render for Seek {
                     this.file_action(super::daily::Action::DeletePermanently, None, window, cx);
                     cx.stop_propagation();
                 }))
-                .child(self.toolbar(p, window, cx))
-                .child(self.tab_strip(p, cx))
-                .child(body);
+                .when(!self.preview_enlarged, |view| view
+                    .child(self.toolbar(p, window, cx))
+                    .child(self.tab_strip(p, cx))
+                    .child(body));
         if self.settings {
             view = view.child(self.settings_sheet(p, cx));
+        }
+        if self.preview_enlarged {
+            view = view.child(self.enlarged_preview(p, window, cx));
         }
         view.child(self.daily_overlays(window, cx))
     }

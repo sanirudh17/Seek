@@ -17,12 +17,16 @@ use std::sync::{Arc, Mutex};
 use std::{path::PathBuf, sync::atomic::Ordering};
 #[path = "daily.rs"]
 mod daily;
+#[path = "enlarged_preview.rs"]
+mod enlarged_preview;
 #[path = "info_resize.rs"]
 mod info_resize;
 #[path = "interface.rs"]
 mod interface;
 #[path = "permanent_delete.rs"]
 mod permanent_delete;
+#[path = "preview_controls.rs"]
+mod preview_controls;
 #[path = "settings_view.rs"]
 mod settings_view;
 #[path = "tabs.rs"]
@@ -437,9 +441,15 @@ pub struct Seek {
     extra: Arc<Mutex<std::collections::HashSet<media::Key>>>,
     view: View,
     panel: bool,
+    preview_enlarged: bool,
+    preview_focus: FocusHandle,
+    all_offset: usize,
+    all_total: Option<usize>,
+    preview_watchdog: Task<()>,
     info_resizing: bool,
     documents: crate::document_preview::Worker,
     document_key: Option<crate::document_preview::Key>,
+    document_pages: Option<(u32, bool)>,
     document: Option<Result<crate::document_preview::Preview, String>>,
     document_images_to_drop: Vec<Arc<RenderImage>>,
     sort_open: bool,
@@ -598,6 +608,8 @@ impl Seek {
                 if matches!(event, InputEvent::Change) {
                     let _profile=crate::metrics::span("input_change");
                     if this.restoring_input.take().is_some_and(|text| text == this.input.read(cx).value().as_str()) { return; }
+                    this.all_offset=0;
+                    this.all_total=None;
                     this.pending_tab_restore = None;
                     if !this.input.read(cx).value().trim().is_empty(){this.largest=None;}
                     this.table.update(cx, |table, _| {
@@ -608,6 +620,7 @@ impl Seek {
                     this.refresh_suggestions(window,cx);
                     this.submit(cx);
                 } else if let InputEvent::PressEnter { secondary, .. } = event {
+                    if this.open_address(window, cx) { return; }
                     this.open_selected(*secondary, cx);
                     this.remember(cx);
                 }
@@ -659,9 +672,11 @@ impl Seek {
             while let Ok(reply)=document_replies.recv().await {
                 if this.update_in(cx,|this,window,cx| {
                     if !this.documents.accepts(&reply) {return;}
+                    this.preview_watchdog=Task::ready(());
                     #[cfg(feature="benchmarks")]
                     crate::metrics::interaction("document_preview",serde_json::json!({"name":reply.key.file.path.file_name().map(|n|n.to_string_lossy()),"page":reply.key.page,"elapsed_ms":reply.elapsed_ms,"success":reply.result.is_ok(),"source":reply.result.as_ref().ok().map(|p|&p.info.source),"pages":reply.result.as_ref().ok().map(|p|p.info.pages),"dimensions":reply.result.as_ref().ok().map(|p|(p.info.width,p.info.height)),"sheet_rows":reply.result.as_ref().ok().and_then(|p|p.info.sheet.as_ref().map(|s|s.rows.len()))}));
                     if let Some(Ok(old))=this.document.take() && let Some(image)=old.image {let _=window.drop_image(image);}
+                    if let Ok(preview)=&reply.result {this.document_pages=(preview.info.pages>0).then_some((preview.info.pages,preview.info.source.starts_with("PowerPoint")));}
                     this.document=Some(reply.result);cx.notify();
                 }).is_err(){break;}
             }
@@ -773,9 +788,15 @@ impl Seek {
             visible,
             extra,
             panel: true,
+            preview_enlarged: false,
+            preview_focus: cx.focus_handle(),
+            all_offset: 0,
+            all_total: None,
+            preview_watchdog: Task::ready(()),
             info_resizing: false,
             documents,
             document_key: None,
+            document_pages: None,
             document: None,
             document_images_to_drop: vec![],
             sort_open: false,
@@ -813,10 +834,27 @@ impl Seek {
     }
     fn submit(&mut self, cx: &mut Context<Self>) {
         self.content_failures.clear();
+        let text = self.input.read(cx).value().to_string();
+        if crate::location::address(&text).is_some() {
+            // Cancel any previous scan, but do not send this address to either
+            // filename or document-content search while the user is typing.
+            self.backend.generation.fetch_add(1, Ordering::Relaxed);
+            self.message = Some("Press Enter to open this folder".into());
+            self.table.update(cx, |table, cx| {
+                let data = table.delegate_mut();
+                data.rows = Arc::new(vec![]);
+                data.base_rows = Arc::new(vec![]);
+                data.empty_message = "Press Enter to open this folder".into();
+                table.refresh(cx);
+            });
+            cx.notify();
+            return;
+        }
         self.message = self.content_mode.then(|| "Searching contents?".into());
         let (started, native_input) = crate::metrics::input_start();
         let generation = self.backend.generation.fetch_add(1, Ordering::Relaxed) + 1;
         let _ = self.backend.tx.send(Command::Search(Request {
+            all_offset: self.all_offset,
             text: self.input.read(cx).value().to_string(),
             scope: self.scope.clone(),
             show_hidden: self.show_hidden,
@@ -885,6 +923,7 @@ impl Seek {
             self.message = None;
         }
         self.status = update.status;
+        self.all_total = update.all_total;
         self.content_failures = update.content_failures;
         if self.cache_epoch != update.cache_epoch {
             self.cache_epoch = update.cache_epoch;
@@ -1055,6 +1094,8 @@ impl Seek {
         }
     }
     fn scope_to(&mut self, scope: Option<PathBuf>, window: &mut Window, cx: &mut Context<Self>) {
+        self.all_offset = 0;
+        self.all_total = None;
         self.pending_tab_restore = None;
         self.content_mode = false;
         self.largest = None;
@@ -1077,6 +1118,20 @@ impl Seek {
         self.submit(cx);
         self.remember(cx);
         cx.notify();
+    }
+    fn open_address(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        let text = self.input.read(cx).value().to_string();
+        let Some(result) = crate::location::address(&text) else {
+            return false;
+        };
+        match result {
+            Ok(path) => self.scope_to(Some(path), window, cx),
+            Err(error) => {
+                self.message = Some(error);
+                cx.notify();
+            }
+        }
+        true
     }
     fn history(&mut self, direction: isize, window: &mut Window, cx: &mut Context<Self>) {
         self.history_position = self
@@ -1189,6 +1244,20 @@ impl Seek {
         if window.has_active_dialog(cx) {
             return;
         }
+        if self.preview_enlarged {
+            self.enlarged_key(&event.keystroke.key, window, cx);
+            if event.keystroke.modifiers.control
+                || matches!(
+                    event.keystroke.key.as_str(),
+                    "escape" | "up" | "down" | "left" | "right" | "delete"
+                )
+                || event.keystroke.key == "enter"
+                    && self.table.read(cx).focus_handle(cx).is_focused(window)
+            {
+                cx.stop_propagation();
+            }
+            return;
+        }
         #[cfg(feature = "benchmarks")]
         crate::metrics::interaction(
             "key_route",
@@ -1261,6 +1330,10 @@ impl Seek {
         let input_focused = self.input.read(cx).focus_handle(cx).is_focused(window);
         let list_focused = self.table.read(cx).focus_handle(cx).is_focused(window);
         if !(input_focused || list_focused || modifiers.control && key == "l") {
+            return;
+        }
+        if key == "enter" && input_focused && self.open_address(window, cx) {
+            cx.stop_propagation();
             return;
         }
         if key == "enter" && input_focused && self.suggestions.is_some() {

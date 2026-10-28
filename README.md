@@ -17,7 +17,7 @@ Find a file, inspect it, and get back to work.</p>
 
 Seek searches filenames using a local index and renders a compact native GPUI interface. It runs as your ordinary Windows account. There is no account sign-in, AI model, telemetry service, tray, global hotkey, app autostart or resident updater process. Closing the last tab quits Seek. The optional indexing helper is a separate, explicitly installed service.
 
-**1.0.1** includes tabs, folder browsing, file actions, filename/type filters, on-demand content search, and previews in the resizable information panel. The default sidebar uses the current account's Windows Known Folders, including redirected OneDrive locations. Your index and settings are never part of the download. See [CHANGELOG](CHANGELOG.md).
+**1.0.2** includes tabs, folder browsing, file actions, filename/type filters, on-demand content search, and previews in the resizable information panel. The default sidebar uses the current account's Windows Known Folders, including redirected OneDrive locations. Your index and settings are never part of the download. See [CHANGELOG](CHANGELOG.md).
 
 ## Contents
 
@@ -35,7 +35,7 @@ Seek searches filenames using a local index and renders a compact native GPUI in
 
 ## Download and install
 
-Download **[Seek-1.0.1-Setup-x64.exe](https://github.com/sanirudh17/Seek/releases/download/v1.0.1/Seek-1.0.1-Setup-x64.exe)** from [Releases](https://github.com/sanirudh17/Seek/releases/latest). Requires x64 Windows; tested on Windows 11. Windows 10 and physical HDR/mixed-DPI setups remain unverified.
+Download **[Seek-1.0.2-Setup-x64.exe](https://github.com/sanirudh17/Seek/releases/download/v1.0.2/Seek-1.0.2-Setup-x64.exe)** from [Releases](https://github.com/sanirudh17/Seek/releases/latest). Requires x64 Windows; tested on Windows 11. Windows 10 and physical HDR/mixed-DPI setups remain unverified.
 
 1. Double-click the installer normally, without **Run as administrator**.
 2. Accept the license. If Seek is already installed, close it and approve replacing its program files; saved data is retained.
@@ -44,12 +44,12 @@ Download **[Seek-1.0.1-Setup-x64.exe](https://github.com/sanirudh17/Seek/release
 
 The program installs in `%LOCALAPPDATA%\Programs\Seek` and registers in **Settings > Apps > Installed apps** for this account only, with a native uninstaller. It does not install the helper service. Existing program files and shortcuts require replacement approval; saved data is retained. The package is unsigned, so Windows may display reputation warnings, and managed computers may restrict the bundled PowerShell install scripts.
 
-The separate `Seek-1.0.1-windows-x64.zip` asset supports the existing in-app updater and portable use. The normal download is the **Setup EXE**. Portable saved data still goes under your current account's `%LOCALAPPDATA%\Seek`, not beside the executable.
+The separate `Seek-1.0.2-windows-x64.zip` asset supports the existing in-app updater and portable use. The normal download is the **Setup EXE**. Portable saved data still goes under your current account's `%LOCALAPPDATA%\Seek`, not beside the executable.
 
 To verify the download against the separately supplied `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash .\Seek-1.0.1-Setup-x64.exe -Algorithm SHA256
+Get-FileHash .\Seek-1.0.2-Setup-x64.exe -Algorithm SHA256
 ```
 
 ## Everyday use
@@ -108,6 +108,13 @@ Only configured content folders are read. Secret/key paths and files, offline/un
 
 The information panel previews images/videos, PDF pages with page controls, the first XLSX sheet as a data table, and a large DOCX shell thumbnail or beginning-of-text fallback. Office is not required. XLSX shows **data, not formatting**, with cached formula values and visible row/column/cell limits. Legacy `.doc` and `.xls` formats are not supported as document previews. Document previews have a **32 MiB input cap and four-second worker limit**; broken, encrypted, unsupported and over-limit documents can show **Preview unavailable**. Previews load only for the current selection; list rows keep icons.
 
+### Folder addresses and enlarged previews
+
+Type `%TEMP%`, `%USERPROFILE%`, `%APPDATA%`, a full drive/UNC folder path or `~`, then press **Enter** or select **Open folder**. This works in Name and Content mode and navigates directly instead of scanning document text. The folder must exist and be accessible to your account.
+
+Select a document and choose **Enlarge preview**. **Up/Down** selects the previous/next file, **Left/Right** changes page or slide, and **Escape** returns to the information panel. In the panel, use the page arrows. All locations includes files and folders in **500-item pages**, with the total and Previous/Next controls at the bottom.
+
+Modern PowerPoint (`.pptx`, `.pptm`, `.ppsx`) displays saved first-slide artwork where available and ordered slide text. Other slides show text, not a reproduction of their graphical layouts. Legacy `.ppt` can use a Windows thumbnail provider but has no slide-text parser. PDF raster frames are cached only in memory (four entries / 24 MiB); changing a file or closing the panel invalidates them. The selected-PDF host exits after two idle seconds and has the same four-second request limit. Enlarged PDFs use a larger raster than panel previews.
 ## Settings and saved data
 
 | Setting | Purpose |
@@ -162,7 +169,7 @@ Use Rust **1.96.0 x86_64-pc-windows-msvc**, Visual Studio 2022 Build Tools with 
 # Clone the public source and select the release.
 git clone https://github.com/sanirudh17/Seek.git
 cd Seek
-git checkout v1.0.1
+git checkout v1.0.2
 
 # Install the pinned compiler and developer checks.
 rustup toolchain install 1.96.0-x86_64-pc-windows-msvc --component rustfmt --component clippy

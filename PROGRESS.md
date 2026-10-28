@@ -1,3 +1,8 @@
+# October 28 — 1.0.2 release preparation
+
+The user approved complete preview/navigation verification, a version bump, native Setup EXE and GitHub publication under `sanirudh17`. The prepared source starts from published `main`, preserving the native-uninstaller hotfix. Commit identity is the owner's explicitly supplied email. No personal preview documents or screenshots are included.
+
+Source checks: 73 app tests pass concurrently after correcting the folder test to await a complete browse response rather than index-ready progress; engine tests pass. The previous follow-up's owned-profile Light/Dark checks and latency measurements are documented in [preview report](docs/PREVIEW_POLISH_2026_10_27.md). Final optimized-build/installer checks and fresh release downloads are still pending; their results will be recorded before publication. Historical build holds below are superseded by the current approval.
 # Seek 1.0.1 - public release published
 
 Installer hotfix: the original Setup EXE could leave NSIS's error flag set after checking for an optional test-only argument, then report a false failure after writing the uninstaller. The current account's Installed apps registration was repaired to point to its existing native `Uninstall.exe`; saved data was not changed. A rebuilt Setup EXE passed all 23 owned-fixture checks and replaced the published Setup download. Its hash and new public-download verification are recorded below.

@@ -286,6 +286,96 @@ impl Engine {
         hits.truncate(q.limit);
         Ok(hits)
     }
+    /// Complete newest-first namespace, materializing paths only for one page.
+    /// The temporary ordinal list is 8 bytes per eligible base entry; it does
+    /// not retain formatted rows or a duplicate full-path list for the drive.
+    pub fn all_locations_page(
+        &self,
+        q: &Query,
+        offset: usize,
+        count: usize,
+    ) -> Result<(usize, Vec<Found>), String> {
+        if q.cancelled() {
+            return Err("Cancelled".into());
+        }
+        let guard = self.shared.live.read().unwrap();
+        let live = guard.as_ref().ok_or("Building index")?;
+        let overlay: Vec<_> = live.over.iter().collect();
+        let mut order = Vec::new();
+        let mut path = Vec::new();
+        for i in 1..live.base.n {
+            if i % 4096 == 0 && q.cancelled() {
+                return Err("Cancelled".into());
+            }
+            if live.is_dead(i as u32) {
+                continue;
+            }
+            let (kind, size, mtime) = live.attributes(i);
+            if kind & FLAG_SYNTH != 0 {
+                continue;
+            }
+            // match_path handles hidden flags and user exclusions consistently
+            // with filename search, never omitting a class of readable files.
+            if q.hide_hidden_system && kind & (walk::FLAG_HIDDEN | walk::FLAG_SYSTEM) != 0 {
+                continue;
+            }
+            if !q.excluded_paths.is_empty() {
+                live.base.path(i, &mut path);
+                if q.match_path(&path, kind, size, mtime).is_none() {
+                    continue;
+                }
+            }
+            order.push((std::cmp::Reverse(mtime), i as u32));
+        }
+        for (i, (path, entry)) in overlay.iter().enumerate() {
+            if q.cancelled() {
+                return Err("Cancelled".into());
+            }
+            if entry.kind & FLAG_SYNTH == 0
+                && q.match_path(path, entry.kind, entry.size, entry.mtime)
+                    .is_some()
+            {
+                order.push((std::cmp::Reverse(entry.mtime), (live.base.n + i) as u32));
+            }
+        }
+        let total = order.len();
+        let start = offset.min(total);
+        let end = start.saturating_add(count).min(total);
+        if start == end {
+            return Ok((total, vec![]));
+        }
+        if start > 0 {
+            order.select_nth_unstable(start);
+        }
+        let rest = &mut order[start..];
+        let take = end - start;
+        if take < rest.len() {
+            rest.select_nth_unstable(take);
+        }
+        rest[..take].sort_unstable();
+        let rows = rest[..take]
+            .iter()
+            .map(|(_, ordinal)| {
+                let i = *ordinal as usize;
+                let (kind, size, mtime) = if i < live.base.n {
+                    live.base.path(i, &mut path);
+                    live.attributes(i)
+                } else {
+                    let (p, e) = overlay[i - live.base.n];
+                    path.clone_from(p);
+                    (e.kind, e.size, e.mtime)
+                };
+                Found {
+                    path: crate::paths::native(&path),
+                    kind,
+                    size,
+                    mtime,
+                    score: 0,
+                }
+            })
+            .collect();
+        Ok((total, rows))
+    }
     /// Refresh a bounded set of already displayed hits from the live index.
     /// This allows recent-file views to retain their order without retaining
     /// deleted files or doing a directory walk.

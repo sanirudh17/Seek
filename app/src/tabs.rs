@@ -3,6 +3,7 @@ use super::*;
 
 #[derive(Clone)]
 pub(super) struct Tab {
+    all_offset: usize,
     id: usize,
     text: String,
     scope: Option<PathBuf>,
@@ -23,6 +24,7 @@ pub(super) struct Tab {
 impl Tab {
     pub fn initial(view: View) -> Self {
         Self {
+            all_offset: 0,
             id: 0,
             text: String::new(),
             scope: None,
@@ -166,6 +168,7 @@ impl Seek {
     pub(super) fn tabs_available(&self, window: &mut Window, cx: &mut App) -> bool {
         use gpui_component::WindowExt;
         !self.settings
+            && !self.preview_enlarged
             && self.edit.is_none()
             && self.permanent_delete.is_none()
             && !window.has_active_dialog(cx)
@@ -173,6 +176,7 @@ impl Seek {
     fn capture_tab(&self, cx: &App) -> Tab {
         let table = self.table.read(cx);
         Tab {
+            all_offset: self.all_offset,
             id: self.tabs[self.active_tab].id,
             created: self.tabs[self.active_tab].created,
             text: self.input.read(cx).value().to_string(),
@@ -233,6 +237,8 @@ impl Seek {
         let mut tab = self.tabs[index].clone();
         self.active_tab = index;
         self.scope = tab.scope.clone();
+        self.all_offset = tab.all_offset;
+        self.all_total = None;
         self.view = tab.view;
         self.content_mode = tab.content;
         self.largest = tab.largest;

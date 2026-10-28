@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.2 - 2026-10-28
+
+- Fixed PDF preview stalls with bounded renderer output collection, cancellation, timeout and Retry.
+- Added an enlarged reader with a dedicated toolbar, fixed page controls, Up/Down file navigation, Left/Right page navigation and Escape to close.
+- Reduced PDF page-turn overhead with native image decoding, a short-lived selected-PDF renderer and a bounded memory-only cache with adjacent-page prefetch. Cached Word previews are reused too.
+- Added modern PowerPoint saved-first-slide artwork and ordered slide-text previews. Full graphical rendering of every slide is not supported.
+- All locations now includes files and folders across 500-item pages, with the complete count and pagination controls at the bottom.
+- Added Explorer-style folder addresses such as `%TEMP%`, `%USERPROFILE%`, `%APPDATA%`, drive/UNC paths and `~`. Press Enter or choose Open folder; addresses bypass Name and Content scans.
+- Centered Enlarge preview and reused the Settings glass-button style in both themes. Kept presentation controls in a fixed position and removed underlying app controls from the enlarged reader.
+- Preserved the 1.0.1 installer hotfix, per-user installation, optional desktop shortcut and saved-data retention on uninstall. The recommended download is the Setup EXE; a separate ZIP supports existing in-app updates.
+
+Preview limits remain 32 MiB per document and four seconds per request. Performance depends on the document and system; these changes do not establish a cold-cache startup or 16 ms input-to-present guarantee. No framework version updates.
+
 ## 1.0.1 - 2026-10-20
 
 - Added a per-user Setup EXE and native uninstaller, with an optional desktop shortcut and saved-data retention by default. The helper is never installed automatically.

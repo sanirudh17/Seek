@@ -432,6 +432,24 @@ impl Seek {
     pub(super) fn refresh_suggestions(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let text = self.input.read(cx).value().to_string();
         let word = text.trim();
+        if crate::location::address(word).is_some() {
+            let owner = cx.entity().downgrade();
+            let menu = PopupMenu::build(window, cx, move |menu, window, _| {
+                menu_style(menu, window).item(
+                    PopupMenuItem::new(format!("Open folder {word}")).on_click(
+                        move |_, window, cx| {
+                            let _ = owner.update(cx, |this, cx| {
+                                this.open_address(window, cx);
+                            });
+                        },
+                    ),
+                )
+            });
+            self.suggestion_width = px(420.);
+            self.attach_suggestions(menu, Point::default(), window, cx);
+            self.suggestions_at_search = true;
+            return;
+        }
         if self.content_mode
             || word.is_empty()
             || word.contains(':')
@@ -490,6 +508,9 @@ impl Seek {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if enabled && self.open_address(window, cx) {
+            return;
+        }
         self.content_mode = enabled;
         self.largest = None;
         self.suggestions = None;

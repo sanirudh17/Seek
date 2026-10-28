@@ -28,6 +28,7 @@ pub struct Row {
 }
 #[derive(Clone, Default)]
 pub struct Request {
+    pub all_offset: usize,
     pub text: String,
     pub scope: Option<PathBuf>,
     pub show_hidden: bool,
@@ -44,6 +45,7 @@ pub struct Request {
 impl Request {
     fn same_view(&self, other: &Self) -> bool {
         self.text == other.text
+            && self.all_offset == other.all_offset
             && self.scope == other.scope
             && self.show_hidden == other.show_hidden
             && self.exclusions == other.exclusions
@@ -75,6 +77,7 @@ pub struct HelperState {
     pub message: Option<String>,
 }
 pub struct Update {
+    pub all_total: Option<usize>,
     pub content_failures: Vec<crate::content::Failure>,
     pub rows: Vec<Row>,
     pub status: Status,
@@ -126,6 +129,7 @@ pub fn start(
                 Ok(engine) => engine,
                 Err(error) => {
                     let _ = result_tx.force_send(Update {
+                        all_total: None,
                         content_failures:vec![],
                         rows: vec![],
                         status: Status {
@@ -251,6 +255,7 @@ pub fn start(
                 }
                 let work_started = Instant::now();
                 let mut dates = std::collections::HashMap::new();
+                let mut all_total=None;
                 let mut rows = if !request.content && request.text.trim().is_empty() && request.largest.is_none() && let Some(folder)=request.scope.as_ref() {
                     // A direct folder listing is independent of a long catch-up index write lock.
                     // Keep its cached rows while a finite refresh validates this visit.
@@ -276,6 +281,7 @@ pub fn start(
                             let signature=signature.finish();
                             let progress_only=signature==published_rows;
                             let update=Update {
+                                all_total:None,
                                 content_failures: partial.failures.clone(),
                                 rows: if progress_only {vec![]}else{partial.rows.clone()}, status: status.clone(), generation:request.generation,
                                 message:Some(partial.message()),
@@ -301,13 +307,6 @@ pub fn start(
                     );
                     match parsed {
                         Ok(mut query) => {
-                            if request.text.trim().is_empty()
-                                && request.scope.is_none()
-                                && query.scope.is_none()
-                                && query.kind.is_none()
-                            {
-                                query.kind = Some(seek_engine::walk::KIND_FILE);
-                            }
                             query.limit = query.limit.min(200);
                             if !request.text.contains("limit:") {
                                 query.limit = 200;
@@ -321,8 +320,13 @@ pub fn start(
                             query.hide_hidden_system = !request.show_hidden;
                             query.excluded_paths = request.exclusions.iter().map(|p| {let mut root=seek_engine::paths::internal(p);while root.last()==Some(&b'/'){root.pop();}root}).collect();
                             query.cancellation = Some((generation.clone(), request.generation));
-                            let search = if let Some(folders)=request.largest {
-                                Some(engine.largest(&query,folders))
+                            let search = if request.text.trim().is_empty() && request.scope.is_none() && request.largest.is_none() {
+                                match engine.all_locations_page(&query,request.all_offset,500) {
+                                    Ok((total,files))=>{all_total=Some(total);message=Some(format!("All locations · {total} items"));Some(Ok(files))},
+                                    Err(error)=>Some(Err(error)),
+                                }
+                            }else if let Some(folders)=request.largest {
+                                Some(Ok(engine.largest(&query,folders)))
                             }else if request.text.trim().is_empty() {
                                 request.scope.as_ref().map(|folder| {
                                     #[cfg(feature = "benchmarks")]
@@ -335,10 +339,10 @@ pub fn start(
                                     #[cfg(not(feature = "benchmarks"))]
                                     let mut files = engine.children(folder, request.show_hidden, &request.exclusions);
                                     files.sort_unstable_by(|a, b| b.mtime.cmp(&a.mtime).then_with(|| a.path.cmp(&b.path)));
-                                    files
+                                    Ok(files)
                                 })
                             } else { None };
-                            match search.map_or_else(|| engine.search(&query), Ok) {
+                            match search.unwrap_or_else(|| engine.search(&query)) {
                                 Ok(files) => {
                                     let files = if request.text.trim().is_empty() && request.largest.is_none() {
                                         if request.scope.is_some() {
@@ -346,12 +350,7 @@ pub fn start(
                                             recent_files = stable.clone();
                                             stable
                                         } else {
-                                        let mut stable = engine.refresh_results(&recent_files, &query);
-                                        let mut seen: std::collections::HashSet<_> = stable.iter().map(|f| f.path.clone()).collect();
-                                        for file in files { if seen.insert(file.path.clone()) { stable.push(file); } }
-                                        if request.scope.is_none() { stable.truncate(query.limit); }
-                                        recent_files = stable.clone();
-                                        stable
+                                        recent_files.clear();files
                                         }
                                     } else { recent_files.clear(); files };
                                     files.into_iter().map(|file| {
@@ -402,6 +401,7 @@ pub fn start(
                 let progress_only=message.as_deref()==Some("Indexing this folder...");
                 if result_tx
                     .force_send(Update {
+                        all_total,
                         content_failures: if request.content {content_failures.clone()} else {vec![]},
                         rows,
                         status,
@@ -1015,7 +1015,7 @@ mod tests {
             loop {
                 let update = updates.recv_blocking().unwrap();
                 assert!(update.status.error.is_none(), "{:?}", update.status.error);
-                if update.status.ready && update.generation == id {
+                if update.status.ready && update.generation == id && !update.progress_only {
                     break update.rows;
                 }
             }

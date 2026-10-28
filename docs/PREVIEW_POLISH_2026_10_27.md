@@ -1,3 +1,5 @@
+> Historical implementation report. Earlier build holds are superseded by the approved [1.0.2 release](RELEASE_1_0_2.md).
+
 # Preview polish and navigation checks — October 27
 
 The test app now centers the compact Enlarge preview button. Following user review, it reuses the exact Settings button component in both themes: subtle glass gradient, quiet border, matching hover/pressed states and eight-pixel corners. The earlier high-contrast Dark override was removed. The enlarged reader has a dedicated toolbar, fixed page controls and no underlying application controls. Presentation controls retain their position across slides. All locations pagination is at the bottom, with grouped counts and native buttons.

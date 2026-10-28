@@ -1,3 +1,10 @@
+# October 28 — Seek 1.0.2 published and verified
+
+[Seek 1.0.2](https://github.com/sanirudh17/Seek/releases/tag/v1.0.2) is public. GitHub CLI authenticated as `sanirudh17`; GitHub recognizes the requested `sanirudh1017@gmail.com` commit identity as that account. Exact clean build source/tag: `179e236`. The native Setup EXE, updater ZIP and checksums were freshly downloaded without authentication and match local artifacts. The downloaded EXE passed 23 native installer checks again.
+
+148 regular Rust tests, strict Clippy, 44 desktop checks per theme, 23 installer/21 package/seven updater checks passed. PDF panel/enlarged paging, digital/scanned file switching, Word/PowerPoint views, maximize/restore, sidebar variants, complete pagination, environment-folder navigation, tabs and normal exit were covered in owned profiles. Live Settings Check now reports 1.0.2 up to date. No production installation/data/helper change.
+
+Run **Seek-1.0.2-Setup-x64.exe**; close Seek and install normally. Saved data is retained during replacement. [Changelog](CHANGELOG.md), [release verification and remaining limits](docs/RELEASE_1_0_2.md), [measurements](docs/benchmarks/release-1.0.2.json). PowerPoint remains saved first-slide artwork plus slide text; true cold-cache launch, a new full input-to-present p95, physical HDR/mixed DPI and a second Windows account remain unverified.
 # October 28 — 1.0.2 release preparation
 
 The user approved complete preview/navigation verification, a version bump, native Setup EXE and GitHub publication under `sanirudh17`. The prepared source starts from published `main`, preserving the native-uninstaller hotfix. Commit identity is the owner's explicitly supplied email. No personal preview documents or screenshots are included.

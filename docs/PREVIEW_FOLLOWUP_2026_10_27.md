@@ -1,3 +1,5 @@
+> Historical implementation report. Earlier build holds are superseded by the approved [1.0.2 release](RELEASE_1_0_2.md).
+
 # Preview and navigation follow-up — awaiting app-build approval
 
 The changes below are source and test-harness verified. The normal debug/release app, installed program and release assets were not rebuilt or replaced. No version bump, installer, publication or framework update was performed.

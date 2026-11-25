@@ -82,6 +82,10 @@ pub struct HelperState {
     pub busy: bool,
     pub message: Option<String>,
 }
+/// A remembered All locations page: offset, hidden shown, exclusions,
+/// total and rows.
+type AllPage = (usize, bool, Vec<PathBuf>, usize, Vec<Found>);
+
 pub struct Update {
     pub all_total: Option<usize>,
     pub content_failures: Vec<crate::content::Failure>,
@@ -185,6 +189,10 @@ pub fn start(
             let mut content_cache: Option<(Vec<Row>, String)> = None;
             let mut content_failures = Vec::new();
             let mut removed_files=Vec::<Found>::new();
+            // The last All locations page (offset, hidden, exclusions, total,
+            // rows): shown at once when All locations opens again, while the
+            // index is asked afresh (which can wait while it writes changes).
+            let mut all_cache: Option<AllPage> = None;
             let mut browse = crate::browse::Cache::new(tx.clone());
             let mut startup_locations=favorites.iter().filter(|(_,folder)|roots.iter().any(|root|crate::file_changes::under_any(folder,std::slice::from_ref(root)))).cloned().collect::<Vec<_>>();
             startup_locations.extend(roots.iter().map(|root|(root.display().to_string(),root.clone())));
@@ -342,8 +350,33 @@ pub fn start(
                             query.excluded_paths = request.exclusions.iter().map(|p| {let mut root=seek_engine::paths::internal(p);while root.last()==Some(&b'/'){root.pop();}root}).collect();
                             query.cancellation = Some((generation.clone(), request.generation));
                             let search = if request.text.trim().is_empty() && request.scope.is_none() && request.largest.is_none() {
+                                if let Some((offset, hidden, exclusions, total, files)) = &all_cache
+                                    && *offset == request.all_offset
+                                    && *hidden == request.show_hidden
+                                    && *exclusions == request.exclusions
+                                {
+                                    let mut dates = std::collections::HashMap::new();
+                                    let _ = result_tx.force_send(Update {
+                                        all_total: Some(*total),
+                                        content_failures: vec![],
+                                        rows: files.iter().cloned().map(|file| Row::with_dates(file, &mut dates)).collect(),
+                                        status: status.clone(),
+                                        generation: request.generation,
+                                        message: Some(format!("All locations · {total} items")),
+                                        started: None,
+                                        native_input: request.native_input,
+                                        favorites: favorites.clone(),
+                                        roots: roots.clone(),
+                                        helper: helper.clone(),
+                                        children: Default::default(),
+                                        cache_epoch,
+                                        progress_only: false,
+                                    });
+                                }
                                 match engine.all_locations_page(&query,request.all_offset,500) {
-                                    Ok((total,files))=>{all_total=Some(total);message=Some(format!("All locations · {total} items"));Some(Ok(files))},
+                                    Ok((total,files))=>{
+                                        all_cache = Some((request.all_offset, request.show_hidden, request.exclusions.clone(), total, files.clone()));
+                                        all_total=Some(total);message=Some(format!("All locations · {total} items"));Some(Ok(files))},
                                     Err(error)=>Some(Err(error)),
                                 }
                             }else if let Some(folders)=request.largest {

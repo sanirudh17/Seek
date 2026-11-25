@@ -283,6 +283,9 @@ fn main() {
                     let backend = backend.clone();
                     move |cx, _| {
                         if cx.windows().is_empty() {
+                            // A Seek started from now on waits for this one
+                            // to finish saving and opens its own window.
+                            instance::mark_closing();
                             // Save the index as it is now, so agent tools that
                             // read it while Seek is closed see this session's
                             // files, not the ones from the last full build.

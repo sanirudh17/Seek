@@ -469,6 +469,7 @@ impl Seek {
         }
         div()
             .id("worktrees-page")
+            .track_focus(&self.page_focus)
             .role(Role::Region)
             .aria_label("Worktrees")
             .flex_1()

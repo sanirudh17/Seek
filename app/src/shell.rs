@@ -830,6 +830,9 @@ pub struct Seek {
     settings: bool,
     settings_tab: usize,
     settings_focus: FocusHandle,
+    /// Holds focus on the Storage and Worktrees pages, where no control
+    /// takes it, so Ctrl+K and other shortcuts still reach Seek.
+    page_focus: FocusHandle,
     settings_search: Entity<InputState>,
     opacity_sliders: [Entity<gpui_component::slider::SliderState>; SLIDERS],
     opacity_focus: [FocusHandle; SLIDERS],
@@ -1396,6 +1399,7 @@ impl Seek {
             settings: false,
             settings_tab: 0,
             settings_focus: cx.focus_handle(),
+            page_focus: cx.focus_handle(),
             settings_search,
             opacity_sliders,
             opacity_focus: std::array::from_fn(|_| cx.focus_handle()),
@@ -1925,7 +1929,8 @@ impl Seek {
         self.content_mode = false;
         self.largest = None;
         self.suggestions = None;
-        self.message = Some("Indexing this folder...".into());
+        let loading = if scope.is_some() { "Indexing this folder..." } else { "Loading all locations..." };
+        self.message = Some(loading.into());
         self.table.update(cx, |table, _| {
             table.delegate_mut().expanded.clear();
             table.delegate_mut().children.clear();
@@ -1934,7 +1939,7 @@ impl Seek {
             let rows = table.delegate_mut();
             rows.base_rows = Arc::new(vec![]);
             rows.rows = Arc::new(vec![]);
-            rows.empty_message = "Indexing this folder...".into();
+            rows.empty_message = loading.into();
             table.refresh(cx);
         });
         self.scope = scope;

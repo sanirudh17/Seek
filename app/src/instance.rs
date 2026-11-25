@@ -49,6 +49,20 @@ pub fn key(data: &Path) -> Result<String, String> {
     Ok(format!("Seek-{sid}-{hash:016x}"))
 }
 
+/// This Seek's "closing" event, raised when its last window closes.
+static CLOSING: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+
+/// Tells a Seek started now that this one is on its way out (it still has its
+/// index to save), so the new one waits and opens its own window instead of
+/// asking this one to come forward.
+pub fn mark_closing() {
+    if let Some(event) = CLOSING.get() {
+        unsafe {
+            SetEvent(*event as HANDLE);
+        }
+    }
+}
+
 pub fn acquire(data: &Path, request: Option<&Path>) -> Result<Option<Instance>, String> {
     let sid = seek_engine::helper::user_sid().map_err(|e| e.to_string())?;
     let data = std::path::absolute(data).map_err(|e| e.to_string())?;
@@ -67,11 +81,42 @@ pub fn acquire(data: &Path, request: Option<&Path>) -> Result<Option<Instance>, 
         });
     let base = format!("Local\\Seek-{sid}-{hash:016x}");
     let wide = |s: &str| s.encode_utf16().chain(Some(0)).collect::<Vec<_>>();
-    let mutex = unsafe { CreateMutexW(std::ptr::null(), 0, wide(&base).as_ptr()) };
+    // Manual-reset: once the running Seek starts closing, it stays raised.
+    let closing = unsafe { CreateEventW(std::ptr::null(), 1, 0, wide(&format!("{base}-closing")).as_ptr()) };
+    let mut mutex = unsafe { CreateMutexW(std::ptr::null(), 0, wide(&base).as_ptr()) };
     if mutex.is_null() {
         return Err(std::io::Error::last_os_error().to_string());
     }
-    let exists = unsafe { GetLastError() } == ERROR_ALREADY_EXISTS;
+    let mut exists = unsafe { GetLastError() } == ERROR_ALREADY_EXISTS;
+    // The running Seek is closing (saving its index): wait for it to finish,
+    // then become the running Seek, rather than waking one that is leaving
+    // (which used to make a quick relaunch from the taskbar do nothing).
+    if exists && !closing.is_null() && unsafe { WaitForSingleObject(closing, 0) } == WAIT_OBJECT_0 {
+        let started = std::time::Instant::now();
+        while exists && started.elapsed() < std::time::Duration::from_secs(20) {
+            unsafe {
+                CloseHandle(mutex);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            mutex = unsafe { CreateMutexW(std::ptr::null(), 0, wide(&base).as_ptr()) };
+            if mutex.is_null() {
+                return Err(std::io::Error::last_os_error().to_string());
+            }
+            exists = unsafe { GetLastError() } == ERROR_ALREADY_EXISTS;
+        }
+        if !exists {
+            unsafe {
+                ResetEvent(closing);
+            }
+        }
+    }
+    if !closing.is_null() && !exists {
+        let _ = CLOSING.set(closing as usize);
+    } else if !closing.is_null() {
+        unsafe {
+            CloseHandle(closing);
+        }
+    }
     let event = unsafe {
         CreateEventW(
             std::ptr::null(),
@@ -153,7 +198,7 @@ pub fn round(window: &gpui::Window) {
         unsafe {
             windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute(
                 h,
-                33,
+                33, // DWMWA_WINDOW_CORNER_PREFERENCE: round
                 (&round as *const u32).cast(),
                 4,
             );

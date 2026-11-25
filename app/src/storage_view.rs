@@ -163,6 +163,11 @@ impl Seek {
         }
     }
 
+    /// Measures the page's folder again (after a cleanup freed space).
+    pub(super) fn measure_storage_again(&mut self, scope: PathBuf, cx: &mut Context<Self>) {
+        self.measure_storage(scope, cx);
+    }
+
     fn measure_storage(&mut self, scope: PathBuf, cx: &mut Context<Self>) {
         let Some(page) = &mut self.storage_page else {
             return;
@@ -195,10 +200,34 @@ impl Seek {
                 if let Some(page) = &mut this.storage_page
                     && page.generation == generation
                 {
+                    // The index is still loading or hasn't reached this
+                    // folder (after an update or on first start): measure
+                    // again shortly instead of stopping at a blank page.
+                    let indexed = crate::file_changes::under_any(&page.scope, &this.roots);
+                    let mut report = report;
+                    if !indexed && report.stopped.as_deref() == Some("This folder isn't in the index yet") {
+                        report.stopped = Some("Not indexed · add it in Settings > Locations to see what uses space".into());
+                    }
+                    let waiting = indexed
+                        && report.stopped.as_deref().is_some_and(|why| {
+                            why == "The index is still loading" || why == "This folder isn't in the index yet"
+                        });
                     page.report = Some(report);
                     page.measuring = false;
                     if std::mem::take(&mut page.reveal_duplicates) {
                         page.scroll.scroll_to_bottom();
+                    }
+                    if waiting {
+                        let scope = page.scope.clone();
+                        cx.spawn(async move |this, cx| {
+                            cx.background_executor().timer(std::time::Duration::from_secs(2)).await;
+                            let _ = this.update(cx, |this, cx| {
+                                if this.storage_page.as_ref().is_some_and(|p| p.generation == generation) {
+                                    this.measure_storage(scope, cx);
+                                }
+                            });
+                        })
+                        .detach();
                     }
                     cx.notify();
                 }
@@ -221,12 +250,17 @@ impl Seek {
         let at_drive = page.scope == page.drive;
         // Header: title, the drive picker, and the measuring line.
         let owner = cx.entity().downgrade();
-        let roots = self.roots.clone();
+        // Every drive on the PC, and any other indexed location.
+        let mut roots = drives();
+        for root in &self.roots {
+            if !roots.iter().any(|r| r.as_os_str().eq_ignore_ascii_case(root.as_os_str())) {
+                roots.push(root.clone());
+            }
+        }
         let drive_name = page.drive.to_string_lossy().trim_start_matches(r"\\?\").to_string();
         let picker = super::settings_view::choice_control("storage-drive", drive_name, p, cx)
             .h(BUTTON_HEIGHT)
             .w(px(180.))
-            .disabled(roots.len() < 2)
             .dropdown_menu(move |menu, window, _| {
                 let mut menu = super::daily::menu_style(menu, window);
                 for root in &roots {
@@ -247,7 +281,12 @@ impl Seek {
         let status = if page.measuring {
             "Measuring…".to_string()
         } else if let Some(reason) = &report.stopped {
-            reason.clone()
+            match reason.as_str() {
+                "The index is still loading" | "This folder isn't in the index yet" => {
+                    "Waiting for the index; this fills in by itself".to_string()
+                }
+                _ => reason.clone(),
+            }
         } else {
             format!(
                 "{} files · {} · {} on disk",
@@ -600,6 +639,7 @@ impl Seek {
             );
         div()
             .id("storage-page")
+            .track_focus(&self.page_focus)
             .role(Role::Region)
             .aria_label("Storage")
             .flex_1()
@@ -637,4 +677,20 @@ impl Seek {
             )
             .into_any_element()
     }
+}
+
+/// The PC's drives with something in them: fixed, removable and network.
+fn drives() -> Vec<PathBuf> {
+    use windows_sys::Win32::Storage::FileSystem::{GetDriveTypeW, GetLogicalDrives};
+    let mask = unsafe { GetLogicalDrives() };
+    (0..26u8)
+        .filter(|i| mask & (1 << i) != 0)
+        .map(|i| format!("{}:\\", (b'A' + i) as char))
+        .filter(|root| {
+            let wide: Vec<u16> = root.encode_utf16().chain(Some(0)).collect();
+            // 2 removable, 3 fixed, 4 network.
+            matches!(unsafe { GetDriveTypeW(wide.as_ptr()) }, 2..=4)
+        })
+        .map(PathBuf::from)
+        .collect()
 }

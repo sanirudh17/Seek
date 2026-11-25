@@ -1,8 +1,9 @@
 //! Cleanup suggestions on the Storage page (Phase 9.2). Nothing is looked
 //! for until Find suggestions is chosen, and nothing moves until a reviewed
-//! list is confirmed; removal goes to the Recycle Bin through the journaled
-//! file operations, so Ctrl+Z puts it back. Emptying the Recycle Bin is the
-//! one permanent action, and it asks first.
+//! list is confirmed. Caches, temporary files and build folders are deleted
+//! in place (they rebuild on their own); models, unfinished downloads and old
+//! installers go to the Recycle Bin through the journaled file operations, so
+//! Ctrl+Z puts them back.
 use super::*;
 use crate::cleanup::{Action, Report, Suggestion};
 use gpui_component::checkbox::Checkbox;
@@ -20,6 +21,10 @@ pub(super) struct Cleanup {
     open: Option<usize>,
     /// Items the person unticked in the open review.
     unticked: std::collections::HashSet<PathBuf>,
+    /// Groups the person unticked (by title): left out of Clean up.
+    skipped_groups: std::collections::HashSet<String>,
+    /// A deletion running now, or the last one's result.
+    removal: Option<Removal>,
     /// "Clean up all" was pressed once and waits for its confirmation.
     confirm_all: bool,
     /// Items the last move sent to the Recycle Bin (offers Undo, since
@@ -27,6 +32,14 @@ pub(super) struct Cleanup {
     moved: Option<usize>,
     cancel: Option<Arc<AtomicBool>>,
     task: Option<Task<()>>,
+}
+
+/// A deletion of cache folders running in the background.
+pub(super) struct Removal {
+    progress: Arc<crate::cleanup::Progress>,
+    cancel: Arc<AtomicBool>,
+    running: bool,
+    stopped: bool,
 }
 
 impl Seek {
@@ -43,6 +56,10 @@ impl Seek {
         self.cleanup.moved = None;
         self.cleanup.open = None;
         self.cleanup.unticked.clear();
+        self.cleanup.skipped_groups.clear();
+        if self.cleanup.removal.as_ref().is_some_and(|r| !r.running) {
+            self.cleanup.removal = None;
+        }
         let home = PathBuf::from(std::env::var_os("USERPROFILE").unwrap_or_default());
         let job = cx.background_executor().spawn(async move {
             let say = |text: &str| {
@@ -102,57 +119,128 @@ impl Seek {
             .map_or(&[], |r| r.suggestions.as_slice())
     }
 
-    fn recycle_suggestion(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(suggestion) = self.suggestions().get(index) else {
-            return;
-        };
-        let paths: Vec<PathBuf> = suggestion
+    /// The ticked items of one suggestion.
+    fn ticked(&self, suggestion: &Suggestion) -> Vec<PathBuf> {
+        suggestion
             .items
             .iter()
             .map(|(p, _)| p.clone())
             .filter(|p| !self.cleanup.unticked.contains(p))
-            .collect();
-        if paths.is_empty() {
+            .collect()
+    }
+
+    fn clean_suggestion(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(suggestion) = self.suggestions().get(index) else {
             return;
+        };
+        let paths = self.ticked(suggestion);
+        let (delete, recycle) = if suggestion.action == Action::Delete {
+            (paths, vec![])
+        } else {
+            (vec![], paths)
+        };
+        let title = suggestion.title.clone();
+        self.clean(delete, recycle, window, cx);
+        if let Some(report) = &mut self.cleanup.report {
+            report.suggestions.retain(|s| s.title != title);
         }
-        let count = paths.len();
-        self.run_file_op(crate::file_ops::Operation::Recycle { paths }, window, cx);
-        if self.message.is_none() {
-            self.cleanup.moved = Some(count);
-        }
-        if self.message.is_none()
-            && let Some(report) = &mut self.cleanup.report
-        {
-            report.suggestions.remove(index);
-            self.cleanup.open = None;
-            self.cleanup.unticked.clear();
-            self.refresh_recycle_bin(cx);
-        }
+        self.cleanup.open = None;
+        self.cleanup.unticked.clear();
         cx.notify();
     }
 
-    /// Moves every suggestion's items to the Recycle Bin in one undoable
-    /// operation (the Recycle Bin itself is left to its own button).
-    fn recycle_all(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    /// Every ticked group's ticked items: caches deleted, the person's own
+    /// files to the Recycle Bin (the Recycle Bin itself has its own button).
+    fn clean_selected(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.cleanup.confirm_all = false;
-        let paths: Vec<PathBuf> = self
-            .suggestions()
-            .iter()
-            .filter(|s| s.action == Action::Recycle)
-            .flat_map(|s| s.items.iter().map(|(p, _)| p.clone()))
-            .collect();
-        if paths.is_empty() {
+        let mut delete = vec![];
+        let mut recycle = vec![];
+        let mut done = vec![];
+        for suggestion in self.suggestions() {
+            if suggestion.action == Action::EmptyRecycleBin
+                || self.cleanup.skipped_groups.contains(&suggestion.title)
+            {
+                continue;
+            }
+            let paths = self.ticked(suggestion);
+            done.push(suggestion.title.clone());
+            if suggestion.action == Action::Delete {
+                delete.extend(paths);
+            } else {
+                recycle.extend(paths);
+            }
+        }
+        self.clean(delete, recycle, window, cx);
+        if let Some(report) = &mut self.cleanup.report {
+            report.suggestions.retain(|s| !done.contains(&s.title));
+        }
+        self.cleanup.open = None;
+        self.cleanup.unticked.clear();
+        cx.notify();
+    }
+
+    fn clean(&mut self, delete: Vec<PathBuf>, recycle: Vec<PathBuf>, window: &mut Window, cx: &mut Context<Self>) {
+        if !recycle.is_empty() {
+            let count = recycle.len();
+            self.run_file_op(crate::file_ops::Operation::Recycle { paths: recycle }, window, cx);
+            if self.message.is_none() {
+                self.cleanup.moved = Some(count);
+                self.refresh_recycle_bin(cx);
+            }
+        }
+        if delete.is_empty() || self.cleanup.removal.as_ref().is_some_and(|r| r.running) {
             return;
         }
-        let count = paths.len();
-        self.run_file_op(crate::file_ops::Operation::Recycle { paths }, window, cx);
-        if self.message.is_none() {
-            self.cleanup.moved = Some(count);
-            if let Some(report) = &mut self.cleanup.report {
-                report.suggestions.retain(|s| s.action != Action::Recycle);
+        let progress = Arc::new(crate::cleanup::Progress::default());
+        let cancel = Arc::new(AtomicBool::new(false));
+        self.cleanup.removal = Some(Removal {
+            progress: progress.clone(),
+            cancel: cancel.clone(),
+            running: true,
+            stopped: false,
+        });
+        let job = cx.background_executor().spawn({
+            let progress = progress.clone();
+            async move { crate::cleanup::delete(&delete, &cancel, &progress) }
+        });
+        cx.spawn(async move |this, cx| {
+            job.await;
+            let _ = this.update(cx, |this, cx| {
+                if let Some(removal) = &mut this.cleanup.removal {
+                    removal.running = false;
+                }
+                // Storage's numbers include what was just freed.
+                if let Some(page) = &this.storage_page {
+                    let scope = page.scope.clone();
+                    this.measure_storage_again(scope, cx);
+                }
+                cx.notify();
+            });
+        })
+        .detach();
+        // Redraw the progress about five times a second while it runs.
+        cx.spawn(async move |this, cx| {
+            loop {
+                cx.background_executor().timer(std::time::Duration::from_millis(200)).await;
+                let running = this
+                    .update(cx, |this, cx| {
+                        cx.notify();
+                        this.cleanup.removal.as_ref().is_some_and(|r| r.running)
+                    })
+                    .unwrap_or(false);
+                if !running {
+                    return;
+                }
             }
-            self.cleanup.open = None;
-            self.refresh_recycle_bin(cx);
+        })
+        .detach();
+        cx.notify();
+    }
+
+    fn stop_removal(&mut self, cx: &mut Context<Self>) {
+        if let Some(removal) = &mut self.cleanup.removal {
+            removal.cancel.store(true, Ordering::Relaxed);
+            removal.stopped = true;
         }
         cx.notify();
     }
@@ -293,12 +381,24 @@ impl Seek {
         let movable: Vec<&Suggestion> = self
             .suggestions()
             .iter()
-            .filter(|s| s.action == Action::Recycle)
+            .filter(|s| s.action != Action::EmptyRecycleBin && !state.skipped_groups.contains(&s.title))
             .collect();
         let all_items: usize = movable.iter().map(|s| s.items.len()).sum();
         let all_bytes: u64 = movable.iter().map(|s| s.bytes()).sum();
-        let clean_all = (!state.looking && all_items > 0).then(|| {
-            super::settings_view::control("cleanup-all", "Clean up all", p, cx)
+        let recycled_items: usize = movable
+            .iter()
+            .filter(|s| s.action == Action::Recycle)
+            .map(|s| s.items.len())
+            .sum();
+        let some_skipped = !state.skipped_groups.is_empty();
+        let busy = state.removal.as_ref().is_some_and(|r| r.running);
+        let clean_all = (!state.looking && all_items > 0 && !busy).then(|| {
+            super::settings_view::control(
+                "cleanup-all",
+                if some_skipped { "Clean up selected" } else { "Clean up all" },
+                p,
+                cx,
+            )
                 .h(BUTTON_HEIGHT)
                 .on_click(cx.listener(|this, _, _, cx| {
                     this.cleanup.confirm_all = !this.cleanup.confirm_all;
@@ -384,6 +484,71 @@ impl Seek {
                     ),
             );
         }
+        if let Some(removal) = &state.removal {
+            use std::sync::atomic::Ordering::Relaxed;
+            let listed = removal.progress.listed.load(Relaxed);
+            let files = removal.progress.files.load(Relaxed);
+            let bytes = removal.progress.bytes.load(Relaxed);
+            let skipped = removal.progress.skipped.load(Relaxed);
+            let listing = removal.progress.listing.load(Relaxed);
+            let fraction = if listed == 0 { 0. } else { (files + skipped) as f32 / listed as f32 };
+            let line = if removal.running && listing {
+                format!("Finding files… {}", super::interface::thousands(listed as usize))
+            } else if removal.running {
+                format!(
+                    "Deleting… {} of {} files · {} freed",
+                    super::interface::thousands((files + skipped) as usize),
+                    super::interface::thousands(listed as usize),
+                    human(bytes)
+                )
+            } else {
+                let mut line = format!(
+                    "{} {} · {} files deleted",
+                    if removal.stopped { "Stopped. Freed" } else { "Freed" },
+                    human(bytes),
+                    super::interface::thousands(files as usize)
+                );
+                if skipped > 0 {
+                    line.push_str(&format!(" · {} in use or protected were left", super::interface::thousands(skipped as usize)));
+                }
+                line
+            };
+            card = card.child(
+                div()
+                    .px_4()
+                    .py_3()
+                    .flex()
+                    .flex_col()
+                    .gap_2()
+                    .border_b_1()
+                    .border_color(p.line)
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_3()
+                            .child(div().flex_1().text_size(TEXT_SMALL).child(line))
+                            .when(removal.running, |d| {
+                                d.child(
+                                    super::settings_view::control("cleanup-stop-removal", "Stop", p, cx)
+                                        .h(BUTTON_HEIGHT)
+                                        .on_click(cx.listener(|this, _, _, cx| this.stop_removal(cx))),
+                                )
+                            }),
+                    )
+                    .when(removal.running, |d| {
+                        d.child(
+                            div()
+                                .h(px(6.))
+                                .w_full()
+                                .rounded(px(3.))
+                                .overflow_hidden()
+                                .bg(p.text.opacity(0.08))
+                                .child(div().h_full().w(relative(fraction.clamp(0., 1.))).bg(p.accent)),
+                        )
+                    }),
+            );
+        }
         if state.confirm_all && all_items > 0 {
             card = card.child(
                 div()
@@ -402,14 +567,18 @@ impl Seek {
                             .flex_col()
                             .gap(px(2.))
                             .child(div().text_size(TEXT_BODY).child(format!(
-                                "Move all {all_items} items ({}) to the Recycle Bin?",
+                                "Clean up {all_items} items ({})?",
                                 human(all_bytes)
                             )))
                             .child(
                                 div()
                                     .text_size(TEXT_SMALL)
                                     .text_color(p.muted)
-                                    .child("Files apps have open are skipped. Ctrl+Z puts everything back; the space is freed when you empty the Recycle Bin."),
+                                    .child(if recycled_items > 0 {
+                                        "Caches and logs are deleted (their apps rebuild them); your downloads and models go to the Recycle Bin. Files apps have open are skipped."
+                                    } else {
+                                        "These are caches and logs their apps rebuild, so they're deleted rather than recycled. Files apps have open are skipped."
+                                    }),
                             ),
                     )
                     .child(
@@ -428,16 +597,16 @@ impl Seek {
                             .bg(p.text)
                             .text_color(crate::appearance::modal_surface(p))
                             .font_weight(FontWeight::MEDIUM)
-                            .disabled(self.files_pending != 0)
-                            .child(super::interface::button_text("Move all"))
-                            .on_click(cx.listener(|this, _, window, cx| this.recycle_all(window, cx))),
+                            .disabled(self.files_pending != 0 || busy)
+                            .child(super::interface::button_text("Clean up"))
+                            .on_click(cx.listener(|this, _, window, cx| this.clean_selected(window, cx))),
                     ),
             );
         }
         let list = self.suggestions();
         if state.report.is_none() && !state.looking {
             card = card.child(note(
-                "Seek looks through developer, app and browser caches, shader caches, crash dumps, old temporary files and installers, build folders in projects you haven't touched for months, and the Recycle Bin. Nothing is removed until you review it, and everything but the Recycle Bin can be put back with Ctrl+Z.",
+                "Seek looks through developer, app and browser caches, shader caches, crash dumps, old temporary files and installers, build folders in projects you haven't touched for months, and the Recycle Bin. Nothing is removed until you review it. Caches their apps rebuild are deleted; your own files go to the Recycle Bin.",
             ));
         } else if state.looking && list.is_empty() {
             card = card.child(note("Looking…"));
@@ -489,8 +658,24 @@ impl Seek {
                 );
             }
             let bytes = suggestion.bytes();
+            let title = suggestion.title.clone();
+            let included = !state.skipped_groups.contains(&title);
             let mut line = row(("cleanup", index).into())
                 .when(index > 0, |d| d.border_t_1().border_color(p.line))
+                // Which groups Clean up takes.
+                .when(!empties, |d| {
+                    d.child(
+                        Checkbox::new(("cleanup-group", index))
+                            .checked(included)
+                            .accessibility_label(title.clone())
+                            .on_click(cx.listener(move |this, _: &bool, _, cx| {
+                                if !this.cleanup.skipped_groups.remove(&title) {
+                                    this.cleanup.skipped_groups.insert(title.clone());
+                                }
+                                cx.notify();
+                            })),
+                    )
+                })
                 .child(text)
                 .child(
                     div()
@@ -599,7 +784,11 @@ impl Seek {
                                 .flex_1()
                                 .text_size(TEXT_SMALL)
                                 .text_color(p.muted)
-                                .child("Goes to the Recycle Bin · Ctrl+Z puts it back"),
+                                .child(if suggestion.action == Action::Delete {
+                                    "Deleted · the apps that made these rebuild them"
+                                } else {
+                                    "Goes to the Recycle Bin · Ctrl+Z puts it back"
+                                }),
                         )
                         .child(
                             Button::new(("cleanup-recycle", index))
@@ -609,13 +798,14 @@ impl Seek {
                                 .bg(p.text)
                                 .text_color(crate::appearance::modal_surface(p))
                                 .font_weight(FontWeight::MEDIUM)
-                                .disabled(count == 0 || self.files_pending != 0)
-                                .child(super::interface::button_text(format!(
-                                    "Move {count} to Recycle Bin · {}",
-                                    human(chosen)
-                                )))
+                                .disabled(count == 0 || self.files_pending != 0 || busy)
+                                .child(super::interface::button_text(if suggestion.action == Action::Delete {
+                                    format!("Delete {count} · {}", human(chosen))
+                                } else {
+                                    format!("Move {count} to Recycle Bin · {}", human(chosen))
+                                }))
                                 .on_click(cx.listener(move |this, _, window, cx| {
-                                    this.recycle_suggestion(index, window, cx)
+                                    this.clean_suggestion(index, window, cx)
                                 })),
                         ),
                 );

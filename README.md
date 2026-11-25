@@ -89,8 +89,8 @@ Get-FileHash .\Seek-<version>-Setup-x64.exe -Algorithm SHA256
 
 ### Storage
 
-- **Overview** of a drive or folder: space used and free, a breakdown by kind, and the largest folders with drill-down.
-- **Cleanup suggestions** for caches apps rebuild on their own (developer tools, browsers, editors, chat apps, graphics drivers), old temporary files, crash dumps, app logs, unfinished downloads, old installers and build folders in long-untouched projects. Sign-in tokens, locally installed packages and tracked source folders are never offered. Everything goes to the Recycle Bin and can be undone.
+- **Overview** of any drive or folder, picked from a list of all your drives: space used and free, a breakdown by kind, and the largest folders with drill-down.
+- **Cleanup suggestions** for caches apps rebuild on their own (developer tools, browsers, editors, chat apps, graphics drivers), old temporary files, crash dumps, app logs, unfinished downloads, old installers and build folders in long-untouched projects. Sign-in tokens, locally installed packages and tracked source folders are never offered. Tick the groups you want and clean them in one go, with live progress and a Stop button. Caches, temporary files and build folders are deleted in place, since they rebuild on their own; downloaded AI models, unfinished downloads and old installers go to the Recycle Bin and can be undone.
 - **Find duplicates** confirms identical files by their full contents and checks each file again just before moving it. Hard links, cloud placeholders and system files are left out, and identical folders are found too.
 - **Similar images** finds resized, recompressed or lightly edited copies of a picture at three levels, in one folder or everywhere. Pictures are compared upright and by colour, and shown side by side; nothing is selected for you, and one picture of every group always stays.
 

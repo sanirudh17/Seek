@@ -842,6 +842,11 @@ impl WindowsWindowInner {
             if self.state.is_maximized() {
                 let dpi = GetDpiForWindow(handle);
                 (*params).rgrc[0].top += get_frame_thicknessx(dpi);
+            } else {
+                // Leave Windows a 1px frame strip at the top as on the other
+                // sides, so its window border runs all the way round,
+                // following the rounded corners.
+                (*params).rgrc[0].top += 1;
             }
             Some(result.0 as isize)
         }

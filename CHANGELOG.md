@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.1.1 - 2026-11-25
+
+Seek 1.1.1 makes Cleanup much faster and gives you control over what it removes, lets Storage measure any drive, speeds up All locations, and fixes several window and startup glitches. Saved data from earlier versions is kept.
+
+#### Cleanup
+
+- Each cleanup group has its own checkbox. Clean up selected removes only the groups you ticked, and each group can still be cleaned on its own.
+- Caches, temporary files and build folders are now deleted in place instead of being sent to the Recycle Bin. Gigabytes of cache that used to stall in the Recycle Bin dialog now clear in seconds. Downloaded AI models, unfinished downloads and old installers still go to the Recycle Bin.
+- Cleaning shows live progress (files and space removed) and a Stop button that takes effect at once. Seek stays responsive while it works.
+- Read-only files and links inside caches are handled safely: links are removed themselves, never followed.
+
+#### Storage
+
+- The drive picker lists every drive on the PC and always opens.
+- Storage can measure a whole drive, not only indexed folders.
+- While the index is still loading, Storage waits and fills in by itself instead of showing an empty page. A drive that is not indexed says so and points to Settings > Locations.
+
+#### Search and browsing
+
+- All locations opens instantly, showing the last results at once while the index answers.
+- Jump (Ctrl+K) and the other shortcuts work while the Storage and Worktrees pages are open.
+
+#### Windows and appearance
+
+- Seek's first window appears with its glass already in place, without a see-through or grey flash.
+- Column headers and the Settings panel use the glass appearance like the rest of the window.
+- The window border is a single line that follows the rounded corners all the way round, with no translucent rim along the edges.
+- Relaunching Seek from the taskbar while it is still closing now opens a new window instead of doing nothing.
+- Setting descriptions appear in a compact box instead of a long tooltip.
+
 ## 1.1.0 - 2026-11-25
 
 Seek 1.1.0 is a large update that turns Seek from a search window into a full file manager: split panes, new views, renaming and organizing tools, a storage page with cleanup and duplicate finding, an MCP server for coding agents, and live folder updates. Saved data from earlier versions is kept.

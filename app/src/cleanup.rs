@@ -16,8 +16,14 @@ use std::{
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
-    /// Move the ticked items to the Recycle Bin.
+    /// Move the ticked items to the Recycle Bin (the person's own files:
+    /// installers and unfinished downloads, downloaded models).
     Recycle,
+    /// Delete the ticked items in place: caches, logs and build output the
+    /// apps that made them rebuild on their own. Recycling hundreds of
+    /// thousands of cache files makes Windows record each one and takes
+    /// many minutes; deleting them takes seconds.
+    Delete,
     /// Empty the Recycle Bin, after a confirmation.
     EmptyRecycleBin,
 }
@@ -599,7 +605,7 @@ pub fn suggest(
                 title: title.into(),
                 detail: detail.into(),
                 note: note.map(Into::into),
-                action: Action::Recycle,
+                action: if group == Models { Action::Recycle } else { Action::Delete },
                 items,
                 total: None,
             });
@@ -626,7 +632,7 @@ pub fn suggest(
             title: "Old temporary files".into(),
             detail: "In your Temp folder and untouched for a day".into(),
             note: Some("Files still in use are skipped".into()),
-            action: Action::Recycle,
+            action: Action::Delete,
             items: temp_items,
             total: None,
         });
@@ -735,7 +741,7 @@ pub fn suggest(
             title: "Build folders in old projects".into(),
             detail: "node_modules, target, .venv, dist, build and .next in repositories untouched for 90 days".into(),
             note: Some("Rebuilt the next time you build the project".into()),
-            action: Action::Recycle,
+            action: Action::Delete,
             items: without_nested(builds),
             total: None,
         });
@@ -763,6 +769,115 @@ pub fn suggest(
         suggestions: out,
         elapsed: started.elapsed(),
         stopped,
+    }
+}
+
+/// How far a deletion has got, read by the page while it runs.
+#[derive(Default)]
+pub struct Progress {
+    /// Files found so far, and whether the listing is still going.
+    pub listed: std::sync::atomic::AtomicU64,
+    pub listing: AtomicBool,
+    /// Files deleted, their bytes, and files left because they're in use or
+    /// can't be removed.
+    pub files: std::sync::atomic::AtomicU64,
+    pub bytes: std::sync::atomic::AtomicU64,
+    pub skipped: std::sync::atomic::AtomicU64,
+}
+
+/// Deletes each path in place: files at once, folders by deleting what they
+/// hold (several at a time) and then the emptied folders, deepest first.
+/// Links and junctions are removed themselves, never followed; a file in use
+/// or protected is skipped and counted; `cancel` stops it between files.
+pub fn delete(paths: &[PathBuf], cancel: &AtomicBool, progress: &Progress) {
+    use rayon::prelude::*;
+    use std::os::windows::fs::MetadataExt;
+    use std::sync::atomic::Ordering::Relaxed;
+    const REPARSE: u32 = 0x400;
+    progress.listing.store(true, Relaxed);
+    let mut files: Vec<(PathBuf, u64)> = vec![];
+    let mut dirs: Vec<(PathBuf, usize)> = vec![];
+    let mut links: Vec<PathBuf> = vec![];
+    for root in paths {
+        let Ok(meta) = std::fs::symlink_metadata(root) else { continue };
+        if meta.file_attributes() & REPARSE != 0 {
+            links.push(root.clone());
+            continue;
+        }
+        if !meta.is_dir() {
+            files.push((root.clone(), meta.len()));
+            continue;
+        }
+        let mut stack = vec![(root.clone(), 0usize)];
+        while let Some((dir, depth)) = stack.pop() {
+            if cancel.load(Relaxed) {
+                progress.listing.store(false, Relaxed);
+                return;
+            }
+            dirs.push((dir.clone(), depth));
+            let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+            for entry in entries.flatten() {
+                let Ok(meta) = entry.metadata() else { continue };
+                let path = entry.path();
+                if meta.file_attributes() & REPARSE != 0 {
+                    links.push(path);
+                } else if meta.is_dir() {
+                    stack.push((path, depth + 1));
+                } else {
+                    files.push((path, meta.len()));
+                    progress.listed.fetch_add(1, Relaxed);
+                }
+            }
+        }
+    }
+    progress.listed.store(files.len() as u64, Relaxed);
+    progress.listing.store(false, Relaxed);
+    let remove_file = |path: &Path| -> bool {
+        if std::fs::remove_file(path).is_ok() {
+            return true;
+        }
+        // A read-only file: clear the flag and try once more.
+        std::fs::metadata(path)
+            .map(|m| {
+                let mut permissions = m.permissions();
+                #[allow(clippy::permissions_set_readonly_false)]
+                permissions.set_readonly(false);
+                std::fs::set_permissions(path, permissions).is_ok() && std::fs::remove_file(path).is_ok()
+            })
+            .unwrap_or(false)
+    };
+    let work = || {
+        files.par_iter().for_each(|(path, bytes)| {
+            if cancel.load(Relaxed) {
+                return;
+            }
+            if remove_file(path) {
+                progress.files.fetch_add(1, Relaxed);
+                progress.bytes.fetch_add(*bytes, Relaxed);
+            } else {
+                progress.skipped.fetch_add(1, Relaxed);
+            }
+        });
+    };
+    match rayon::ThreadPoolBuilder::new().num_threads(8).build() {
+        Ok(pool) => pool.install(work),
+        Err(_) => work(),
+    }
+    // A link or junction is removed as itself; what it points to is never
+    // touched.
+    for link in &links {
+        if cancel.load(Relaxed) {
+            break;
+        }
+        let _ = std::fs::remove_dir(link).or_else(|_| std::fs::remove_file(link));
+    }
+    // Emptied folders, deepest first; one still holding a skipped file stays.
+    dirs.sort_by_key(|(_, depth)| std::cmp::Reverse(*depth));
+    for (dir, _) in dirs {
+        if cancel.load(Relaxed) {
+            break;
+        }
+        let _ = std::fs::remove_dir(&dir);
     }
 }
 
@@ -919,6 +1034,38 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn delete_removes_folders_and_never_follows_links() {
+        let dir = tempfile::tempdir().unwrap();
+        let cache = dir.path().join("cache");
+        let outside = dir.path().join("outside");
+        std::fs::create_dir_all(cache.join("a").join("b")).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::write(outside.join("keep.txt"), b"keep").unwrap();
+        for i in 0..50 {
+            std::fs::write(cache.join("a").join("b").join(format!("{i}.bin")), vec![1u8; 100]).unwrap();
+        }
+        std::fs::write(cache.join("ro.bin"), b"x").unwrap();
+        let mut permissions = std::fs::metadata(cache.join("ro.bin")).unwrap().permissions();
+        permissions.set_readonly(true);
+        std::fs::set_permissions(cache.join("ro.bin"), permissions).unwrap();
+        // A junction inside the cache to a folder outside it.
+        let junction = cache.join("link");
+        let made = std::process::Command::new("cmd")
+            .args(["/C", "mklink", "/J"])
+            .arg(&junction)
+            .arg(&outside)
+            .output()
+            .is_ok_and(|o| o.status.success());
+        let progress = Progress::default();
+        delete(std::slice::from_ref(&cache), &AtomicBool::new(false), &progress);
+        assert!(!cache.exists(), "the cache folder is gone");
+        assert!(outside.join("keep.txt").exists(), "a junction's target is never touched (junction made: {made})");
+        assert_eq!(progress.files.load(Ordering::Relaxed), 51);
+        assert_eq!(progress.bytes.load(Ordering::Relaxed), 5001);
+        assert_eq!(progress.skipped.load(Ordering::Relaxed), 0);
     }
 
     #[test]

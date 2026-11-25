@@ -411,8 +411,10 @@ pub fn palette(settings: &Settings, cx: &App) -> Palette {
             hover: Hsla::from(rgba(0xffffff10)),
             accent: color(accent),
             selected_text: color(if lum > 0.179 { 0x000000 } else { 0xffffff }),
+            // Settings is glass like the window: the blurred desktop shows
+            // through a light tint, enough to keep text easy to read.
             sheet: if glass {
-                Hsla { a: 0.5, ..tint }
+                Hsla { a: 0.3, ..tint }
             } else {
                 solid(0.07)
             },
@@ -512,7 +514,9 @@ pub fn apply(settings: &Settings, window: Option<&mut Window>, cx: &mut App) {
         t.colors.button_primary_hover = p.accent;
         t.colors.button_primary_active = p.accent;
         t.colors.ring = p.muted.opacity(0.45);
-        t.colors.table_head = p.chrome;
+        // Column headers sit on the pane's own surface (glass shows through),
+        // set apart by their divider, not a darker band of frame colour.
+        t.colors.table_head = rgba(0).into();
         t.colors.table = rgba(0).into();
         t.colors.table_head_foreground = p.muted;
         t.colors.table_even = p.stripe;
@@ -552,7 +556,7 @@ pub fn apply(settings: &Settings, window: Option<&mut Window>, cx: &mut App) {
         t.colors.list_even = p.stripe;
         t.tokens.table_even = Hsla::from(rgba(0)).into();
         t.tokens.table_active = Hsla::from(rgba(0)).into();
-        t.tokens.table_head = p.chrome.into();
+        t.tokens.table_head = Hsla::from(rgba(0)).into();
         t.tokens.table = Hsla::from(rgba(0)).into();
         t.tokens.table_even = Hsla::from(rgba(0)).into();
         // Rows draw their own inset hover; the table adds none.

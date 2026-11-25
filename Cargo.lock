@@ -5541,7 +5541,7 @@ dependencies = [
 
 [[package]]
 name = "seek"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -5578,7 +5578,7 @@ dependencies = [
 
 [[package]]
 name = "seek-cli"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "seek-engine",
  "serde",
@@ -5603,7 +5603,7 @@ dependencies = [
 
 [[package]]
 name = "seek-helper"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "embed-resource",
  "seek-engine",

@@ -1157,7 +1157,38 @@ impl PlatformWindow for WindowsWindow {
         {
             #[cfg(feature = "seek-bench")]
             crate::seek_observer::milestone("first_frame_painted_while_hidden");
+            // Shown for the first time, a glass window is composited before
+            // DWM has sampled what is behind it, so for a frame or two it is
+            // plainly see-through. Show it cloaked, as a taskbar restore does,
+            // and uncloak once a fresh frame is on screen with the material.
+            let hwnd = self.0.hwnd;
+            let glass = matches!(
+                self.state.background_appearance.get(),
+                WindowBackgroundAppearance::Blurred
+                    | WindowBackgroundAppearance::MicaBackdrop
+                    | WindowBackgroundAppearance::MicaAltBackdrop
+            );
+            let cloaked = glass && !self.state.reveal_pending.get() && set_cloaked(hwnd, true);
+            if cloaked {
+                self.state.reveal_pending.set(true);
+                unsafe {
+                    SetTimer(Some(hwnd), REVEAL_TIMER_ID, 3000, None);
+                }
+            }
             self.0.set_window_placement().log_err();
+            if cloaked {
+                // Under the cloak, make the material active now: otherwise
+                // Windows shows acrylic's flat inactive fallback (grey) until
+                // focus lands after the uncloak, then fades to live glass in
+                // front of the person (Glint's prepare step).
+                unsafe {
+                    DefWindowProcW(hwnd, WM_NCACTIVATE, WPARAM(1), LPARAM(0));
+                }
+                self.0.frame_demand.request();
+                unsafe {
+                    let _ = InvalidateRect(Some(hwnd), None, false);
+                }
+            }
             #[cfg(feature = "seek-bench")]
             crate::seek_observer::milestone("first_window_revealed");
             if self.state.activate_after_first_frame.replace(false) {
@@ -1958,6 +1989,8 @@ pub(crate) fn finish_reveal(state: &WindowsWindowState, hwnd: HWND) {
         return;
     }
     unsafe {
+        // Two compositor frames: the material has sampled the backdrop.
+        let _ = windows::Win32::Graphics::Dwm::DwmFlush();
         let _ = windows::Win32::Graphics::Dwm::DwmFlush();
         let _ = KillTimer(Some(hwnd), REVEAL_TIMER_ID);
     }

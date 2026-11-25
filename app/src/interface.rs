@@ -2241,9 +2241,22 @@ impl Render for Seek {
         // element. After a click on something that takes no focus, or when a
         // focused view closes (Settings, a dialog), nothing holds focus and
         // keys go nowhere; give it back to the file list (or Settings).
+        // On Storage and Worktrees the file list isn't shown, so focus left on
+        // it reaches nothing either; the page takes it (never from a field).
+        let page = self.storage_page.is_some() || self.worktrees_page.is_some();
+        if page
+            && !self.settings
+            && window.is_window_active()
+            && self.table.read(cx).focus_handle(cx).is_focused(window)
+        {
+            let page_focus = self.page_focus.clone();
+            window.defer(cx, move |window, cx| page_focus.focus(window, cx));
+        }
         if window.focused(cx).is_none() && window.is_window_active() {
             let fallback = if self.settings {
                 self.settings_focus.clone()
+            } else if self.storage_page.is_some() || self.worktrees_page.is_some() {
+                self.page_focus.clone()
             } else {
                 self.table.read(cx).focus_handle(cx)
             };
@@ -2669,8 +2682,6 @@ impl Render for Seek {
                 .flex()
                 .flex_col()
                 .bg(p.canvas)
-                .border_1()
-                .border_color(p.edge)
                 .children(glass_layers)
                 .font_family(crate::tokens::FONT_UI)
                 .text_size(px(13.))

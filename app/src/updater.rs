@@ -589,13 +589,13 @@ mod tests {
     #[test]
     fn release_selection_requires_correct_assets_and_stable_newer_version() {
         let r = Release {
-            version: "1.1.0".into(),
-            tag: "v1.1.0".into(),
+            version: "99.0.0".into(),
+            tag: "v99.0.0".into(),
             notes: String::new(),
             size: 0,
             preview: false,
         };
-        let mut value = serde_json::json!({"tag_name":"v1.1.0","draft":false,"prerelease":false,"body":"Faster search.","assets":[{"name":r.filename(),"size":1234,"browser_download_url":r.url(&r.filename())},{"name":"SHA256SUMS.txt","browser_download_url":r.url("SHA256SUMS.txt")}]});
+        let mut value = serde_json::json!({"tag_name":"v99.0.0","draft":false,"prerelease":false,"body":"Faster search.","assets":[{"name":r.filename(),"size":1234,"browser_download_url":r.url(&r.filename())},{"name":"SHA256SUMS.txt","browser_download_url":r.url("SHA256SUMS.txt")}]});
         match release(&serde_json::to_vec(&value).unwrap()) {
             Ok(Check::Available(found)) => {
                 assert_eq!(found.notes, "Faster search.");
@@ -617,15 +617,15 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
         zip.start_file(
-            "Seek-1.1.0-windows-x64/../escape",
+            "Seek-99.0.0-windows-x64/../escape",
             zip::write::SimpleFileOptions::default(),
         )
         .unwrap();
         zip.write_all(b"bad").unwrap();
         let bytes = zip.finish().unwrap().into_inner();
         let r = Release {
-            version: "1.1.0".into(),
-            tag: "v1.1.0".into(),
+            version: "99.0.0".into(),
+            tag: "v99.0.0".into(),
             notes: String::new(),
             size: 0,
             preview: false,
@@ -637,8 +637,8 @@ mod tests {
     fn exact_payload_is_accepted_but_missing_files_are_rejected() {
         use std::io::Write;
         let r = Release {
-            version: "1.1.0".into(),
-            tag: "v1.1.0".into(),
+            version: "99.0.0".into(),
+            tag: "v99.0.0".into(),
             notes: String::new(),
             size: 0,
             preview: false,
@@ -648,7 +648,7 @@ mod tests {
             let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
             for name in FILES.iter().take(count) {
                 zip.start_file(
-                    format!("Seek-1.1.0-windows-x64/{name}"),
+                    format!("Seek-99.0.0-windows-x64/{name}"),
                     zip::write::SimpleFileOptions::default(),
                 )
                 .unwrap();
@@ -662,8 +662,8 @@ mod tests {
     fn windows_and_mixed_zip_separators_preserve_the_fixed_payload_boundary() {
         use std::io::Write;
         let release = Release {
-            version: "1.1.0".into(),
-            tag: "v1.1.0".into(),
+            version: "99.0.0".into(),
+            tag: "v99.0.0".into(),
             notes: String::new(),
             size: 0,
             preview: false,
@@ -679,7 +679,7 @@ mod tests {
                 };
                 writer
                     .start_file(
-                        format!("Seek-1.1.0-windows-x64{sep}{name}"),
+                        format!("Seek-99.0.0-windows-x64{sep}{name}"),
                         zip::write::SimpleFileOptions::default(),
                     )
                     .unwrap();
@@ -694,17 +694,17 @@ mod tests {
             }
         }
         for name in [
-            "/Seek-1.1.0-windows-x64/seek.exe",
-            "C:\\Seek-1.1.0-windows-x64\\seek.exe",
-            "\\\\server\\Seek-1.1.0-windows-x64\\seek.exe",
-            "Seek-1.1.0-windows-x64\\..\\seek.exe",
-            "Seek-1.1.0-windows-x64/../seek.exe",
-            "Seek-1.1.0-windows-x64/./seek.exe",
-            "Seek-1.1.0-windows-x64\\nested/seek.exe",
-            "Seek-1.1.0-windows-x64/seek.exe:stream",
-            "Seek-1.1.0-windows-x64//seek.exe",
+            "/Seek-99.0.0-windows-x64/seek.exe",
+            "C:\\Seek-99.0.0-windows-x64\\seek.exe",
+            "\\\\server\\Seek-99.0.0-windows-x64\\seek.exe",
+            "Seek-99.0.0-windows-x64\\..\\seek.exe",
+            "Seek-99.0.0-windows-x64/../seek.exe",
+            "Seek-99.0.0-windows-x64/./seek.exe",
+            "Seek-99.0.0-windows-x64\\nested/seek.exe",
+            "Seek-99.0.0-windows-x64/seek.exe:stream",
+            "Seek-99.0.0-windows-x64//seek.exe",
             "Other/seek.exe",
-            "Seek-1.1.0-windows-x64/extra.exe",
+            "Seek-99.0.0-windows-x64/extra.exe",
         ] {
             let temp = tempfile::tempdir().unwrap();
             let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
@@ -721,8 +721,8 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
         for name in [
-            "Seek-1.1.0-windows-x64/seek.exe",
-            "Seek-1.1.0-windows-x64\\seek.exe",
+            "Seek-99.0.0-windows-x64/seek.exe",
+            "Seek-99.0.0-windows-x64\\seek.exe",
         ] {
             writer
                 .start_file(name, zip::write::SimpleFileOptions::default())

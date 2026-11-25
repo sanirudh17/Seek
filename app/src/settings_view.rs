@@ -200,8 +200,16 @@ pub(super) fn card(
                         // The explanation stays one hover away instead of a
                         // sentence under every setting.
                         .when(!description.is_empty(), |d| {
+                            // A compact box that wraps, not one long line.
                             d.tooltip(move |window, cx| {
-                                gpui_component::tooltip::Tooltip::new(description).build(window, cx)
+                                gpui_component::tooltip::Tooltip::element(move |_, _| {
+                                    div()
+                                        .max_w(px(300.))
+                                        .whitespace_normal()
+                                        .line_height(px(17.))
+                                        .child(description)
+                                })
+                                .build(window, cx)
                             })
                         }),
                 ),

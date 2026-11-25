@@ -1,0 +1,556 @@
+{
+  "accuracy": {
+    "all": {
+      "mrr": 0.5068154297045844,
+      "queries": 1607,
+      "top1": 0.4642190416925949,
+      "top20": 0.6172993154947106,
+      "top5": 0.5500933416303672
+    },
+    "by_kind": {
+      "acronym": {
+        "mrr": 0.29163477704192314,
+        "queries": 283,
+        "top1": 0.24734982332155478,
+        "top20": 0.43109540636042404,
+        "top5": 0.3321554770318021
+      },
+      "exact": {
+        "mrr": 0.9983333333333333,
+        "queries": 300,
+        "top1": 0.9966666666666667,
+        "top20": 1.0,
+        "top5": 1.0
+      },
+      "middle": {
+        "mrr": 0.1236887519221599,
+        "queries": 123,
+        "top1": 0.08943089430894309,
+        "top20": 0.2601626016260163,
+        "top5": 0.13008130081300814
+      },
+      "path hint": {
+        "mrr": 0.39799701936261633,
+        "queries": 242,
+        "top1": 0.3305785123966942,
+        "top20": 0.5619834710743802,
+        "top5": 0.4628099173553719
+      },
+      "prefix": {
+        "mrr": 0.391752386207203,
+        "queries": 287,
+        "top1": 0.3310104529616725,
+        "top20": 0.5505226480836237,
+        "top5": 0.4634146341463415
+      },
+      "two words": {
+        "mrr": 0.2912820655294655,
+        "queries": 218,
+        "top1": 0.22018348623853212,
+        "top20": 0.44036697247706424,
+        "top5": 0.3761467889908257
+      },
+      "typo": {
+        "mrr": 0.9412878787878787,
+        "queries": 154,
+        "top1": 0.9285714285714286,
+        "top20": 0.961038961038961,
+        "top5": 0.9545454545454546
+      }
+    },
+    "other_targets": {
+      "mrr": 0.4232967792064929,
+      "queries": 807,
+      "top1": 0.40396530359355637,
+      "top20": 0.4684014869888476,
+      "top5": 0.4448574969021066
+    },
+    "sample_misses": [
+      {
+        "kind": "prefix",
+        "query": "pixel-desi",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "pd9t",
+        "user": false
+      },
+      {
+        "kind": "two words",
+        "query": "pixel design",
+        "user": false
+      },
+      {
+        "kind": "path hint",
+        "query": "batch-0911 pixel-desi",
+        "user": false
+      },
+      {
+        "kind": "prefix",
+        "query": "pixel-desi",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "pd3t",
+        "user": false
+      },
+      {
+        "kind": "two words",
+        "query": "pixel design",
+        "user": false
+      },
+      {
+        "kind": "path hint",
+        "query": "batch-0330 pixel-desi",
+        "user": false
+      },
+      {
+        "kind": "prefix",
+        "query": "pixel-desi",
+        "user": false
+      },
+      {
+        "kind": "middle",
+        "query": "design",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "pd5t",
+        "user": false
+      },
+      {
+        "kind": "two words",
+        "query": "pixel design",
+        "user": false
+      },
+      {
+        "kind": "prefix",
+        "query": "orbit-budg",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "ob2t",
+        "user": false
+      },
+      {
+        "kind": "two words",
+        "query": "orbit budget",
+        "user": false
+      },
+      {
+        "kind": "path hint",
+        "query": "batch-0235 orbit-budg",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "skc",
+        "user": false
+      },
+      {
+        "kind": "prefix",
+        "query": "pixel-desi",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "pd3t",
+        "user": false
+      },
+      {
+        "kind": "two words",
+        "query": "pixel design",
+        "user": false
+      },
+      {
+        "kind": "path hint",
+        "query": "batch-0335 pixel-desi",
+        "user": false
+      },
+      {
+        "kind": "prefix",
+        "query": "pixel-desi",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "pd8t",
+        "user": false
+      },
+      {
+        "kind": "two words",
+        "query": "pixel design",
+        "user": false
+      },
+      {
+        "kind": "path hint",
+        "query": "batch-0895 pixel-desi",
+        "user": false
+      },
+      {
+        "kind": "middle",
+        "query": "1fe21f",
+        "user": false
+      },
+      {
+        "kind": "prefix",
+        "query": "orbit-budg",
+        "user": false
+      },
+      {
+        "kind": "middle",
+        "query": "budget",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "ob7t",
+        "user": false
+      },
+      {
+        "kind": "two words",
+        "query": "orbit budget",
+        "user": false
+      },
+      {
+        "kind": "prefix",
+        "query": "orbit-budg",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "ob8t",
+        "user": false
+      },
+      {
+        "kind": "two words",
+        "query": "orbit budget",
+        "user": false
+      },
+      {
+        "kind": "prefix",
+        "query": "orbit-budg",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "ob9t",
+        "user": false
+      },
+      {
+        "kind": "two words",
+        "query": "orbit budget",
+        "user": false
+      },
+      {
+        "kind": "middle",
+        "query": "tidimp",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "p1ojm",
+        "user": false
+      },
+      {
+        "kind": "two words",
+        "query": "local base",
+        "user": false
+      },
+      {
+        "kind": "prefix",
+        "query": "pixel-desi",
+        "user": false
+      }
+    ],
+    "targets": 300,
+    "user_targets": {
+      "mrr": 0.5910648683945342,
+      "queries": 800,
+      "top1": 0.525,
+      "top20": 0.7675,
+      "top5": 0.65625
+    }
+  },
+  "entries": 3541426,
+  "first_result_hits": 50,
+  "heimdall_query_set_limit50": [
+    {
+      "hits": 50,
+      "median_ms": 0.023350000000000003,
+      "p95_ms": 0.043699999999999996,
+      "query": "a"
+    },
+    {
+      "hits": 50,
+      "median_ms": 0.05115,
+      "p95_ms": 0.0653,
+      "query": "re"
+    },
+    {
+      "hits": 50,
+      "median_ms": 0.19079999999999997,
+      "p95_ms": 0.2409,
+      "query": "report"
+    },
+    {
+      "hits": 50,
+      "median_ms": 6.1513,
+      "p95_ms": 8.4303,
+      "query": "main.rs"
+    },
+    {
+      "hits": 50,
+      "median_ms": 0.25015,
+      "p95_ms": 0.7374999999999999,
+      "query": "readme"
+    },
+    {
+      "hits": 50,
+      "median_ms": 0.6777,
+      "p95_ms": 0.8859,
+      "query": "heimdall"
+    },
+    {
+      "hits": 50,
+      "median_ms": 8.694849999999999,
+      "p95_ms": 34.9842,
+      "query": "config json"
+    },
+    {
+      "hits": 50,
+      "median_ms": 3.1703,
+      "p95_ms": 21.2653,
+      "query": "ext:pdf invoice"
+    },
+    {
+      "hits": 50,
+      "median_ms": 5.16535,
+      "p95_ms": 13.3111,
+      "query": "node_modules"
+    },
+    {
+      "hits": 17,
+      "median_ms": 0.28535,
+      "p95_ms": 0.7079,
+      "query": "zzqxv"
+    }
+  ],
+  "junk": {
+    "dominated": 129,
+    "dominated_queries": [
+      "after",
+      "agent",
+      "antigravity",
+      "apps",
+      "auth",
+      "awareness",
+      "background",
+      "backup",
+      "before",
+      "beta",
+      "block",
+      "cases",
+      "certificate",
+      "class",
+      "cline",
+      "code",
+      "codes",
+      "comet",
+      "complete",
+      "consumer",
+      "contracts",
+      "control",
+      "controller",
+      "core",
+      "credentials",
+      "dark",
+      "data",
+      "debug",
+      "docx",
+      "ember"
+    ],
+    "junk_rate": 0.5512820512820513,
+    "mean_junk_share_top20": 0.5547008547008547,
+    "queries_with_user_match": 234
+  },
+  "label": "after",
+  "latency": [
+    {
+      "all_hits": 100000,
+      "all_results_median_ms": 335.51365,
+      "all_results_p95_ms": 390.3524,
+      "first_page_median_ms": 1.40475,
+      "first_page_p95_ms": 1.7812,
+      "kind": "1 char",
+      "page_hits": 200,
+      "query": "a"
+    },
+    {
+      "all_hits": 100000,
+      "all_results_median_ms": 436.82405,
+      "all_results_p95_ms": 468.8923,
+      "first_page_median_ms": 1.4899499999999999,
+      "first_page_p95_ms": 2.0745999999999998,
+      "kind": "2 chars",
+      "page_hits": 200,
+      "query": "re"
+    },
+    {
+      "all_hits": 100000,
+      "all_results_median_ms": 420.956,
+      "all_results_p95_ms": 456.03880000000004,
+      "first_page_median_ms": 1.6492499999999999,
+      "first_page_p95_ms": 1.9402,
+      "kind": "3 chars",
+      "page_hits": 200,
+      "query": "con"
+    },
+    {
+      "all_hits": 19581,
+      "all_results_median_ms": 100.73339999999999,
+      "all_results_p95_ms": 106.8545,
+      "first_page_median_ms": 2.0683499999999997,
+      "first_page_p95_ms": 2.5111,
+      "kind": "whole word",
+      "page_hits": 200,
+      "query": "report"
+    },
+    {
+      "all_hits": 3096,
+      "all_results_median_ms": 18.071150000000003,
+      "all_results_p95_ms": 22.706,
+      "first_page_median_ms": 3.38345,
+      "first_page_p95_ms": 4.736,
+      "kind": "whole word",
+      "page_hits": 200,
+      "query": "invoice"
+    },
+    {
+      "all_hits": 9870,
+      "all_results_median_ms": 34.2136,
+      "all_results_p95_ms": 38.1606,
+      "first_page_median_ms": 2.82435,
+      "first_page_p95_ms": 3.5873,
+      "kind": "prefix",
+      "page_hits": 200,
+      "query": "^read"
+    },
+    {
+      "all_hits": 71752,
+      "all_results_median_ms": 308.94565,
+      "all_results_p95_ms": 571.2514,
+      "first_page_median_ms": 2.8724,
+      "first_page_p95_ms": 9.7436,
+      "kind": "substring",
+      "page_hits": 200,
+      "query": "port"
+    },
+    {
+      "all_hits": 122,
+      "all_results_median_ms": 9.1065,
+      "all_results_p95_ms": 14.8734,
+      "first_page_median_ms": 8.425799999999999,
+      "first_page_p95_ms": 15.0565,
+      "kind": "camelCase",
+      "page_hits": 122,
+      "query": "MainWindow"
+    },
+    {
+      "all_hits": 446,
+      "all_results_median_ms": 4.1569,
+      "all_results_p95_ms": 7.1177,
+      "first_page_median_ms": 3.69215,
+      "first_page_p95_ms": 8.2502,
+      "kind": "underscore",
+      "page_hits": 200,
+      "query": "test_utils"
+    },
+    {
+      "all_hits": 16441,
+      "all_results_median_ms": 91.30475000000001,
+      "all_results_p95_ms": 135.2596,
+      "first_page_median_ms": 7.34235,
+      "first_page_p95_ms": 11.5406,
+      "kind": "typo",
+      "page_hits": 200,
+      "query": "documnet"
+    },
+    {
+      "all_hits": 1180,
+      "all_results_median_ms": 25.12935,
+      "all_results_p95_ms": 27.881800000000002,
+      "first_page_median_ms": 20.6902,
+      "first_page_p95_ms": 24.9668,
+      "kind": "several words",
+      "page_hits": 200,
+      "query": "windows update log"
+    },
+    {
+      "all_hits": 1265,
+      "all_results_median_ms": 22.7449,
+      "all_results_p95_ms": 48.6167,
+      "first_page_median_ms": 18.8828,
+      "first_page_p95_ms": 39.4847,
+      "kind": "path-qualified",
+      "page_hits": 200,
+      "query": "users downloads pdf"
+    },
+    {
+      "all_hits": 73,
+      "all_results_median_ms": 0.8682000000000001,
+      "all_results_p95_ms": 1.4936,
+      "first_page_median_ms": 0.84095,
+      "first_page_p95_ms": 1.1471,
+      "kind": "extension",
+      "page_hits": 73,
+      "query": "ext:pdf invoice"
+    },
+    {
+      "all_hits": 42484,
+      "all_results_median_ms": 79.71635,
+      "all_results_p95_ms": 131.0394,
+      "first_page_median_ms": 2.10015,
+      "first_page_p95_ms": 6.0515,
+      "kind": "extension only",
+      "page_hits": 200,
+      "query": "ext:png"
+    },
+    {
+      "all_hits": 8170,
+      "all_results_median_ms": 19.792450000000002,
+      "all_results_p95_ms": 31.244999999999997,
+      "first_page_median_ms": 0.8996,
+      "first_page_p95_ms": 1.7497,
+      "kind": "exact file",
+      "page_hits": 200,
+      "query": "readme.md"
+    },
+    {
+      "all_hits": 17,
+      "all_results_median_ms": 0.2307,
+      "all_results_p95_ms": 0.3059,
+      "first_page_median_ms": 0.2435,
+      "first_page_p95_ms": 0.2786,
+      "kind": "no match",
+      "page_hits": 17,
+      "query": "zzqxv"
+    }
+  ],
+  "load_index_ms": 49.398900000000005,
+  "measurement": "in-process engine search on a loaded index; no IPC, no painting",
+  "peak_working_set_bytes": 445169664,
+  "rebuild_from_index_ms": 1656.6436,
+  "restart_to_first_result_ms": 2519.796,
+  "runs": 30,
+  "typing": {
+    "per_key_median_ms": 1.1838000000000002,
+    "per_key_p95_ms": 2.1309,
+    "text": "readme.md"
+  },
+  "warmups": 3
+}

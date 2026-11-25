@@ -615,6 +615,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "blake3"
+version = "1.8.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d9e454fc11f76977dc803893aff6304ed33d6a26efae8696573bea74baa27ae"
+dependencies = [
+ "arrayvec",
+ "cc",
+ "cfg-if",
+ "constant_time_eq",
+ "cpufeatures 0.3.1",
+]
+
+[[package]]
 name = "block"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1001,6 +1014,12 @@ name = "const-oid"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
+
+[[package]]
+name = "constant_time_eq"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
 
 [[package]]
 name = "convert_case"
@@ -3144,6 +3163,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "kamadak-exif"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8772c92c0f41c4a672cbdee6728253e5ae8fcc1c5eb5c6c676579565684bbf68"
+dependencies = [
+ "mutate_once",
+]
+
+[[package]]
 name = "khronos-egl"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3614,6 +3642,12 @@ name = "multiversion_no_op"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "743fb55ba31b18fb1ecef6bdc9aa2743314978ac084044301a7eee33fb99a20d"
+
+[[package]]
+name = "mutate_once"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13d2233c9842d08cfe13f9eac96e207ca6a2ea10b80259ebe8ad0268be27d2af"
 
 [[package]]
 name = "naga"
@@ -5507,12 +5541,14 @@ dependencies = [
 
 [[package]]
 name = "seek"
-version = "1.0.2"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "async-channel",
+ "blake3",
  "calamine",
  "chrono",
+ "data-url",
  "embed-resource",
  "gpui",
  "gpui-base",
@@ -5521,15 +5557,20 @@ dependencies = [
  "gpui_platform",
  "gpui_windows",
  "image",
+ "kamadak-exif",
  "quick-xml 0.38.4",
  "raw-window-handle",
+ "rayon",
+ "regex",
  "resvg 0.46.0",
  "seek-engine",
  "serde",
  "serde_json",
  "sha2 0.10.9",
  "tempfile",
+ "url",
  "windows 0.62.2",
+ "windows-collections",
  "windows-core 0.62.2",
  "windows-sys 0.61.2",
  "zip 2.4.2",
@@ -5537,11 +5578,12 @@ dependencies = [
 
 [[package]]
 name = "seek-cli"
-version = "1.0.2"
+version = "1.1.0"
 dependencies = [
  "seek-engine",
  "serde",
  "serde_json",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5561,7 +5603,7 @@ dependencies = [
 
 [[package]]
 name = "seek-helper"
-version = "1.0.2"
+version = "1.1.0"
 dependencies = [
  "embed-resource",
  "seek-engine",

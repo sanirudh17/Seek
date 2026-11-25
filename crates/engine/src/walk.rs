@@ -24,6 +24,10 @@ pub const FLAG_HIDDEN: u8 = 1 << 2;
 pub const FLAG_MOUNT: u8 = 1 << 3;
 pub const FLAG_SYNTH: u8 = 1 << 4;
 pub const FLAG_SYSTEM: u8 = 1 << 5;
+/// A cloud placeholder (OneDrive and other sync providers) whose content is
+/// not on this PC: recall on open or on data access, or offline.
+pub const FLAG_CLOUD: u8 = 1 << 6;
+pub const CLOUD_ATTRIBUTES: u32 = 0x0040_0000 | 0x0004_0000 | 0x0000_1000;
 pub static DENIED: Mutex<BTreeMap<Vec<u8>, u32>> = Mutex::new(BTreeMap::new());
 pub static LISTED: AtomicUsize = AtomicUsize::new(0);
 /// A vanished directory is a normal change, not a current access failure.
@@ -119,6 +123,10 @@ pub fn flags_with_tag(attrs: u32, reparse_tag: u32) -> u8 {
         0
     }) | (if attrs & FILE_ATTRIBUTE_SYSTEM != 0 {
         FLAG_SYSTEM
+    } else {
+        0
+    }) | (if attrs & CLOUD_ATTRIBUTES != 0 && attrs & FILE_ATTRIBUTE_DIRECTORY == 0 {
+        FLAG_CLOUD
     } else {
         0
     })
@@ -346,5 +354,24 @@ mod tests {
                 KIND_LINK | FLAG_HIDDEN | FLAG_SYSTEM
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod cloud_flag_tests {
+    use super::*;
+    #[test]
+    fn cloud_placeholders_are_flagged_and_local_files_are_not() {
+        assert_eq!(flags(FILE_ATTRIBUTE_ARCHIVE) & FLAG_CLOUD, 0);
+        // OneDrive "online-only": recall on data access, plus its reparse tag.
+        let online = FILE_ATTRIBUTE_ARCHIVE | 0x0040_0000 | FILE_ATTRIBUTE_REPARSE_POINT;
+        assert_eq!(flags_with_tag(online, 0x9000_601a) & FLAG_CLOUD, FLAG_CLOUD);
+        assert_eq!(flags_with_tag(online, 0x9000_601a) & 3, KIND_FILE);
+        assert_eq!(flags(FILE_ATTRIBUTE_OFFLINE) & FLAG_CLOUD, FLAG_CLOUD);
+        // Folders are never badged.
+        assert_eq!(
+            flags(FILE_ATTRIBUTE_DIRECTORY | 0x0040_0000) & FLAG_CLOUD,
+            0
+        );
     }
 }

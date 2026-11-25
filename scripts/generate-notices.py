@@ -100,7 +100,7 @@ def main():
         for future in concurrent.futures.as_completed(futures):
             p = futures[future]
             texts[p['id']] = future.result()
-    blocks = ['Seek 1.0.0 - Third-party notices\n\n'
+    blocks = ['Seek 1.0.2 - Third-party notices\n\n'
               'This file includes complete license/notice texts and attribution from the locked\n'
               'Windows app/helper dependency graph, including build tools conservatively.\n'
               'Dependencies are not relicensed by Seek. For OR expressions either permissive\n'
@@ -128,6 +128,8 @@ def main():
                   'Upstream: https://nsis.sourceforge.io/\n'
                   'Used with zlib compression (not the LZMA or bzip2 module).\n\n'
                   + nsis.read_text(encoding='utf-8') + '\n')
+    for notice in sorted((ROOT / 'licenses').glob('*.txt')):
+        blocks.append('\n' + '=' * 78 + '\n' + notice.read_text(encoding='utf-8') + '\n')
     args.output.write_text(''.join(blocks), encoding='utf-8')
     print(f'Included {len(shipping)} packages; {args.output.stat().st_size} notice bytes')
 

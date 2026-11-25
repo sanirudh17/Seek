@@ -210,81 +210,8 @@ impl Engine {
     pub fn search(&self, q: &Query) -> Result<Vec<Found>, String> {
         let guard = self.shared.live.read().unwrap();
         let live = guard.as_ref().ok_or("Building index")?;
-        let mut path = Vec::new();
-        let mut hits: Vec<Found> = Searcher { live }
-            .search(q)
-            .into_iter()
-            .map(|h| {
-                let (kind, size, mtime) = match h.over {
-                    Some(over) => {
-                        let o = live.over[&over];
-                        path = over;
-                        (o.kind, o.size, o.mtime)
-                    }
-                    None => {
-                        let i = h.idx as usize;
-                        live.base.path(i, &mut path);
-                        live.attributes(i)
-                    }
-                };
-                Found {
-                    path: crate::paths::native(&path),
-                    kind,
-                    size,
-                    mtime,
-                    score: h.score,
-                }
-            })
-            .filter(|h| h.kind & FLAG_SYNTH == 0)
-            .collect();
-        drop(guard);
-        if q.tokens.is_empty() {
-            hits.sort_by(|a, b| b.mtime.cmp(&a.mtime).then(b.score.cmp(&a.score)));
-        }
         let opened = self.shared.opened.read().unwrap();
-        let tier = |h: &Found| {
-            let name = h
-                .path
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_lowercase();
-            let tokens: Vec<_> = q.tokens.iter().filter(|t| !t.negate).collect();
-            if tokens.len() == 1 {
-                let text = String::from_utf8_lossy(&tokens[0].text);
-                if name == text {
-                    return 2;
-                }
-                if name.starts_with(text.as_ref()) {
-                    return 1;
-                }
-            }
-            0
-        };
-        if !q.tokens.is_empty() {
-            let now = crate::query::now_secs();
-            hits.sort_by_cached_key(|h| {
-                (
-                    std::cmp::Reverse(tier(h)),
-                    std::cmp::Reverse(
-                        h.score
-                            + match now.saturating_sub(h.mtime) {
-                                0..=86_400 => 6,
-                                86_401..=604_800 => 4,
-                                604_801..=2_592_000 => 2,
-                                _ => 0,
-                            }
-                            + opened
-                                .get(&crate::paths::internal(&h.path))
-                                .copied()
-                                .unwrap_or(0)
-                                .min(5) as i32,
-                    ),
-                )
-            });
-        }
-        hits.truncate(q.limit);
-        Ok(hits)
+        Ok(search_live(live, q, &opened))
     }
     /// Complete newest-first namespace, materializing paths only for one page.
     /// The temporary ordinal list is 8 bytes per eligible base entry; it does
@@ -452,6 +379,24 @@ impl Engine {
     pub fn children(&self, folder: &Path, show_hidden: bool, excluded: &[PathBuf]) -> Vec<Found> {
         self.profiled_children(folder, show_hidden, excluded).0
     }
+    /// Storage by category and by child folder for `scope`, from the index
+    /// only (Phase 9.1). Bounded by `deadline` and `cancel`.
+    pub fn storage(
+        &self,
+        scope: &Path,
+        cluster: u64,
+        deadline: Instant,
+        cancel: &std::sync::atomic::AtomicBool,
+    ) -> crate::live::storage::Storage {
+        let scope = crate::paths::internal(scope);
+        self.shared.live.read().unwrap().as_ref().map_or_else(
+            || crate::live::storage::Storage {
+                stopped: Some("The index is still loading".into()),
+                ..Default::default()
+            },
+            |live| live.storage(&scope, cluster, deadline, cancel),
+        )
+    }
     pub fn largest(&self, query: &Query, folders: bool) -> Vec<Found> {
         self.shared
             .live
@@ -603,10 +548,12 @@ fn run(
         .ok()
         .and_then(|b| serde_json::from_slice::<Vec<Vec<u8>>>(&b).ok())
         .is_some_and(|saved| saved == root_bytes);
+    load_ranking(&options.dir);
     let load_started = Instant::now();
     let saved = roots_match
         .then(|| Index::load(&options.dir.join("index.bin")))
-        .flatten();
+        .flatten()
+        .map(|index| reweighted(index, &options.dir));
     shared.status.lock().unwrap().progress.load_ms = load_started.elapsed().as_secs_f64() * 1000.;
     let started = Instant::now();
     let cached = saved.is_some();
@@ -694,7 +641,7 @@ fn run(
             }),
             0,
             crate::query::now_secs(),
-            &[],
+            &crate::places::home(),
         ));
         shared.update_status();
         shared.announce();
@@ -925,7 +872,12 @@ fn save(shared: &Shared, dir: &Path) -> Result<(), String> {
         .as_ref()
         .and_then(|s| s.cursors.first())
         .map_or(0, |c| c.next_usn as u64);
-    let index = Index::build(listings, event_id, crate::query::now_secs(), &[]);
+    let index = Index::build(
+        listings,
+        event_id,
+        crate::query::now_secs(),
+        &crate::places::home(),
+    );
     // File-backed mappings are immutable snapshots; replacement is done after dropping the old map.
     shared.install(index);
     let path = dir.join("index.bin");
@@ -947,6 +899,7 @@ fn save(shared: &Shared, dir: &Path) -> Result<(), String> {
         )
         .map_err(|e| e.to_string())?;
     let mapped = Index::load(&path).ok_or("Saved index failed validation")?;
+    let _ = std::fs::write(dir.join("ranking.applied"), ranking_fingerprint());
     shared.install(mapped);
     shared.status.lock().unwrap().progress.save_ms += saving.elapsed().as_secs_f64() * 1000.;
     Ok(())
@@ -1022,4 +975,229 @@ fn graft_roots(roots: &[Vec<u8>], mut scan: impl FnMut(&[u8]) -> Vec<Listing>) -
         all.extend(listings);
     }
     all
+}
+
+/// One name search over a live index, ranked as the app shows it: the
+/// engine's score, then whole-name and prefix tiers, recency and how often
+/// Seek opened the file. Shared by `Engine::search` and the benchmarks.
+/// A read-only view of the index Seek saved, for tools that run while the
+/// app is closed (Seek's MCP server). It maps `index.bin` without starting
+/// an indexer or writing anything; drop it soon, since Windows won't let the
+/// app replace a file another process has mapped.
+pub struct SavedIndex {
+    live: Live,
+}
+
+impl SavedIndex {
+    pub fn open(dir: &Path) -> Result<Self, String> {
+        let index = Index::load(&dir.join("index.bin"))
+            .ok_or("Seek has no saved index yet; open Seek once to build it.")?;
+        Ok(Self {
+            live: Live::new(index),
+        })
+    }
+    pub fn search(&self, q: &Query) -> Vec<Found> {
+        search_live(&self.live, q, &HashMap::new())
+    }
+    pub fn largest(&self, q: &Query, folders: bool) -> Vec<Found> {
+        self.live.largest(q, folders)
+    }
+    pub fn storage(
+        &self,
+        scope: &Path,
+        cluster: u64,
+        deadline: Instant,
+        cancel: &std::sync::atomic::AtomicBool,
+    ) -> crate::live::storage::Storage {
+        self.live
+            .storage(&crate::paths::internal(scope), cluster, deadline, cancel)
+    }
+}
+
+pub fn search_live(live: &Live, q: &Query, opened: &HashMap<Vec<u8>, u32>) -> Vec<Found> {
+    let mut path = Vec::new();
+
+    let mut hits: Vec<Found> = Searcher { live }
+        .search(q)
+        .into_iter()
+        .map(|h| {
+            let (kind, size, mtime) = match h.over {
+                Some(over) => {
+                    let o = live.over[&over];
+                    path = over;
+                    (o.kind, o.size, o.mtime)
+                }
+                None => {
+                    let i = h.idx as usize;
+                    live.base.path(i, &mut path);
+                    live.attributes(i)
+                }
+            };
+            Found {
+                path: crate::paths::native(&path),
+                kind,
+                size,
+                mtime,
+                score: h.score,
+            }
+        })
+        .filter(|h| h.kind & FLAG_SYNTH == 0)
+        .collect();
+    if q.tokens.is_empty() {
+        hits.sort_by(|a, b| b.mtime.cmp(&a.mtime).then(b.score.cmp(&a.score)));
+    }
+    let mut positive = q.tokens.iter().filter(|t| !t.negate);
+    let single = match (positive.next(), positive.next()) {
+        (Some(token), None) => Some(String::from_utf8_lossy(&token.text).into_owned()),
+        _ => None,
+    };
+    let tier = |h: &Found| match &single {
+        Some(text) => name_tier(
+            &h.path.file_name().unwrap_or_default().to_string_lossy(),
+            text,
+        ),
+        None => 0,
+    };
+    if !q.tokens.is_empty() {
+        let now = crate::query::now_secs();
+        hits.sort_by_cached_key(|h| {
+            (
+                std::cmp::Reverse(tier(h)),
+                std::cmp::Reverse(
+                    h.score
+                        + match now.saturating_sub(h.mtime) {
+                            0..=86_400 => 6,
+                            86_401..=604_800 => 4,
+                            604_801..=2_592_000 => 2,
+                            _ => 0,
+                        }
+                        + opened
+                            .get(&crate::paths::internal(&h.path))
+                            .copied()
+                            .unwrap_or(0)
+                            .min(5) as i32,
+                ),
+            )
+        });
+    }
+    hits.truncate(q.limit);
+    hits
+}
+
+/// How cleanly a one-word query matches a file name, before score: 2 for
+/// the whole name or the name without its extension, 1 for a match at the
+/// start of the name or of a word in it (after a space or punctuation, or a
+/// lower-to-upper case change), 0 otherwise (inside a word, or fuzzy).
+/// Within a tier the score decides, so a user's `project config.txt` can
+/// rank above `config.json` deep in AppData; a typo never beats a clean match.
+fn name_tier(name: &str, text: &str) -> u8 {
+    if name.is_ascii() && text.is_ascii() {
+        // No copy: compare in place, ignoring ASCII case.
+        let (n, t) = (name.as_bytes(), text.as_bytes());
+        let stem = match n.iter().rposition(|&b| b == b'.') {
+            Some(i) if i > 0 => &n[..i],
+            _ => n,
+        };
+        if n.eq_ignore_ascii_case(t) || stem.eq_ignore_ascii_case(t) {
+            return 2;
+        }
+        if t.is_empty() || t.len() > n.len() {
+            return 0;
+        }
+        return (0..=n.len() - t.len()).any(|i| {
+            n[i..i + t.len()].eq_ignore_ascii_case(t)
+                && (i == 0 || {
+                    let (p, c) = (n[i - 1], n[i]);
+                    !p.is_ascii_alphanumeric()
+                        || (p.is_ascii_lowercase() && c.is_ascii_uppercase())
+                        || (p.is_ascii_digit() != c.is_ascii_digit())
+                })
+        }) as u8;
+    }
+    let lower = name.to_lowercase();
+    let stem = match lower.rfind('.') {
+        Some(i) if i > 0 => &lower[..i],
+        _ => &lower[..],
+    };
+    if lower == text || stem == text {
+        return 2;
+    }
+    if text.is_empty() || lower.len() != name.len() {
+        // Case folding changed byte offsets: prefixes only.
+        return lower.starts_with(text) as u8;
+    }
+    let bytes = name.as_bytes();
+    lower.match_indices(text).any(|(i, _)| {
+        i == 0 || {
+            let (p, c) = (bytes[i - 1], bytes[i]);
+            !p.is_ascii_alphanumeric()
+                || (p.is_ascii_lowercase() && c.is_ascii_uppercase())
+                || (p.is_ascii_digit() != c.is_ascii_digit())
+        }
+    }) as u8
+}
+
+/// `ranking.json` in the data folder replaces the default folder weights
+/// (docs/SEARCH_RANKING.md). The weights are process-wide, and only the main
+/// index's folder has the file: a folder-browsing engine, whose data folder
+/// has none, leaves them alone. An unreadable file means defaults.
+fn load_ranking(dir: &Path) {
+    let Ok(bytes) = std::fs::read(dir.join("ranking.json")) else {
+        return;
+    };
+    crate::index::set_weights(serde_json::from_slice(&bytes).ok());
+}
+
+/// What the location prior was computed from: the weights and the profile.
+fn ranking_fingerprint() -> String {
+    serde_json::json!({
+        "weights": crate::index::weights(),
+        "home": String::from_utf8_lossy(&crate::places::home()),
+    })
+    .to_string()
+}
+
+/// A saved index whose location prior came from other weights (or an older
+/// Seek) is rebuilt from itself, not from the disk, and saved again.
+fn reweighted(index: Index, dir: &Path) -> Index {
+    let marker = dir.join("ranking.applied");
+    let fingerprint = ranking_fingerprint();
+    if std::fs::read_to_string(&marker).is_ok_and(|applied| applied == fingerprint) {
+        return index;
+    }
+    let state = index.saved_state().map(<[u8]>::to_vec);
+    let rebuilt = Index::build(
+        index.relisted(),
+        index.event_id,
+        index.synced_at,
+        &crate::places::home(),
+    );
+    drop(index);
+    let path = dir.join("index.bin");
+    if rebuilt.save_with_state(&path, state.as_deref()).is_err() {
+        return rebuilt;
+    }
+    let _ = std::fs::write(&marker, fingerprint);
+    // The file-backed map can be paged out; the freshly built one cannot.
+    Index::load(&path).unwrap_or(rebuilt)
+}
+
+#[cfg(test)]
+mod tier_tests {
+    use super::name_tier;
+
+    #[test]
+    fn whole_name_then_word_starts_then_the_rest() {
+        assert_eq!(name_tier("config", "config"), 2);
+        assert_eq!(name_tier("Config.json", "config"), 2);
+        assert_eq!(name_tier("config.old.json", "config"), 1);
+        assert_eq!(name_tier("project config.txt", "config"), 1);
+        assert_eq!(name_tier("project_config.txt", "config"), 1);
+        assert_eq!(name_tier("projectConfig.ts", "config"), 1);
+        assert_eq!(name_tier("report2026.pdf", "2026"), 1);
+        assert_eq!(name_tier("reconfigure.sh", "config"), 0);
+        assert_eq!(name_tier("cnofig.txt", "config"), 0);
+        assert_eq!(name_tier("Ärger config.txt", "config"), 1);
+        assert_eq!(name_tier("Ärger.txt", "ärger"), 2);
+    }
 }

@@ -54,54 +54,6 @@ pub(super) fn retry_failures(shared: &Shared) {
     shared.announce();
 }
 
-#[cfg(test)]
-mod retry_tests {
-    use super::*;
-    #[test]
-    fn recovered_cached_folder_reindexes_descendants_before_clearing_its_warning() {
-        let temp = tempfile::tempdir().unwrap();
-        let root = crate::paths::internal(temp.path());
-        let folder = temp.path().join("recovered");
-        std::fs::create_dir(&folder).unwrap();
-        std::fs::write(folder.join("visible.txt"), b"fixture").unwrap();
-        let mut listings = walk::scan(&root, 1);
-        // Model a cached listing whose directory previously denied access.
-        for listing in &mut listings {
-            if listing.id != 0 {
-                listing.names.clear();
-                listing.ents.clear();
-            }
-        }
-        let shared = Arc::new(Shared {
-            closing: std::sync::atomic::AtomicBool::new(false),
-            roots: vec![root],
-            live: RwLock::new(None),
-            status: Mutex::new(Status::default()),
-            ready: Condvar::new(),
-            notify: Mutex::new(None),
-            opened: RwLock::new(HashMap::new()),
-            journal: Mutex::new(None),
-            helper_cancel: Mutex::new(None),
-        });
-        shared.install(Index::build(listings, 0, crate::query::now_secs(), &[]));
-        let (tx, _rx) = mpsc::channel();
-        let engine = Engine {
-            shared: shared.clone(),
-            control: Arc::new(Control {
-                tx,
-                thread: Mutex::new(None),
-                shared: shared.clone(),
-            }),
-        };
-        let failed = crate::paths::internal(&folder);
-        walk::DENIED.lock().unwrap().insert(failed.clone(), 5);
-        assert!(engine.children(&folder, true, &[]).is_empty());
-        retry_failures(&shared);
-        assert_eq!(engine.children(&folder, true, &[]).len(), 1);
-        assert!(!walk::DENIED.lock().unwrap().contains_key(&failed));
-    }
-}
-
 pub(super) fn refresh(shared: &Shared, full: bool, started: Instant) {
     let planning = Instant::now();
     let priorities: Vec<_> = crate::places::favorites()
@@ -210,5 +162,58 @@ pub(super) fn refresh(shared: &Shared, full: bool, started: Instant) {
     if priority_count == 0 {
         s.progress.priority_ready = true;
         s.progress.priority_ms = started.elapsed().as_secs_f64() * 1000.;
+    }
+}
+
+#[cfg(test)]
+mod retry_tests {
+    use super::*;
+    #[test]
+    fn recovered_cached_folder_reindexes_descendants_before_clearing_its_warning() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = crate::paths::internal(temp.path());
+        let folder = temp.path().join("recovered");
+        std::fs::create_dir(&folder).unwrap();
+        std::fs::write(folder.join("visible.txt"), b"fixture").unwrap();
+        let mut listings = walk::scan(&root, 1);
+        // Model a cached listing whose directory previously denied access.
+        for listing in &mut listings {
+            if listing.id != 0 {
+                listing.names.clear();
+                listing.ents.clear();
+            }
+        }
+        let shared = Arc::new(Shared {
+            closing: std::sync::atomic::AtomicBool::new(false),
+            roots: vec![root],
+            live: RwLock::new(None),
+            status: Mutex::new(Status::default()),
+            ready: Condvar::new(),
+            notify: Mutex::new(None),
+            opened: RwLock::new(HashMap::new()),
+            journal: Mutex::new(None),
+            helper_cancel: Mutex::new(None),
+        });
+        shared.install(Index::build(
+            listings,
+            0,
+            crate::query::now_secs(),
+            &crate::places::home(),
+        ));
+        let (tx, _rx) = mpsc::channel();
+        let engine = Engine {
+            shared: shared.clone(),
+            control: Arc::new(Control {
+                tx,
+                thread: Mutex::new(None),
+                shared: shared.clone(),
+            }),
+        };
+        let failed = crate::paths::internal(&folder);
+        walk::DENIED.lock().unwrap().insert(failed.clone(), 5);
+        assert!(engine.children(&folder, true, &[]).is_empty());
+        retry_failures(&shared);
+        assert_eq!(engine.children(&folder, true, &[]).len(), 1);
+        assert!(!walk::DENIED.lock().unwrap().contains_key(&failed));
     }
 }

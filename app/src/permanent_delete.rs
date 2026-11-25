@@ -3,6 +3,9 @@ use super::*;
 
 pub(super) struct Confirmation {
     pub paths: Vec<PathBuf>,
+    /// Set when this asks to empty the Recycle Bin (its size) instead of
+    /// deleting `paths`.
+    pub empty_recycle_bin: Option<u64>,
     pub root: FocusHandle,
     pub cancel: FocusHandle,
     pub delete: FocusHandle,
@@ -45,6 +48,11 @@ impl Seek {
         );
         if let Some(focus) = confirm.restore {
             window.focus(&focus, cx);
+        }
+        if confirm.empty_recycle_bin.is_some() {
+            self.empty_recycle_bin(cx);
+            cx.notify();
+            return;
         }
         self.run_file_op(
             crate::file_ops::Operation::DeletePermanently {
@@ -128,7 +136,21 @@ impl Seek {
                 "These items"
             }
         );
-        let selection_label = format!("Delete permanently? {selection}");
+        let (title, description, accept) = match confirm.empty_recycle_bin {
+            Some(bytes) => (
+                "Empty the Recycle Bin?",
+                format!(
+                    "Everything in the Recycle Bin on all drives ({}) will be deleted permanently. This can't be undone.",
+                    super::storage_view::human(bytes)
+                ),
+                "Empty Recycle Bin",
+            ),
+            None => ("Delete permanently?", description, "Delete permanently"),
+        };
+        let selection_label = match confirm.empty_recycle_bin {
+            Some(_) => title.to_string(),
+            None => format!("Delete permanently? {selection}"),
+        };
         let cancel_focused = confirm.cancel.is_focused(window);
         let delete_focused = confirm.delete.is_focused(window);
         let cancel = gpui_base::Button::new("permanent-delete-cancel")
@@ -146,7 +168,7 @@ impl Seek {
             .child(interface::button_text("Cancel"))
             .on_click(cx.listener(|this, _, window, cx| this.cancel_permanent_delete(window, cx)));
         let delete = gpui_base::Button::new("permanent-delete-accept")
-            .accessibility_label("Delete permanently")
+            .accessibility_label(accept)
             .track_focus(&confirm.delete)
             .tab_index(1)
             .h(px(28.))
@@ -161,7 +183,7 @@ impl Seek {
             .bg(rgb(0xb42318))
             .text_color(rgb(0xffffff))
             .hover(|s| s.bg(rgb(0xc73325)))
-            .child(interface::button_text("Delete permanently"))
+            .child(interface::button_text(accept))
             .on_click(cx.listener(|this, _, window, cx| this.accept_permanent_delete(window, cx)));
         let panel = div()
             .id("permanent-delete-surface")
@@ -177,14 +199,14 @@ impl Seek {
             .gap_2()
             .rounded(px(14.))
             .border_1()
-            .border_color(p.line)
+            .border_color(crate::appearance::modal_border(p))
             .bg(surface)
             .text_color(p.text)
             .child(
                 div()
                     .text_size(px(13.))
                     .font_weight(FontWeight::SEMIBOLD)
-                    .child("Delete permanently?"),
+                    .child(title),
             )
             .child(
                 div()

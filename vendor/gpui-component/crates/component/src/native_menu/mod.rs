@@ -1,3 +1,6 @@
+// Seek draws native menus with GPUI on Windows, so the OS menu helpers are
+// used on macOS only.
+#![cfg_attr(not(target_os = "macos"), allow(dead_code))]
 //! A menu rendered natively by the operating system.
 //!
 //! Unlike [`crate::menu::PopupMenu`], which is drawn by GPUI and therefore
@@ -23,7 +26,6 @@
 //! ```
 
 #[cfg(target_os = "windows")]
-use crate::ActiveTheme as _;
 use crate::Icon;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 use crate::icon::IconSource;
@@ -207,18 +209,9 @@ impl NativeMenu {
         {
             macos::show(self.items, cx.asset_source().clone(), position, window, cx);
         }
-        #[cfg(target_os = "windows")]
-        {
-            windows::show(
-                self.items,
-                cx.asset_source().clone(),
-                position,
-                cx.theme().is_dark(),
-                window,
-                cx,
-            );
-        }
-        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        // Seek: on Windows the menu is drawn by GPUI, so editor menus match
+        // the app's own menus instead of the OS menu.
+        #[cfg(not(target_os = "macos"))]
         fallback::show(self.items, position, window, cx);
     }
 }

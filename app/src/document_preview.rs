@@ -19,7 +19,6 @@ use std::{
 pub const MAX_FILE: u64 = 32 * 1024 * 1024;
 const MAX_OUTPUT: u64 = 16 * 1024 * 1024;
 pub const ENLARGED_EDGE: u16 = 1536;
-const TIMEOUT: Duration = Duration::from_secs(4);
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Key {
     pub file: media::Key,
@@ -28,10 +27,7 @@ pub struct Key {
 impl Key {
     pub fn new(row: &Row, page: u32) -> Option<Self> {
         (row.file.kind & 3 == seek_engine::walk::KIND_FILE
-            && matches!(
-                extension(&row.file.path).as_str(),
-                "pdf" | "docx" | "xlsx" | "pptx" | "pptm" | "ppsx" | "ppt"
-            ))
+            && matches!(extension(&row.file.path).as_str(), "pdf" | "docx" | "xlsx"))
         .then(|| Self {
             file: media::Key::new(row, media::PREVIEW_EDGE, false),
             page,
@@ -53,8 +49,14 @@ pub struct Sheet {
     pub total_rows: usize,
     pub total_cols: usize,
 }
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Wire {
+    #[serde(default)]
+    pub version: String,
+    #[serde(default)]
+    pub protocol: u32,
+    #[serde(default)]
+    pub host_started_ms: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
     pub source: String,
@@ -64,6 +66,23 @@ pub struct Wire {
     pub pages: u32,
     pub text: Option<String>,
     pub sheet: Option<Sheet>,
+}
+impl Default for Wire {
+    fn default() -> Self {
+        Self {
+            version: env!("CARGO_PKG_VERSION").into(),
+            protocol: crate::preview_diagnostics::PROTOCOL,
+            host_started_ms: crate::preview_diagnostics::host_started_ms(),
+            error: None,
+            source: String::new(),
+            width: 0,
+            height: 0,
+            page: 0,
+            pages: 0,
+            text: None,
+            sheet: None,
+        }
+    }
 }
 #[derive(Clone)]
 pub struct Preview {
@@ -158,10 +177,8 @@ impl Worker {
                     }
                     // At most one adjacent page of the selected PDF. It is a
                     // finite, cancellable host, never a retained idle process.
-                    if matches!(
-                        extension(&key.file.path).as_str(),
-                        "pdf" | "pptx" | "pptm" | "ppsx"
-                    ) && key.page.saturating_add(1) < pages
+                    if extension(&key.file.path) == "pdf"
+                        && key.page.saturating_add(1) < pages
                         && serial.load(Ordering::Acquire) == stamp
                     {
                         let mut next = key.clone();
@@ -233,12 +250,26 @@ impl Drop for Worker {
         *self.desired.lock().unwrap() = None;
     }
 }
+#[cfg(feature = "benchmarks")]
 pub fn load(key: &Key, cancelled: &(impl Fn() -> bool + ?Sized)) -> Result<Preview, String> {
+    load_with_timeout(key, cancelled, crate::preview_diagnostics::NORMAL_TIMEOUT)
+}
+pub fn load_with_timeout(
+    key: &Key,
+    cancelled: &(impl Fn() -> bool + ?Sized),
+    timeout: Duration,
+) -> Result<Preview, String> {
     if key.file.size > MAX_FILE {
         return Err("File exceeds the 32 MiB preview limit".into());
     }
-    let bytes = host_output(key, cancelled)?;
-    decode_wire(bytes)
+    let start_ms = crate::preview_diagnostics::now_ms();
+    let bytes = host_output(key, cancelled, timeout)?;
+    let preview = decode_wire(bytes)?;
+    crate::preview_diagnostics::record(
+        "host_start_timing",
+        serde_json::json!({"process_entry_ms":preview.info.host_started_ms.saturating_sub(start_ms),"clock":"system wall clock, not cache-flushed"}),
+    );
+    Ok(preview)
 }
 pub(crate) fn decode_wire(bytes: Vec<u8>) -> Result<Preview, String> {
     let split = bytes
@@ -246,6 +277,7 @@ pub(crate) fn decode_wire(bytes: Vec<u8>) -> Result<Preview, String> {
         .position(|b| *b == b'\n')
         .ok_or("Invalid preview output")?;
     let info: Wire = serde_json::from_slice(&bytes[..split]).map_err(|e| e.to_string())?;
+    crate::preview_diagnostics::validate(&info.version, info.protocol)?;
     if let Some(error) = &info.error {
         return Err(error.clone());
     }
@@ -265,7 +297,11 @@ pub(crate) fn decode_wire(bytes: Vec<u8>) -> Result<Preview, String> {
     };
     Ok(Preview { info, image })
 }
-fn host_output(key: &Key, cancelled: &(impl Fn() -> bool + ?Sized)) -> Result<Vec<u8>, String> {
+fn host_output(
+    key: &Key,
+    cancelled: &(impl Fn() -> bool + ?Sized),
+    timeout: Duration,
+) -> Result<Vec<u8>, String> {
     let job = crate::child_job::Job::new().map_err(|e| e.to_string())?;
     let executable = std::env::current_exe().map_err(|e| e.to_string())?;
     #[cfg(test)]
@@ -276,6 +312,12 @@ fn host_output(key: &Key, cancelled: &(impl Fn() -> bool + ?Sized)) -> Result<Ve
     command
         .args(["--document-preview-host", "--document-job"])
         .arg(&job.name)
+        .args([
+            "--preview-parent-version",
+            env!("CARGO_PKG_VERSION"),
+            "--preview-parent-protocol",
+            "1",
+        ])
         .arg("--document-file")
         .arg(&key.file.path)
         .arg("--document-page")
@@ -285,13 +327,13 @@ fn host_output(key: &Key, cancelled: &(impl Fn() -> bool + ?Sized)) -> Result<Ve
         .creation_flags(0x08000000)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null());
+        .stderr(crate::preview_diagnostics::stderr());
     #[cfg(feature = "benchmarks")]
     if let Some(ms) = crate::argument("--document-host-test-stall-ms") {
         command.arg("--document-host-test-stall-ms").arg(ms);
     }
     let mut child = command.spawn().map_err(|e| e.to_string())?;
-    let result = collect_output(&mut child, cancelled, TIMEOUT);
+    let result = collect_output(&mut child, cancelled, timeout);
     if result.is_err() {
         let _ = child.kill();
         let _ = child.wait();
@@ -376,7 +418,10 @@ fn collect_output(
                 return if status.success() {
                     Ok(bytes)
                 } else {
-                    Err("Unsupported, broken, encrypted or over-limit document".into())
+                    Err(crate::preview_diagnostics::host_error(
+                        child.id(),
+                        &format!("Preview renderer exited with {status}. See Copy diagnostics."),
+                    ))
                 };
             }
             Ok(None) => std::thread::sleep(Duration::from_millis(10)),
@@ -395,6 +440,22 @@ pub fn host() -> i32 {
         crate::child_job::attach_current(
             &crate::argument("--document-job").ok_or_else(|| anyhow::anyhow!("Missing job"))?,
         )?;
+        crate::preview_diagnostics::host_stage(
+            "job_attached",
+            serde_json::json!({"memory_limit_mib":256}),
+        );
+        if let Some(version) = crate::argument("--preview-parent-version") {
+            let protocol = crate::argument("--preview-parent-protocol")
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0);
+            anyhow::ensure!(
+                version == env!("CARGO_PKG_VERSION")
+                    && protocol == crate::preview_diagnostics::PROTOCOL,
+                "Preview host version mismatch: parent {version} / protocol {protocol}, running host {} / protocol {}. Restart Seek after completing the update.",
+                env!("CARGO_PKG_VERSION"),
+                crate::preview_diagnostics::PROTOCOL
+            );
+        }
         #[cfg(feature = "benchmarks")]
         if let Some(ms) = crate::argument("--document-host-test-stall-ms") {
             std::thread::sleep(Duration::from_millis(ms.parse::<u64>()?.min(10000)));
@@ -404,6 +465,7 @@ pub fn host() -> i32 {
                 windows::Win32::System::WinRT::RO_INIT_MULTITHREADED,
             )?;
         }
+        crate::preview_diagnostics::host_stage("native_runtime_ready", serde_json::json!({}));
         let path = PathBuf::from(
             crate::argument("--document-file").ok_or_else(|| anyhow::anyhow!("Missing file"))?,
         );
@@ -424,84 +486,15 @@ pub fn host() -> i32 {
             .take(MAX_FILE + 1)
             .read_to_end(&mut bytes)?;
         anyhow::ensure!(bytes.len() as u64 <= MAX_FILE, "Input grew beyond cap");
+        crate::preview_diagnostics::host_stage(
+            "file_read",
+            serde_json::json!({"bytes":bytes.len()}),
+        );
         if extension(&path) == "pdf" && std::env::args().any(|a| a == "--document-session") {
             return crate::pdf_session::serve(&bytes);
         }
         let (info, pixels) = match extension(&path).as_str() {
             "pdf" => render_pdf(&bytes, page, edge)?,
-            "pptx" | "pptm" | "ppsx" | "ppt" => {
-                let legacy = extension(&path) == "ppt";
-                let (pages, text) = if legacy {
-                    (1, None)
-                } else {
-                    check_archive(&bytes)?;
-                    let (pages, text) = crate::presentation::slide(&bytes, page)?;
-                    (pages, Some(text))
-                };
-                let key = media::Key {
-                    path: path.clone(),
-                    mtime: 0,
-                    size: meta.len(),
-                    edge: edge.min(1024),
-                    details: false,
-                    folder: false,
-                };
-                // Windows exposes a first-slide thumbnail, not a page renderer.
-                // Never label that first slide as a later slide's artwork.
-                if page == 0
-                    && !legacy
-                    && let Some((width, height, pixels)) =
-                        crate::presentation::thumbnail(&bytes, edge)
-                {
-                    (
-                        Wire {
-                            source: "PowerPoint saved first-slide preview".into(),
-                            width,
-                            height,
-                            page,
-                            pages,
-                            text,
-                            ..Default::default()
-                        },
-                        pixels,
-                    )
-                } else if page == 0
-                    && let Some(image) = media::document_thumbnail(&key)
-                        .ok()
-                        .filter(|i| thumbnail_has_content(i))
-                {
-                    (
-                        Wire {
-                            source: "PowerPoint thumbnail".into(),
-                            width: image.size(0).width.0 as u32,
-                            height: image.size(0).height.0 as u32,
-                            page,
-                            pages,
-                            text,
-                            ..Default::default()
-                        },
-                        image
-                            .as_bytes(0)
-                            .ok_or_else(|| anyhow::anyhow!("No pixels"))?
-                            .to_vec(),
-                    )
-                } else {
-                    anyhow::ensure!(
-                        !legacy,
-                        "No PowerPoint thumbnail available for this legacy presentation"
-                    );
-                    (
-                        Wire {
-                            source: "PowerPoint slide text".into(),
-                            page,
-                            pages,
-                            text,
-                            ..Default::default()
-                        },
-                        vec![],
-                    )
-                }
-            }
             "xlsx" => {
                 check_archive(&bytes)?;
                 (
@@ -517,12 +510,22 @@ pub fn host() -> i32 {
                 check_archive(&bytes)?;
                 // Validate the package before asking a provider for artwork.
                 zip::ZipArchive::new(std::io::Cursor::new(&bytes))?.by_name("word/document.xml")?;
+                let text = crate::content::docx(&bytes, &|| false).map_err(anyhow::Error::msg)?;
+                let excerpt: String = text
+                    .lines()
+                    .take(100)
+                    .collect::<Vec<_>>()
+                    .join("\n")
+                    .chars()
+                    .take(12000)
+                    .collect();
                 let key = media::Key {
                     path,
                     mtime: 0,
                     size: meta.len(),
                     edge: media::PREVIEW_EDGE,
                     details: false,
+                    text_preview: true,
                     folder: false,
                 };
                 // Some packages contain an empty/stale white template preview.
@@ -534,6 +537,7 @@ pub fn host() -> i32 {
                     (
                         Wire {
                             source: "Word thumbnail".into(),
+                            text: Some(excerpt.clone()),
                             width: image.size(0).width.0 as u32,
                             height: image.size(0).height.0 as u32,
                             ..Default::default()
@@ -544,20 +548,10 @@ pub fn host() -> i32 {
                             .to_vec(),
                     )
                 } else {
-                    let text =
-                        crate::content::docx(&bytes, &|| false).map_err(anyhow::Error::msg)?;
                     (
                         Wire {
                             source: "Word text".into(),
-                            text: Some(
-                                text.lines()
-                                    .take(100)
-                                    .collect::<Vec<_>>()
-                                    .join("\n")
-                                    .chars()
-                                    .take(12000)
-                                    .collect(),
-                            ),
+                            text: Some(excerpt),
                             ..Default::default()
                         },
                         vec![],
@@ -572,7 +566,19 @@ pub fn host() -> i32 {
         out.write_all(&pixels)?;
         Ok(())
     })();
-    if result.is_ok() { 0 } else { 1 }
+    match result {
+        Ok(()) => {
+            crate::preview_diagnostics::host_stage("complete", serde_json::json!({}));
+            0
+        }
+        Err(error) => {
+            crate::preview_diagnostics::host_stage(
+                "host_error",
+                serde_json::json!({"error":format!("{error:#}").chars().take(2048).collect::<String>()}),
+            );
+            1
+        }
+    }
 }
 pub(crate) fn check_archive(bytes: &[u8]) -> anyhow::Result<()> {
     let archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))?;
@@ -702,6 +708,37 @@ pub(crate) fn render_loaded_pdf(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn presentation_types_never_request_a_document_host() {
+        for ext in [
+            "ppt", "pptx", "PPTX", "pptm", "pps", "ppsx", "ppsm", "pot", "potx", "potm", "ppam",
+            "sldx", "sldm", "odp",
+        ] {
+            let row = Row::new(seek_engine::Found {
+                path: PathBuf::from(format!(r"C:\Owned\Slides.{ext}")),
+                kind: seek_engine::walk::KIND_FILE,
+                mtime: 0,
+                size: 12,
+                score: 0,
+            });
+            assert!(Key::new(&row, 0).is_none(), "{ext}");
+            assert_eq!(
+                crate::icons::kind(&row.file.path, false),
+                crate::icons::Kind::Powerpoint
+            );
+        }
+        for ext in ["pdf", "docx", "xlsx"] {
+            let row = Row::new(seek_engine::Found {
+                path: PathBuf::from(format!(r"C:\Owned\Document.{ext}")),
+                kind: seek_engine::walk::KIND_FILE,
+                mtime: 0,
+                size: 12,
+                score: 0,
+            });
+            assert!(Key::new(&row, 0).is_some());
+        }
+    }
+
     fn wait_reply(worker: &Worker, rx: &async_channel::Receiver<Reply>) -> Reply {
         let deadline = Instant::now() + Duration::from_secs(8);
         loop {
@@ -749,6 +786,7 @@ mod tests {
                 size: 5,
                 edge: 768,
                 details: false,
+                text_preview: true,
                 folder: false,
             },
             page,
@@ -788,6 +826,7 @@ mod tests {
                     .and_then(|s| s.parse().ok())
                     .unwrap_or(768),
                 details: false,
+                text_preview: true,
                 folder: false,
             },
             page,
@@ -945,6 +984,7 @@ mod tests {
                 size: 1,
                 edge: 768,
                 details: false,
+                text_preview: true,
                 folder: false,
             },
             page: 0,

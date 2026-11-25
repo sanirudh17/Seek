@@ -252,4 +252,119 @@ mod tests {
         std::fs::write(path.with_extension("tmp"), b"interrupted").unwrap();
         assert_eq!(Index::load(&path).unwrap().event_id, 8);
     }
+
+    /// The folder weights are process-wide; tests that read or set them take turns.
+    static WEIGHTS_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// A tree from `/`-separated paths; folders are listed as needed.
+    fn tree(paths: &[&str]) -> Vec<Listing> {
+        let mut all = vec![Listing {
+            id: 0,
+            names: vec![],
+            ents: vec![],
+        }];
+        let mut dirs: HashMap<String, u32> = HashMap::new();
+        for path in paths {
+            let mut parent = 0u32;
+            let mut sofar = String::new();
+            let parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();
+            for (i, part) in parts.iter().enumerate() {
+                sofar.push('/');
+                sofar.push_str(part);
+                let file = i + 1 == parts.len();
+                if !file && let Some(&id) = dirs.get(&sofar) {
+                    parent = id;
+                    continue;
+                }
+                let id = all.len() as u32;
+                let l = &mut all[parent as usize];
+                l.ents.push(crate::walk::RawEnt {
+                    name_off: l.names.len() as u32,
+                    name_len: part.len() as u16,
+                    kind: if file { 0 } else { KIND_DIR },
+                    size: 1,
+                    mtime: 42,
+                    child: if file { crate::walk::NONE } else { id },
+                });
+                l.names.extend_from_slice(part.as_bytes());
+                if !file {
+                    all.push(Listing {
+                        id,
+                        names: vec![],
+                        ents: vec![],
+                    });
+                    dirs.insert(sofar.clone(), id);
+                    parent = id;
+                }
+            }
+        }
+        all
+    }
+
+    fn prior_of(index: &Index, path: &str) -> i8 {
+        let e = index.lookup(path.as_bytes()).unwrap();
+        index.dir_prior()[index.dir_of(e).unwrap() as usize]
+    }
+
+    #[test]
+    fn windows_weights_apply_by_drive_level_case_and_home() {
+        let _weights = WEIGHTS_LOCK.lock().unwrap();
+        let index = Index::build(
+            tree(&[
+                "/C:/Windows/System32/a.dll",
+                "/C:/Users/me/Projects/Windows/b.txt",
+                "/C:/Users/me/DOWNLOADS/c.pdf",
+                "/C:/Users/me/AppData/Local/Temp/d.tmp",
+                "/C:/Users/other/e.txt",
+            ]),
+            0,
+            42,
+            b"/C:/Users/ME",
+        );
+        // A drive-level rule: C:\Windows sinks, a Windows folder elsewhere does not.
+        assert_eq!(prior_of(&index, "/C:/Windows"), -45);
+        let home = prior_of(&index, "/C:/Users/me");
+        assert_eq!(home, 15, "the profile is matched without regard to case");
+        assert_eq!(prior_of(&index, "/C:/Users/me/Projects/Windows"), home);
+        // Case-insensitive names, adding up along the path.
+        assert_eq!(prior_of(&index, "/C:/Users/me/DOWNLOADS"), home + 16);
+        assert_eq!(
+            prior_of(&index, "/C:/Users/me/AppData/Local/Temp"),
+            home - 25 - 20
+        );
+        assert_eq!(prior_of(&index, "/C:/Users/other"), 0);
+    }
+
+    #[test]
+    fn relisted_index_rebuilds_the_same_tree_and_takes_new_weights() {
+        let _weights = WEIGHTS_LOCK.lock().unwrap();
+        let paths = [
+            "/C:/Users/me/Documents/x.txt",
+            "/C:/Users/me/AppData/y.txt",
+            "/D:/z.bin",
+        ];
+        let index = Index::build(tree(&paths), 3, 42, b"/C:/Users/me");
+        let rebuilt = Index::build(index.relisted(), 3, 42, b"/C:/Users/me");
+        assert_eq!(rebuilt.n, index.n);
+        let mut a = Vec::new();
+        let mut b = Vec::new();
+        for i in 0..index.n {
+            index.path(i, &mut a);
+            rebuilt.path(i, &mut b);
+            assert_eq!(a, b);
+            assert_eq!(index.kind()[i], rebuilt.kind()[i]);
+            assert_eq!(index.size_of(i), rebuilt.size_of(i));
+            assert_eq!(index.mtime()[i], rebuilt.mtime()[i]);
+        }
+        assert!(rebuilt.valid_structure());
+        set_weights(Some(vec![FolderWeight {
+            name: "documents".into(),
+            weight: 40,
+            top: false,
+        }]));
+        let reweighted = Index::build(index.relisted(), 3, 42, b"/C:/Users/me");
+        set_weights(None);
+        assert_eq!(prior_of(&reweighted, "/C:/Users/me/Documents"), 15 + 40);
+        assert_eq!(prior_of(&reweighted, "/C:/Users/me/AppData"), 15);
+    }
 }

@@ -101,13 +101,41 @@ impl WindowsWindowInner {
             // So, let's eagerly activate the window.
             WM_MOUSEACTIVATE => Some(MA_ACTIVATE as isize),
             WM_ACTIVATE => self.handle_activate_msg(wparam),
+            // Adapt Glint's visible-surface guard. Keyboard focus still follows
+            // WM_ACTIVATE; only the material stays active while visible.
+            WM_NCACTIVATE
+                if matches!(
+                    self.state.background_appearance.get(),
+                    WindowBackgroundAppearance::Blurred
+                        | WindowBackgroundAppearance::MicaBackdrop
+                        | WindowBackgroundAppearance::MicaAltBackdrop
+                ) && !self.state.surface_hidden.get()
+                    && unsafe {
+                    IsWindowVisible(handle).as_bool() && !IsIconic(handle).as_bool()
+                } =>
+            {
+                Some(unsafe { DefWindowProcW(handle, WM_NCACTIVATE, WPARAM(1), lparam).0 })
+            }
+            // DirectComposition owns client pixels; don't expose GDI erasure
+            // between old and replacement frames on restore or resize.
+            WM_ERASEBKGND => Some(1),
             WM_CREATE => self.handle_create_msg(handle),
             WM_MOVE => self.handle_move_msg(handle, lparam),
-            WM_SIZE => self.handle_size_msg(wparam, lparam),
+            WM_SIZE => self.handle_size_msg(handle, wparam, lparam),
             WM_GETMINMAXINFO => self.handle_get_min_max_info_msg(lparam),
             WM_ENTERSIZEMOVE | WM_ENTERMENULOOP => self.handle_size_move_loop(handle),
             WM_EXITSIZEMOVE | WM_EXITMENULOOP => self.handle_size_move_loop_exit(handle),
+            WM_TIMER if wparam.0 == crate::window::REVEAL_TIMER_ID => {
+                crate::window::finish_reveal(&self.state, handle);
+                Some(0)
+            }
             WM_TIMER => self.handle_timer_msg(handle, wparam),
+            WM_SYSCOMMAND => self.handle_restore_gate(handle, wparam, lparam),
+            // WM_QUERYOPEN: a minimized window is about to be restored.
+            0x0013 => {
+                crate::window::set_transitions_disabled(handle, true);
+                None
+            }
             WM_NCCALCSIZE => self.handle_calc_client_size(handle, wparam, lparam),
             WM_DPICHANGED => self.handle_dpi_changed_msg(handle, wparam, lparam),
             WM_DISPLAYCHANGE => self.handle_display_change_msg(handle),
@@ -242,10 +270,18 @@ impl WindowsWindowInner {
         Some(0)
     }
 
-    fn handle_size_msg(self: &Rc<Self>, wparam: WPARAM, lparam: LPARAM) -> Option<isize> {
+    fn handle_size_msg(
+        self: &Rc<Self>,
+        handle: HWND,
+        wparam: WPARAM,
+        lparam: LPARAM,
+    ) -> Option<isize> {
         // Minimizing and restoring both arrive as `WM_SIZE`; the deferred report
         // reads `IsIconic` at delivery, so one call covers both directions.
         self.report_visibility();
+        self.state
+            .surface_hidden
+            .set(wparam.0 == SIZE_MINIMIZED as usize);
 
         // Don't resize the renderer when the window is minimized, but record that it was minimized so
         // that on restore the swap chain can be recreated via `update_drawable_size_even_if_unchanged`.
@@ -272,6 +308,10 @@ impl WindowsWindowInner {
         }
 
         self.handle_size_change(new_size, scale_factor, should_resize_renderer);
+        // ResizeBuffers replaces the old target. Present the replacement scene
+        // before returning to DWM instead of leaving an unpainted surface until
+        // the demand scheduler's next VSync (visible during native transitions).
+        self.draw_window(handle, true);
         Some(0)
     }
 
@@ -1278,10 +1318,54 @@ impl WindowsWindowInner {
         wparam: WPARAM,
     ) -> Option<isize> {
         self.report_visibility();
+        self.state.surface_hidden.set(wparam.0 == 0);
         if wparam.0 == 1 {
             self.draw_window(handle, false);
         }
         None
+    }
+
+    /// Glint's taskbar-restore gate for glass windows: minimizing animates
+    /// natively; restoring a minimized window is cloaked, given its active
+    /// backdrop, restored, and revealed once a fresh frame is presented.
+    fn handle_restore_gate(
+        self: &Rc<Self>,
+        handle: HWND,
+        wparam: WPARAM,
+        lparam: LPARAM,
+    ) -> Option<isize> {
+        let command = wparam.0 & 0xfff0;
+        // SC_MINIMIZE, SC_MAXIMIZE, SC_RESTORE
+        if !matches!(command, 0xF020 | 0xF030 | 0xF120) {
+            return None;
+        }
+        let reopening = command != 0xF020 && unsafe { IsIconic(handle).as_bool() };
+        crate::window::set_transitions_disabled(handle, reopening);
+        let glass = matches!(
+            self.state.background_appearance.get(),
+            WindowBackgroundAppearance::Blurred
+                | WindowBackgroundAppearance::MicaBackdrop
+                | WindowBackgroundAppearance::MicaAltBackdrop
+        );
+        if !reopening || !glass || self.state.reveal_pending.get() {
+            return None;
+        }
+        if !crate::window::set_cloaked(handle, true) {
+            return None;
+        }
+        self.state.reveal_pending.set(true);
+        unsafe {
+            SetTimer(Some(handle), crate::window::REVEAL_TIMER_ID, 3000, None);
+            // Under the cloak: the material active before it is seen.
+            DefWindowProcW(handle, WM_NCACTIVATE, WPARAM(1), LPARAM(0));
+        }
+        let result = unsafe { DefWindowProcW(handle, WM_SYSCOMMAND, wparam, lparam) };
+        self.state.surface_hidden.set(false);
+        self.frame_demand.request();
+        unsafe {
+            let _ = InvalidateRect(Some(handle), None, false);
+        }
+        Some(result.0)
     }
 
     // The window procedure can run while GPUI is updating this window (e.g.

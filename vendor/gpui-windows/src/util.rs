@@ -103,7 +103,12 @@ pub(crate) fn load_cursor(style: CursorStyle) -> Option<HCURSOR> {
     let (lock, name) = match style {
         CursorStyle::IBeam | CursorStyle::IBeamCursorForVerticalLayout => (&IBEAM, IDC_IBEAM),
         CursorStyle::Crosshair => (&CROSS, IDC_CROSS),
-        CursorStyle::PointingHand | CursorStyle::DragLink => (&HAND, IDC_HAND),
+        // Windows has one native hand resource; map grab styles explicitly
+        // instead of silently falling through to the ordinary arrow.
+        CursorStyle::PointingHand
+        | CursorStyle::DragLink
+        | CursorStyle::OpenHand
+        | CursorStyle::ClosedHand => (&HAND, IDC_HAND),
         CursorStyle::ResizeLeft
         | CursorStyle::ResizeRight
         | CursorStyle::ResizeLeftRight
@@ -188,4 +193,22 @@ where
             .log_err();
     }
     result
+}
+
+#[cfg(test)]
+mod seek_cursor_tests {
+    #[test]
+    fn grab_cursors_resolve_to_the_native_hand_instead_of_arrow() {
+        let hand = super::load_cursor(gpui::CursorStyle::PointingHand).unwrap();
+        assert_ne!(hand.0, std::ptr::null_mut());
+        assert_eq!(
+            super::load_cursor(gpui::CursorStyle::OpenHand).unwrap(),
+            hand
+        );
+        assert_eq!(
+            super::load_cursor(gpui::CursorStyle::ClosedHand).unwrap(),
+            hand
+        );
+        assert_ne!(hand, super::load_cursor(gpui::CursorStyle::Arrow).unwrap());
+    }
 }

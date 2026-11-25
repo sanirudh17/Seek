@@ -48,11 +48,14 @@ fn diagnostic_highlight_style(
 
 const BOTTOM_MARGIN_ROWS: usize = 3;
 pub(super) const RIGHT_MARGIN: Pixels = px(10.);
-pub(super) const LINE_NUMBER_RIGHT_MARGIN: Pixels = px(6.);
+/// Space between the line-number column and the text.
+pub(super) const LINE_NUMBER_RIGHT_MARGIN: Pixels = px(10.);
+/// Space on each side of the numbers inside their column.
+const LINE_NUMBER_SIDE_PADDING: Pixels = px(10.);
 const FOLD_ICON_WIDTH: Pixels = px(14.);
 const FOLD_ICON_HITBOX_WIDTH: Pixels = px(18.);
 const MAX_HIGHLIGHT_LINE_LENGTH: usize = 10_000;
-const MIN_LINE_NUMBER_DIGITS: usize = 3;
+const MIN_LINE_NUMBER_DIGITS: usize = 1;
 const MAX_LINE_NUMBER_DIGITS: usize = 7;
 const MAX_DISPLAYED_LINE_NUMBER: usize = 9_999_999;
 
@@ -332,7 +335,7 @@ fn editor_gutter_bounds(
             input_bounds.origin.y - paddings.top,
         ),
         size: size(
-            line_number_width + paddings.left,
+            (line_number_width - LINE_NUMBER_RIGHT_MARGIN).max(px(0.)) + paddings.left,
             input_bounds.size.height + ghost_lines_height + paddings.top + paddings.bottom,
         ),
     }
@@ -1114,7 +1117,7 @@ impl<M: InputModeKind> TextElement<M> {
                 None,
             );
 
-            empty_line_number.width + LINE_NUMBER_RIGHT_MARGIN
+            empty_line_number.width + LINE_NUMBER_SIDE_PADDING * 2. + LINE_NUMBER_RIGHT_MARGIN
         } else if state.is_code_editor() {
             LINE_NUMBER_RIGHT_MARGIN
         } else {
@@ -3256,6 +3259,11 @@ impl<M: InputModeKind> Element for TextElement<M> {
                 editor_paddings,
             );
             window.paint_quad(fill(gutter_bounds, gutter_bg));
+            let fold_slot = if self.state.read(cx).mode.is_folding() {
+                FOLD_ICON_HITBOX_WIDTH
+            } else {
+                px(0.)
+            };
 
             // Each item is the normal lines.
             for (lines, &buffer_line) in line_numbers
@@ -3280,7 +3288,9 @@ impl<M: InputModeKind> Element for TextElement<M> {
                 }
 
                 for line in lines {
-                    _ = line.paint(p, line_height, TextAlign::Left, None, window, cx);
+                    let x = gutter_bounds.origin.x
+                        + ((gutter_bounds.size.width - fold_slot - line.width).max(px(0.))).half();
+                    _ = line.paint(point(x, p.y), line_height, TextAlign::Left, None, window, cx);
                     offset_y += line_height;
                 }
 
@@ -3600,9 +3610,9 @@ mod tests {
 
     #[test]
     fn line_number_column_stays_at_three_digits_then_grows_up_to_seven() {
-        assert_eq!(line_number_len(1), 3);
-        assert_eq!(line_number_len(9), 3);
-        assert_eq!(line_number_len(10), 3);
+        assert_eq!(line_number_len(1), 1);
+        assert_eq!(line_number_len(9), 1);
+        assert_eq!(line_number_len(10), 2);
         assert_eq!(line_number_len(999), 3);
         assert_eq!(line_number_len(1_000), 4);
         assert_eq!(line_number_len(999_999), 6);
@@ -4357,7 +4367,7 @@ mod tests {
                     left: px(7.),
                 },
             ),
-            Bounds::new(point(px(3.), px(18.)), size(px(55.), px(103.)))
+            Bounds::new(point(px(3.), px(18.)), size(px(45.), px(103.)))
         );
     }
 

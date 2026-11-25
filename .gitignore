@@ -3,3 +3,9 @@
 /.impeccable/
 **/.bench-data/
 *.pdb
+
+/.agents/
+/.taste-skill/
+/skills-lock.json
+/skill-install-*.log
+/impeccable-context.log

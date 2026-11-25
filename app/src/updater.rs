@@ -31,24 +31,38 @@ pub const FILES: &[&str] = &[
 pub struct Release {
     pub version: String,
     tag: String,
+    /// The release's own notes, as GitHub returns them (Markdown source).
+    pub notes: String,
+    /// The package size GitHub reports, for download progress.
+    pub size: u64,
+    /// A debug-build sample: its download is simulated and installs nothing.
+    pub preview: bool,
 }
 pub enum Check {
     Current,
     NoRelease,
     Available(Release),
 }
+#[derive(Default)]
 pub struct State {
     pub busy: bool,
     pub available: Option<Release>,
     pub message: String,
+    /// Bytes of the package downloaded so far, while downloading.
+    pub progress: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    pub downloading: bool,
+    /// A verified, staged update waiting for Restart.
+    pub staged: Option<PathBuf>,
+    pub popover: bool,
 }
-impl Default for State {
-    fn default() -> Self {
-        Self {
-            busy: false,
-            available: None,
-            message: "Check for a newer version on GitHub.".into(),
+impl State {
+    /// Download progress from 0 to 1.
+    pub fn fraction(&self) -> f32 {
+        let total = self.available.as_ref().map_or(0, |release| release.size);
+        if total == 0 {
+            return 0.;
         }
+        (self.progress.load(std::sync::atomic::Ordering::Relaxed) as f32 / total as f32).min(1.)
     }
 }
 fn version(value: &str) -> Option<[u32; 3]> {
@@ -91,13 +105,26 @@ fn release(bytes: &[u8]) -> Result<Check, String> {
     if number <= version(CURRENT).unwrap() {
         return Ok(Check::Current);
     }
-    let info = Release {
+    let mut info = Release {
         version: tag.trim_start_matches('v').into(),
         tag: tag.into(),
+        notes: value["body"]
+            .as_str()
+            .unwrap_or_default()
+            .chars()
+            .take(4000)
+            .collect(),
+        size: 0,
+        preview: false,
     };
     let assets = value["assets"]
         .as_array()
         .ok_or("Release assets are missing")?;
+    info.size = assets
+        .iter()
+        .find(|a| a["name"].as_str() == Some(&info.filename()))
+        .and_then(|a| a["size"].as_u64())
+        .unwrap_or(0);
     for name in [info.filename(), "SHA256SUMS.txt".into()] {
         if !assets.iter().any(|a| {
             a["name"].as_str() == Some(&name)
@@ -107,6 +134,21 @@ fn release(bytes: &[u8]) -> Result<Check, String> {
         }
     }
     Ok(Check::Available(info))
+}
+/// Debug builds only: a sample release for checking the update popover's
+/// layout without the network (SEEK_PREVIEW_UPDATE=1). Download fails safely.
+#[cfg(debug_assertions)]
+pub fn preview() -> Option<Release> {
+    std::env::var_os("SEEK_PREVIEW_UPDATE").map(|_| Release {
+        version: "9.9.9".into(),
+        tag: "v9.9.9".into(),
+        notes: "Organize Folder sorts a folder into subfolders by kind.
+Suggest Names reads names from file contents.
+Drag previews stay under the pointer."
+            .into(),
+        size: 12_000_000,
+        preview: true,
+    })
 }
 pub fn check() -> Result<Check, String> {
     let (status, bytes) = get(API, 1024 * 1024)?;
@@ -148,13 +190,30 @@ fn extract(bytes: Vec<u8>, folder: &Path, release: &Release) -> Result<(), Strin
     let mut total = 0u64;
     for i in 0..archive.len() {
         let entry = archive.by_index(i).map_err(|e| e.to_string())?;
-        if entry.is_dir() && entry.name() == prefix {
+        // PowerShell 5.1 produced ZIP names with Windows separators. Treat both
+        // separators identically before validating; never let Windows interpret
+        // an archive name more broadly than our fixed, flat payload allowlist.
+        let archive_name = entry.name().replace('\\', "/");
+        if archive_name.starts_with('/')
+            || archive_name.contains([':', '\0'])
+            || archive_name
+                .split('/')
+                .any(|part| matches!(part, "." | ".."))
+            || entry.unix_mode().is_some_and(|m| m & 0o170000 == 0o120000)
+        {
+            return Err("Unsafe path in update package".into());
+        }
+        if archive_name.ends_with('/') && archive_name == prefix {
             continue;
         }
-        let name = entry
-            .name()
+        let name = archive_name
             .strip_prefix(&prefix)
-            .ok_or("Unexpected update folder")?
+            .ok_or_else(|| {
+                format!(
+                    "Unexpected update folder: expected {prefix}, got {:?}",
+                    archive_name.chars().take(160).collect::<String>()
+                )
+            })?
             .to_owned();
         if !FILES.contains(&name.as_str())
             || !found.insert(name.clone())
@@ -188,13 +247,16 @@ fn extract(bytes: Vec<u8>, folder: &Path, release: &Release) -> Result<(), Strin
     }
     Ok(())
 }
-pub fn prepare(release: Release) -> Result<PathBuf, String> {
+pub fn prepare(
+    release: Release,
+    progress: &std::sync::atomic::AtomicU64,
+) -> Result<PathBuf, String> {
     let name = release.filename();
     let (status, sums) = get(&release.url("SHA256SUMS.txt"), 64 * 1024)?;
     if status != 200 {
         return Err(format!("Cannot download checksum: HTTP {status}"));
     }
-    let (status, bytes) = get(&release.url(&name), 64 * 1024 * 1024)?;
+    let (status, bytes) = get_counted(&release.url(&name), 64 * 1024 * 1024, Some(progress))?;
     if status != 200 {
         return Err(format!("Cannot download update: HTTP {status}"));
     }
@@ -243,8 +305,14 @@ pub fn launch(stage: &Path) -> Result<(), String> {
     let powershell =
         PathBuf::from(std::env::var_os("SystemRoot").ok_or("Windows path is missing")?)
             .join("System32/WindowsPowerShell/v1.0/powershell.exe");
-    let mut child = std::process::Command::new(powershell)
-        .args([
+    // The worker must outlive Seek, which quits once it is ready. Break away
+    // from any job Seek was started in (some launchers and terminals kill a
+    // job's processes when it closes); fall back when the job forbids it.
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
+    let spawn = |flags: u32| {
+        std::process::Command::new(&powershell)
+            .args([
             "-NoLogo",
             "-NoProfile",
             "-NonInteractive",
@@ -257,14 +325,18 @@ pub fn launch(stage: &Path) -> Result<(), String> {
         .arg(stage.join("payload/Update.ps1"))
         .arg("-Request")
         .arg(stage.join("request.json"))
-        .creation_flags(0x08000000)
+        .creation_flags(flags)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .spawn()
+    };
+    let mut child = spawn(CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB)
+        .or_else(|_| spawn(CREATE_NO_WINDOW))
         .map_err(|e| e.to_string())?;
+    // Room for a cold PowerShell start and an antivirus scan of the new files.
     let start = Instant::now();
-    while start.elapsed() < Duration::from_secs(10) {
+    while start.elapsed() < Duration::from_secs(30) {
         if stage.join("ready").is_file() {
             return Ok(());
         }
@@ -381,6 +453,13 @@ fn url_parts(url: &str) -> Result<(&str, &str), String> {
     Ok((host, &tail[host.len()..]))
 }
 fn get(url: &str, limit: usize) -> Result<(u32, Vec<u8>), String> {
+    get_counted(url, limit, None)
+}
+fn get_counted(
+    url: &str,
+    limit: usize,
+    progress: Option<&std::sync::atomic::AtomicU64>,
+) -> Result<(u32, Vec<u8>), String> {
     let session = handle(unsafe {
         WinHttpOpen(
             wide(&format!("Seek/{CURRENT}")).as_ptr(),
@@ -470,6 +549,9 @@ fn get(url: &str, limit: usize) -> Result<(u32, Vec<u8>), String> {
                 return Err("Update response exceeds its size limit".into());
             }
             bytes.extend_from_slice(&buffer[..read as usize]);
+            if let Some(progress) = progress {
+                progress.store(bytes.len() as u64, std::sync::atomic::Ordering::Relaxed);
+            }
         }
         return Ok((status, bytes));
     }
@@ -509,12 +591,18 @@ mod tests {
         let r = Release {
             version: "1.1.0".into(),
             tag: "v1.1.0".into(),
+            notes: String::new(),
+            size: 0,
+            preview: false,
         };
-        let mut value = serde_json::json!({"tag_name":"v1.1.0","draft":false,"prerelease":false,"assets":[{"name":r.filename(),"browser_download_url":r.url(&r.filename())},{"name":"SHA256SUMS.txt","browser_download_url":r.url("SHA256SUMS.txt")}]});
-        assert!(matches!(
-            release(&serde_json::to_vec(&value).unwrap()),
-            Ok(Check::Available(_))
-        ));
+        let mut value = serde_json::json!({"tag_name":"v1.1.0","draft":false,"prerelease":false,"body":"Faster search.","assets":[{"name":r.filename(),"size":1234,"browser_download_url":r.url(&r.filename())},{"name":"SHA256SUMS.txt","browser_download_url":r.url("SHA256SUMS.txt")}]});
+        match release(&serde_json::to_vec(&value).unwrap()) {
+            Ok(Check::Available(found)) => {
+                assert_eq!(found.notes, "Faster search.");
+                assert_eq!(found.size, 1234);
+            }
+            _ => panic!("expected an available release"),
+        }
         value["assets"][0]["browser_download_url"] = "https://evil.invalid/file".into();
         assert!(release(&serde_json::to_vec(&value).unwrap()).is_err());
         value["tag_name"] = CURRENT.into();
@@ -538,6 +626,9 @@ mod tests {
         let r = Release {
             version: "1.1.0".into(),
             tag: "v1.1.0".into(),
+            notes: String::new(),
+            size: 0,
+            preview: false,
         };
         assert!(extract(bytes, temp.path(), &r).is_err());
         assert_eq!(std::fs::read_dir(temp.path()).unwrap().count(), 0);
@@ -548,6 +639,9 @@ mod tests {
         let r = Release {
             version: "1.1.0".into(),
             tag: "v1.1.0".into(),
+            notes: String::new(),
+            size: 0,
+            preview: false,
         };
         for count in [FILES.len(), FILES.len() - 1] {
             let temp = tempfile::tempdir().unwrap();
@@ -565,13 +659,109 @@ mod tests {
         }
     }
     #[test]
+    fn windows_and_mixed_zip_separators_preserve_the_fixed_payload_boundary() {
+        use std::io::Write;
+        let release = Release {
+            version: "1.1.0".into(),
+            tag: "v1.1.0".into(),
+            notes: String::new(),
+            size: 0,
+            preview: false,
+        };
+        for separator in ["/", "\\", "mixed"] {
+            let temp = tempfile::tempdir().unwrap();
+            let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+            for (i, name) in FILES.iter().enumerate() {
+                let sep = if separator == "mixed" {
+                    if i % 2 == 0 { "/" } else { "\\" }
+                } else {
+                    separator
+                };
+                writer
+                    .start_file(
+                        format!("Seek-1.1.0-windows-x64{sep}{name}"),
+                        zip::write::SimpleFileOptions::default(),
+                    )
+                    .unwrap();
+                writer.write_all(name.as_bytes()).unwrap();
+            }
+            extract(writer.finish().unwrap().into_inner(), temp.path(), &release).unwrap();
+            for name in FILES {
+                assert_eq!(
+                    std::fs::read(temp.path().join(name)).unwrap(),
+                    name.as_bytes()
+                );
+            }
+        }
+        for name in [
+            "/Seek-1.1.0-windows-x64/seek.exe",
+            "C:\\Seek-1.1.0-windows-x64\\seek.exe",
+            "\\\\server\\Seek-1.1.0-windows-x64\\seek.exe",
+            "Seek-1.1.0-windows-x64\\..\\seek.exe",
+            "Seek-1.1.0-windows-x64/../seek.exe",
+            "Seek-1.1.0-windows-x64/./seek.exe",
+            "Seek-1.1.0-windows-x64\\nested/seek.exe",
+            "Seek-1.1.0-windows-x64/seek.exe:stream",
+            "Seek-1.1.0-windows-x64//seek.exe",
+            "Other/seek.exe",
+            "Seek-1.1.0-windows-x64/extra.exe",
+        ] {
+            let temp = tempfile::tempdir().unwrap();
+            let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+            writer
+                .start_file(name, zip::write::SimpleFileOptions::default())
+                .unwrap();
+            writer.write_all(b"must not escape").unwrap();
+            assert!(
+                extract(writer.finish().unwrap().into_inner(), temp.path(), &release).is_err(),
+                "{name}"
+            );
+            assert_eq!(std::fs::read_dir(temp.path()).unwrap().count(), 0, "{name}");
+        }
+        let temp = tempfile::tempdir().unwrap();
+        let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        for name in [
+            "Seek-1.1.0-windows-x64/seek.exe",
+            "Seek-1.1.0-windows-x64\\seek.exe",
+        ] {
+            writer
+                .start_file(name, zip::write::SimpleFileOptions::default())
+                .unwrap();
+            writer.write_all(b"duplicate").unwrap();
+        }
+        assert!(
+            extract(writer.finish().unwrap().into_inner(), temp.path(), &release)
+                .unwrap_err()
+                .contains("duplicate")
+        );
+    }
+    #[test]
+    #[ignore = "Explicit read-only published ZIP via SEEK_TEST_UPDATE_ZIP"]
+    fn published_package_extracts_without_execution() {
+        let bytes = std::fs::read(std::env::var_os("SEEK_TEST_UPDATE_ZIP").unwrap()).unwrap();
+        let temp = tempfile::tempdir().unwrap();
+        let release = Release {
+            version: CURRENT.into(),
+            tag: format!("v{CURRENT}"),
+            notes: String::new(),
+            size: 0,
+            preview: false,
+        };
+        extract(bytes, temp.path(), &release).unwrap();
+        assert!(FILES.iter().all(|name| temp.path().join(name).is_file()));
+    }
+    #[test]
     #[ignore = "Run only after the real release assets are published"]
     fn live_published_package_downloads_and_stages() {
         let r = Release {
             version: CURRENT.into(),
             tag: format!("v{CURRENT}"),
+            notes: String::new(),
+            size: 0,
+            preview: false,
         };
-        let stage = prepare(r).expect("GitHub HTTPS package download, checksum and extraction");
+        let stage = prepare(r, &Default::default())
+            .expect("GitHub HTTPS package download, checksum and extraction");
         assert!(
             FILES
                 .iter()

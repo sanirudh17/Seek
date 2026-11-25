@@ -33,3 +33,11 @@ pub fn favorites() -> Vec<(String, PathBuf)> {
     })
     .collect()
 }
+
+/// The user profile folder (`/C:/Users/name`), whose subtree ranks a little
+/// higher; empty when Windows does not say.
+pub fn home() -> Vec<u8> {
+    std::env::var_os("USERPROFILE")
+        .map(|p| crate::paths::internal(std::path::Path::new(&p)))
+        .unwrap_or_default()
+}

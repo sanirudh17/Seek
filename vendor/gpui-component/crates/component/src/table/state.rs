@@ -1648,7 +1648,7 @@ where
                 .rounded(cx.theme().radius / 2.)
                 .map(|this| match is_on {
                     true => this,
-                    false => this.opacity(0.5),
+                    false => this.opacity(0.25),
                 })
                 .hover(|this| this.bg(cx.theme().tokens.secondary).opacity(7.))
                 .active(|this| this.bg(cx.theme().tokens.secondary_active).opacity(1.))
@@ -2510,6 +2510,13 @@ where
             .size_full()
             .overflow_hidden()
             .child(self.render_table_header(left_columns_count, window, cx))
+            // A right press starts with no row; a row's own handler then claims
+            // it, so empty space never reuses the previous row's menu.
+            .capture_any_mouse_down(cx.listener(|this, event: &MouseDownEvent, _, _| {
+                if event.button == MouseButton::Right {
+                    this.right_clicked_row = None;
+                }
+            }))
             .context_menu({
                 let view = cx.entity().clone();
                 move |this, window: &mut Window, cx: &mut Context<PopupMenu>| {
@@ -2518,7 +2525,9 @@ where
                             menu.delegate_mut().context_menu(row_ix, this, window, cx)
                         })
                     } else {
-                        this
+                        view.update(cx, |menu, cx| {
+                            menu.delegate_mut().background_menu(this, window, cx)
+                        })
                     }
                 }
             })

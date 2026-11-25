@@ -106,6 +106,7 @@ mod tests {
                 size: 3,
                 edge: 768,
                 details: false,
+                text_preview: true,
                 folder: false,
             },
             page,

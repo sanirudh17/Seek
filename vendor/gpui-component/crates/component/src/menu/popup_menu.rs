@@ -9,7 +9,7 @@ use gpui::{
     Action, Anchor, AnyElement, App, AppContext, Bounds, Context, DismissEvent, Edges, Entity,
     EventEmitter, FocusHandle, Focusable, InteractiveElement, IntoElement, KeyBinding,
     ParentElement, Pixels, Render, Role, ScrollHandle, SharedString, StatefulInteractiveElement,
-    Styled, WeakEntity, Window, anchored, deferred, div, prelude::FluentBuilder, px, rems,
+    Styled, WeakEntity, Window, anchored, deferred, div, prelude::FluentBuilder, px,
 };
 use gpui::{ClickEvent, Half, MouseDownEvent, OwnedMenuItem, Point, Subscription};
 use gpui_base::TestSupportExt as _;
@@ -1237,7 +1237,7 @@ impl PopupMenu {
 
         let selected = self.selected_index == Some(ix);
         const EDGE_PADDING: Pixels = px(4.);
-        const INNER_PADDING: Pixels = px(8.);
+        const INNER_PADDING: Pixels = px(10.);
 
         let is_submenu = matches!(item, PopupMenuItem::Submenu { .. });
 
@@ -1249,7 +1249,7 @@ impl PopupMenu {
 
         let this = MenuItemElement::new(ix)
             .relative()
-            .text_sm()
+            .text_size(px(13.))
             .py_0()
             .px(INNER_PADDING)
             .rounded(radius)
@@ -1285,9 +1285,9 @@ impl PopupMenu {
             PopupMenuItem::Separator => this
                 .h_auto()
                 .p_0()
-                .my_0p5()
-                .mx_neg_1()
-                .border_b(px(2.))
+                .my(px(4.))
+                .mx(px(6.))
+                .border_b(px(1.))
                 .border_color(cx.theme().border)
                 .disabled(true),
             PopupMenuItem::Label(label) => this.disabled(true).cursor_default().child(
@@ -1504,7 +1504,7 @@ impl Render for PopupMenu {
         let options = RenderOptions {
             has_left_icon,
             check_side: self.check_side,
-            radius: cx.theme().radius.min(px(8.)),
+            radius: px(7.),
         };
 
         v_flex()
@@ -1521,15 +1521,16 @@ impl Render for PopupMenu {
             .on_action(cx.listener(Self::dismiss))
             .on_mouse_down_out(cx.listener(Self::on_mouse_down_out))
             .popover_style(cx)
+            .rounded(px(12.))
             .text_color(cx.theme().popover_foreground)
             .relative()
             .occlude()
             .child(
                 v_flex()
                     .id("items")
-                    .p_1()
-                    .gap_y_0p5()
-                    .min_w(rems(8.))
+                    .p(px(5.))
+                    .gap_y(px(1.))
+                    .min_w(px(200.))
                     .when_some(self.min_width, |this, min_width| this.min_w(min_width))
                     .max_w(max_width)
                     .when(self.scrollable, |this| {

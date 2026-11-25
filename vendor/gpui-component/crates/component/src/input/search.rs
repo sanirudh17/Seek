@@ -9,7 +9,7 @@ use gpui::{
 };
 
 use crate::{
-    ActiveTheme, Disableable, ElementExt, IconName, Selectable, Sizable,
+    ActiveTheme, Disableable, ElementExt, Icon, IconName, Selectable, Sizable,
     button::{Button, ButtonVariants},
     h_flex,
     input::{
@@ -337,7 +337,7 @@ impl<M: crate::input::overlay::OverlayMode> Render for SearchPanel<M> {
             .on_action(cx.listener(Self::on_action_replace))
             .font_family(cx.theme().font_family.clone())
             .items_center()
-            .py_2()
+            .py_1()
             .px_3()
             .w_full()
             .gap_1()
@@ -356,15 +356,20 @@ impl<M: crate::input::overlay::OverlayMode> Render for SearchPanel<M> {
                             .gap_1()
                             .child(
                                 Input::new(&self.search_input)
+                                    .min_h(gpui::px(30.)).max_h(gpui::px(30.)).text_size(gpui::px(13.))
                                     .focus_bordered(false)
                                     .suffix(
                                         Button::new("case-insensitive")
                                             .selected(!self.session.case_insensitive)
                                             .toggled(!self.session.case_insensitive)
-                                            .xsmall()
-                                            .compact()
+                                            .small()
+                                            .w(gpui::px(28.))
+                                            .h(gpui::px(28.))
+                                            .p_0()
                                             .text()
-                                            .icon(IconName::CaseSensitive)
+                                            .accessibility_label("Match case")
+                                            .tooltip("Match case")
+                                            .child(Icon::new(IconName::CaseSensitive).size(gpui::px(18.)))
                                             .on_click(cx.listener(|this, _, _, cx| {
                                                 this.session.case_insensitive =
                                                     !this.session.case_insensitive;
@@ -372,7 +377,6 @@ impl<M: crate::input::overlay::OverlayMode> Render for SearchPanel<M> {
                                                 cx.notify();
                                             })),
                                     )
-                                    .small()
                                     .w_full()
                                     .shadow_none(),
                             )

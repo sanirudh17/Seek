@@ -1,0 +1,13 @@
+{
+  "label": "baseline: code and saved index at 081c8ff (macOS-era folder weights, no profile boost, prefix-only tier)",
+  "note": "Transcribed from the first search-bench run's output; its JSON file was later overwritten by a run with the new tier rule, kept as search-tiers-only.json.",
+  "entries": 3541426,
+  "accuracy": {
+    "targets": 300,
+    "all": {"queries": 1607, "top1": 0.4555, "top5": 0.5376, "top20": 0.5999, "mrr": 0.4964},
+    "user_targets": {"queries": 800, "top1": 0.51, "top5": 0.63, "top20": 0.7288, "mrr": 0.5698},
+    "other_targets": {"queries": 807, "top1": 0.4015, "top5": 0.4461, "top20": 0.4721, "mrr": 0.4237},
+    "by_kind_top1_mrr": {"acronym": [0.240, 0.276], "exact": [0.993, 0.997], "middle": [0.049, 0.077], "path hint": [0.326, 0.394], "prefix": [0.324, 0.382], "two words": [0.206, 0.282], "typo": [0.929, 0.941]}
+  },
+  "junk": {"queries_with_user_match": 234, "dominated": 178, "junk_rate": 0.7607, "mean_junk_share_top20": 0.6934}
+}

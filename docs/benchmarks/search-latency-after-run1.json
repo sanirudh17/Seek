@@ -1,0 +1,423 @@
+{
+  "accuracy": {
+    "all": {
+      "mrr": 0.44231786452551114,
+      "queries": 55,
+      "top1": 0.4,
+      "top20": 0.6,
+      "top5": 0.4727272727272727
+    },
+    "by_kind": {
+      "acronym": {
+        "mrr": 0.14416647091065696,
+        "queries": 9,
+        "top1": 0.1111111111111111,
+        "top20": 0.4444444444444444,
+        "top5": 0.1111111111111111
+      },
+      "exact": {
+        "mrr": 1.0,
+        "queries": 10,
+        "top1": 1.0,
+        "top20": 1.0,
+        "top5": 1.0
+      },
+      "middle": {
+        "mrr": 0.06925675675675676,
+        "queries": 4,
+        "top1": 0.0,
+        "top20": 0.5,
+        "top5": 0.0
+      },
+      "path hint": {
+        "mrr": 0.39393128067826866,
+        "queries": 9,
+        "top1": 0.3333333333333333,
+        "top20": 0.4444444444444444,
+        "top5": 0.4444444444444444
+      },
+      "prefix": {
+        "mrr": 0.22833333333333333,
+        "queries": 10,
+        "top1": 0.2,
+        "top20": 0.4,
+        "top5": 0.3
+      },
+      "two words": {
+        "mrr": 0.32386363636363635,
+        "queries": 8,
+        "top1": 0.25,
+        "top20": 0.5,
+        "top5": 0.375
+      },
+      "typo": {
+        "mrr": 0.8666666666666668,
+        "queries": 5,
+        "top1": 0.8,
+        "top20": 1.0,
+        "top5": 1.0
+      }
+    },
+    "other_targets": {
+      "mrr": 0.26084695926563395,
+      "queries": 28,
+      "top1": 0.25,
+      "top20": 0.32142857142857145,
+      "top5": 0.25
+    },
+    "sample_misses": [
+      {
+        "kind": "prefix",
+        "query": "pixel-desi",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "pd9t",
+        "user": false
+      },
+      {
+        "kind": "two words",
+        "query": "pixel design",
+        "user": false
+      },
+      {
+        "kind": "path hint",
+        "query": "batch-0911 pixel-desi",
+        "user": false
+      },
+      {
+        "kind": "prefix",
+        "query": "pixel-desi",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "pd3t",
+        "user": false
+      },
+      {
+        "kind": "two words",
+        "query": "pixel design",
+        "user": false
+      },
+      {
+        "kind": "path hint",
+        "query": "batch-0330 pixel-desi",
+        "user": false
+      },
+      {
+        "kind": "prefix",
+        "query": "pixel-desi",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "pd5t",
+        "user": false
+      },
+      {
+        "kind": "two words",
+        "query": "pixel design",
+        "user": false
+      },
+      {
+        "kind": "prefix",
+        "query": "orbit-budg",
+        "user": false
+      },
+      {
+        "kind": "middle",
+        "query": "2355",
+        "user": false
+      },
+      {
+        "kind": "acronym",
+        "query": "ob2t",
+        "user": false
+      },
+      {
+        "kind": "two words",
+        "query": "orbit budget",
+        "user": false
+      },
+      {
+        "kind": "path hint",
+        "query": "batch-0235 orbit-budg",
+        "user": false
+      },
+      {
+        "kind": "prefix",
+        "query": "github",
+        "user": true
+      }
+    ],
+    "targets": 10,
+    "user_targets": {
+      "mrr": 0.6305099144246431,
+      "queries": 27,
+      "top1": 0.5555555555555556,
+      "top20": 0.8888888888888888,
+      "top5": 0.7037037037037037
+    }
+  },
+  "entries": 3541426,
+  "first_result_hits": 50,
+  "heimdall_query_set_limit50": [
+    {
+      "hits": 50,
+      "median_ms": 0.0303,
+      "p95_ms": 0.0554,
+      "query": "a"
+    },
+    {
+      "hits": 50,
+      "median_ms": 0.06219999999999999,
+      "p95_ms": 0.0714,
+      "query": "re"
+    },
+    {
+      "hits": 50,
+      "median_ms": 0.25615,
+      "p95_ms": 0.32130000000000003,
+      "query": "report"
+    },
+    {
+      "hits": 50,
+      "median_ms": 5.945499999999999,
+      "p95_ms": 7.3764,
+      "query": "main.rs"
+    },
+    {
+      "hits": 50,
+      "median_ms": 0.2299,
+      "p95_ms": 0.2667,
+      "query": "readme"
+    },
+    {
+      "hits": 50,
+      "median_ms": 0.5898000000000001,
+      "p95_ms": 0.6744,
+      "query": "heimdall"
+    },
+    {
+      "hits": 50,
+      "median_ms": 7.8449,
+      "p95_ms": 9.8154,
+      "query": "config json"
+    },
+    {
+      "hits": 50,
+      "median_ms": 0.484,
+      "p95_ms": 0.5387000000000001,
+      "query": "ext:pdf invoice"
+    },
+    {
+      "hits": 50,
+      "median_ms": 2.8608000000000002,
+      "p95_ms": 3.1254999999999997,
+      "query": "node_modules"
+    },
+    {
+      "hits": 17,
+      "median_ms": 0.1644,
+      "p95_ms": 0.2078,
+      "query": "zzqxv"
+    }
+  ],
+  "junk": {
+    "dominated": 12,
+    "dominated_queries": [
+      "backup",
+      "block",
+      "data",
+      "image",
+      "json",
+      "logo",
+      "orca",
+      "permissions",
+      "setup",
+      "test",
+      "unit",
+      "workerd"
+    ],
+    "junk_rate": 0.3870967741935484,
+    "mean_junk_share_top20": 0.4403225806451613,
+    "queries_with_user_match": 31
+  },
+  "label": "run",
+  "latency": [
+    {
+      "all_hits": 100000,
+      "all_results_median_ms": 345.4711,
+      "all_results_p95_ms": 378.5081,
+      "first_page_median_ms": 1.27055,
+      "first_page_p95_ms": 1.7537,
+      "kind": "1 char",
+      "page_hits": 200,
+      "query": "a"
+    },
+    {
+      "all_hits": 100000,
+      "all_results_median_ms": 386.6716,
+      "all_results_p95_ms": 454.38960000000003,
+      "first_page_median_ms": 1.655,
+      "first_page_p95_ms": 5.1636,
+      "kind": "2 chars",
+      "page_hits": 200,
+      "query": "re"
+    },
+    {
+      "all_hits": 100000,
+      "all_results_median_ms": 384.85065,
+      "all_results_p95_ms": 445.1436,
+      "first_page_median_ms": 1.8074,
+      "first_page_p95_ms": 2.3064999999999998,
+      "kind": "3 chars",
+      "page_hits": 200,
+      "query": "con"
+    },
+    {
+      "all_hits": 19581,
+      "all_results_median_ms": 84.84344999999999,
+      "all_results_p95_ms": 97.3845,
+      "first_page_median_ms": 2.2956,
+      "first_page_p95_ms": 3.4802,
+      "kind": "whole word",
+      "page_hits": 200,
+      "query": "report"
+    },
+    {
+      "all_hits": 3096,
+      "all_results_median_ms": 14.51355,
+      "all_results_p95_ms": 17.5346,
+      "first_page_median_ms": 3.4831000000000003,
+      "first_page_p95_ms": 4.8043000000000005,
+      "kind": "whole word",
+      "page_hits": 200,
+      "query": "invoice"
+    },
+    {
+      "all_hits": 9870,
+      "all_results_median_ms": 28.62855,
+      "all_results_p95_ms": 34.210499999999996,
+      "first_page_median_ms": 2.97095,
+      "first_page_p95_ms": 3.6101,
+      "kind": "prefix",
+      "page_hits": 200,
+      "query": "^read"
+    },
+    {
+      "all_hits": 71752,
+      "all_results_median_ms": 290.16825000000006,
+      "all_results_p95_ms": 334.9569,
+      "first_page_median_ms": 3.0073,
+      "first_page_p95_ms": 3.7804,
+      "kind": "substring",
+      "page_hits": 200,
+      "query": "port"
+    },
+    {
+      "all_hits": 122,
+      "all_results_median_ms": 5.923449999999999,
+      "all_results_p95_ms": 6.7718,
+      "first_page_median_ms": 5.943250000000001,
+      "first_page_p95_ms": 6.2662,
+      "kind": "camelCase",
+      "page_hits": 122,
+      "query": "MainWindow"
+    },
+    {
+      "all_hits": 446,
+      "all_results_median_ms": 3.33035,
+      "all_results_p95_ms": 3.8768000000000002,
+      "first_page_median_ms": 2.9208,
+      "first_page_p95_ms": 3.5439,
+      "kind": "underscore",
+      "page_hits": 200,
+      "query": "test_utils"
+    },
+    {
+      "all_hits": 16441,
+      "all_results_median_ms": 67.10964999999999,
+      "all_results_p95_ms": 75.80340000000001,
+      "first_page_median_ms": 6.13975,
+      "first_page_p95_ms": 7.167,
+      "kind": "typo",
+      "page_hits": 200,
+      "query": "documnet"
+    },
+    {
+      "all_hits": 1180,
+      "all_results_median_ms": 21.1358,
+      "all_results_p95_ms": 25.536099999999998,
+      "first_page_median_ms": 17.8812,
+      "first_page_p95_ms": 26.442899999999998,
+      "kind": "several words",
+      "page_hits": 200,
+      "query": "windows update log"
+    },
+    {
+      "all_hits": 1265,
+      "all_results_median_ms": 17.405950000000004,
+      "all_results_p95_ms": 20.4534,
+      "first_page_median_ms": 14.298,
+      "first_page_p95_ms": 15.7045,
+      "kind": "path-qualified",
+      "page_hits": 200,
+      "query": "users downloads pdf"
+    },
+    {
+      "all_hits": 73,
+      "all_results_median_ms": 0.7121,
+      "all_results_p95_ms": 0.8513000000000001,
+      "first_page_median_ms": 0.73645,
+      "first_page_p95_ms": 0.8482999999999999,
+      "kind": "extension",
+      "page_hits": 73,
+      "query": "ext:pdf invoice"
+    },
+    {
+      "all_hits": 42484,
+      "all_results_median_ms": 77.4871,
+      "all_results_p95_ms": 86.8271,
+      "first_page_median_ms": 2.45655,
+      "first_page_p95_ms": 2.9783,
+      "kind": "extension only",
+      "page_hits": 200,
+      "query": "ext:png"
+    },
+    {
+      "all_hits": 8170,
+      "all_results_median_ms": 25.9636,
+      "all_results_p95_ms": 30.0184,
+      "first_page_median_ms": 1.3228999999999997,
+      "first_page_p95_ms": 1.8256,
+      "kind": "exact file",
+      "page_hits": 200,
+      "query": "readme.md"
+    },
+    {
+      "all_hits": 17,
+      "all_results_median_ms": 0.25944999999999996,
+      "all_results_p95_ms": 0.3279,
+      "first_page_median_ms": 0.25965,
+      "first_page_p95_ms": 0.32239999999999996,
+      "kind": "no match",
+      "page_hits": 17,
+      "query": "zzqxv"
+    }
+  ],
+  "load_index_ms": 185.2388,
+  "measurement": "in-process engine search on a loaded index; no IPC, no painting",
+  "peak_working_set_bytes": 290344960,
+  "rebuild_from_index_ms": null,
+  "restart_to_first_result_ms": 588.5865,
+  "runs": 30,
+  "typing": {
+    "per_key_median_ms": 1.1322,
+    "per_key_p95_ms": 1.9369,
+    "text": "readme.md"
+  },
+  "warmups": 3
+}

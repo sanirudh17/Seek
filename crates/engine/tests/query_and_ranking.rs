@@ -376,3 +376,42 @@ fn view_filter_does_not_remove_hidden_entries_and_cancellation_returns_no_hits()
     q.cancellation = Some((std::sync::Arc::new(std::sync::atomic::AtomicU64::new(2)), 1));
     assert!(engine.search(&q).unwrap().is_empty());
 }
+
+#[test]
+fn excluded_folder_modified_alias_and_decomposed_queries() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("files");
+    std::fs::create_dir_all(root.join("keep")).unwrap();
+    std::fs::create_dir_all(root.join("skip/deep")).unwrap();
+    std::fs::write(root.join("keep/plan.txt"), "a").unwrap();
+    std::fs::write(root.join("skip/deep/plan.txt"), "b").unwrap();
+    std::fs::write(root.join("keep/café menu.txt"), "c").unwrap();
+    let engine = start_walker(Options {
+        dir: temp.path().join("index"),
+        roots: vec![root.clone()],
+    })
+    .unwrap();
+    engine.wait_ready(Duration::from_secs(30)).unwrap();
+    let skip = root.join("skip").canonicalize().unwrap();
+    let rows = engine
+        .search(&Query::parse(&format!("plan -in:\"{}\"", skip.display()), "").unwrap())
+        .unwrap();
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    assert!(rows[0].path.ends_with("keep/plan.txt"));
+    let recent = engine
+        .search(&Query::parse("plan mod:<1d", "").unwrap())
+        .unwrap();
+    assert_eq!(recent.len(), 2);
+    let old = engine
+        .search(&Query::parse("plan mod:>3650d", "").unwrap())
+        .unwrap();
+    assert!(old.is_empty());
+    // "cafe" + U+0301 (combining acute) finds the composed name.
+    let rows = engine
+        .search(&Query::parse("cafe\u{301}", "").unwrap())
+        .unwrap();
+    assert!(
+        rows.iter().any(|r| r.path.ends_with("keep/café menu.txt")),
+        "{rows:?}"
+    );
+}

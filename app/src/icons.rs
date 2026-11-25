@@ -30,7 +30,8 @@ pub fn kind(path: &Path, folder: bool) -> Kind {
     {
         "doc" | "docx" | "docm" | "dot" | "dotx" | "odt" => Kind::Word,
         "xls" | "xlsx" | "xlsm" | "csv" | "ods" => Kind::Excel,
-        "ppt" | "pptx" | "pptm" | "odp" => Kind::Powerpoint,
+        "ppt" | "pptx" | "pptm" | "pps" | "ppsx" | "ppsm" | "pot" | "potx" | "potm" | "ppam"
+        | "sldx" | "sldm" | "odp" => Kind::Powerpoint,
         "pdf" => Kind::Pdf,
         "txt" | "md" | "markdown" | "rtf" | "log" => Kind::Text,
         "rs" | "py" | "js" | "jsx" | "ts" | "tsx" | "c" | "cc" | "cpp" | "h" | "hpp" | "cs"
@@ -49,10 +50,80 @@ pub fn kind(path: &Path, folder: bool) -> Kind {
         _ => Kind::Generic,
     }
 }
+/// Windows' icon for each file type, by lowercase extension, fetched once
+/// per type as soon as a folder's rows arrive. Rows show it until (and for
+/// most types instead of) a per-file shell icon, so a folder's icons appear
+/// with its rows rather than one by one as each file is asked about.
+static TYPE_ICONS: std::sync::LazyLock<
+    std::sync::Mutex<std::collections::HashMap<String, Option<Arc<RenderImage>>>>,
+> = std::sync::LazyLock::new(Default::default);
+
+/// Types whose icon belongs to each file, not to the type.
+fn per_file(extension: &str) -> bool {
+    matches!(
+        extension,
+        "" | "exe" | "lnk" | "ico" | "url" | "cur" | "ani" | "scr" | "msc" | "appref-ms" | "website"
+    )
+}
+
+fn extension(path: &Path) -> String {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase()
+}
+
+/// The type's icon, once fetched.
+pub fn type_icon(path: &Path, folder: bool) -> Option<Arc<RenderImage>> {
+    if folder {
+        return None;
+    }
+    let extension = extension(path);
+    if per_file(&extension) {
+        return None;
+    }
+    TYPE_ICONS.lock().ok()?.get(&extension).cloned().flatten()
+}
+
+/// Types among these files not fetched or being fetched yet; they are
+/// marked as being fetched.
+pub fn unfetched_types<'a>(files: impl Iterator<Item = (&'a Path, bool)>) -> Vec<String> {
+    let Ok(mut known) = TYPE_ICONS.lock() else {
+        return vec![];
+    };
+    let mut wanted = vec![];
+    for (path, folder) in files {
+        if folder {
+            continue;
+        }
+        let extension = extension(path);
+        if per_file(&extension) || known.contains_key(&extension) {
+            continue;
+        }
+        known.insert(extension.clone(), None);
+        wanted.push(extension);
+    }
+    wanted
+}
+
+/// Fetches type icons on the calling (background) thread.
+pub fn fetch_types(extensions: Vec<String>) {
+    use windows::Win32::System::Com::*;
+    let initialized = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) }.is_ok();
+    for extension in extensions {
+        let icon = crate::media::association_icon(&extension).ok();
+        if let Ok(mut known) = TYPE_ICONS.lock() {
+            known.insert(extension, icon);
+        }
+    }
+    if initialized {
+        unsafe { CoUninitialize() };
+    }
+}
+
 #[derive(Clone)]
 pub struct Atlas {
     cells: Arc<Vec<Arc<RenderImage>>>,
-    locations: Arc<std::collections::HashMap<std::path::PathBuf, Arc<RenderImage>>>,
 }
 impl Atlas {
     /// One embedded SVG sprite is rasterized once on the startup worker. The
@@ -88,16 +159,15 @@ impl Atlas {
             .collect();
         Self {
             cells: Arc::new(images),
-            locations: Arc::new(Default::default()),
         }
     }
     pub fn with_shell(self) -> Self {
         let mut images = self.cells.as_ref().clone();
-        // Windows owns folders, file associations and Favorites artwork.
+        // Windows owns folder and file-association artwork; the sidebar's
+        // places use Seek's own tinted icons.
         // Bundled cells remain fallbacks when an association/provider is absent.
         use windows::Win32::System::Com::*;
         let initialized = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) }.is_ok();
-        let mut locations = std::collections::HashMap::new();
         if initialized {
             for (kind, ext) in [
                 (Kind::Folder, ""),
@@ -118,33 +188,16 @@ impl Atlas {
                     images[kind as usize] = image;
                 }
             }
-            for (_, path) in crate::backend::favorites() {
-                let key = crate::media::Key {
-                    path: path.clone(),
-                    mtime: 0,
-                    size: 0,
-                    edge: 48,
-                    details: false,
-                    folder: true,
-                };
-                if let Ok(image) = crate::media::thumbnail(&key) {
-                    locations.insert(path, image);
-                }
-            }
             unsafe {
                 CoUninitialize();
             }
         }
         Self {
             cells: Arc::new(images),
-            locations: Arc::new(locations),
         }
     }
     pub fn get(&self, kind: Kind) -> Arc<RenderImage> {
         self.cells[kind as usize].clone()
-    }
-    pub fn location(&self, path: &Path) -> Option<Arc<RenderImage>> {
-        self.locations.get(path).cloned()
     }
 }
 #[cfg(test)]

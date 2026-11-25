@@ -97,6 +97,17 @@ pub trait TableDelegate: Sized + 'static {
         div().id(("row", row_ix))
     }
 
+    /// Render the context menu for empty space below the rows.
+    fn background_menu(
+        &mut self,
+        menu: PopupMenu,
+        window: &mut Window,
+        cx: &mut Context<TableState<Self>>,
+    ) -> PopupMenu {
+        let _ = (window, cx);
+        menu
+    }
+
     /// Render the context menu for the row at the given row index.
     fn context_menu(
         &mut self,

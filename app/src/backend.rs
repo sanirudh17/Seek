@@ -14,6 +14,9 @@ use windows_sys::Win32::{
     UI::{Shell::ShellExecuteW, WindowsAndMessaging::SW_SHOWNORMAL},
 };
 
+/// The longest a changed index waits before the current view refreshes.
+const REFRESH_COALESCE: std::time::Duration = std::time::Duration::from_millis(750);
+
 #[derive(Clone)]
 pub struct Row {
     pub file: Found,
@@ -68,6 +71,9 @@ pub enum Command {
     HelperFinished(Result<(), String>),
     Rebuild,
     RefreshParents(Vec<PathBuf>),
+    /// A folder shown in a pane changed on disk: read it again (its cached
+    /// rows stay until then) and bring the index up to date.
+    FolderChanged(PathBuf),
     FilesRemoved(Vec<PathBuf>),
 }
 #[derive(Clone, Default)]
@@ -97,6 +103,10 @@ pub struct Backend {
     pub tx: mpsc::Sender<Command>,
     pub generation: Arc<AtomicU64>,
 }
+
+/// The running index, for bounded read-only reports on other threads
+/// (Storage overview). Set once the engine has started.
+pub static ENGINE: std::sync::OnceLock<Engine> = std::sync::OnceLock::new();
 
 pub fn start(
     root: Option<PathBuf>,
@@ -149,12 +159,22 @@ pub fn start(
                     return;
                 }
             };
+            let _ = ENGINE.set(engine.clone());
             let notify=tx.clone();
             let changed = Arc::new(AtomicBool::new(false));
             let notify_changed = changed.clone();
+            // Index changes arrive continuously during a catch-up. Re-running the
+            // current view for each one redrew the window ~10 times a second, so
+            // changes are coalesced: one refresh per REFRESH_COALESCE at most.
             engine.set_notifier(move || {
                 if !notify_changed.swap(true, Ordering::Relaxed) {
-                    let _ = notify.send(Command::Changed);
+                    let notify = notify.clone();
+                    let _ = thread::Builder::new()
+                        .name("seek-change-coalesce".into())
+                        .spawn(move || {
+                            thread::sleep(REFRESH_COALESCE);
+                            let _ = notify.send(Command::Changed);
+                        });
                 }
             });
             let mut helper=HelperState::default();
@@ -205,6 +225,7 @@ pub fn start(
                                 engine.refresh_parent(&path);
                             }
                         },
+                        Command::FolderChanged(folder)=>{cache_epoch=cache_epoch.wrapping_add(1);browse.refresh(&folder);engine.refresh_parent(&folder.join(".seek-refresh"));},
                         Command::RefreshParents(paths)=>{if !paths.is_empty(){content_cache=None;}for path in paths{browse.invalidate(&path);engine.refresh_parent(&path.join(".seek-refresh"));}},
                         Command::HelperStatus=>{
                             match seek_engine::helper::user_sid().and_then(|sid|seek_engine::helper::service_present(&sid)) {Ok(installed)=>helper.installed=installed,Err(e)=>helper.message=Some(e.to_string())}
@@ -342,6 +363,15 @@ pub fn start(
                                     Ok(files)
                                 })
                             } else { None };
+                            // A folder outside every indexed location: walk it.
+                            let search = search.or_else(|| {
+                                let folder = request.scope.as_ref()?;
+                                (!request.text.trim().is_empty() && !crate::file_changes::under_any(folder, &roots)).then(|| {
+                                    let (files, stopped) = crate::browse::live_search(std::slice::from_ref(folder), &query);
+                                    message = Some(if stopped { "This folder isn't indexed · searched part of it".into() } else { "This folder isn't indexed · searched it directly".into() });
+                                    Ok(files)
+                                })
+                            });
                             match search.unwrap_or_else(|| engine.search(&query)) {
                                 Ok(files) => {
                                     let files = if request.text.trim().is_empty() && request.largest.is_none() {
@@ -374,6 +404,29 @@ pub fn start(
                 } else if !request.content && request.text.trim().is_empty() && request.scope.is_none() && request.largest.is_none() {
                     message=Some("Recent files · indexing all locations...".into());
                     browse.recent(&startup_locations,request.show_hidden,&request.exclusions).into_iter().map(|file|Row::with_dates(file,&mut dates)).collect()
+                } else if !request.content && !request.text.trim().is_empty() && request.largest.is_none() {
+                    // The index is still being built: walk the folder, or the
+                    // person's own folders for All locations, with the same matching.
+                    match Query::parse(&request.text, &std::env::var("USERPROFILE").unwrap_or_default()) {
+                        Ok(mut query) => {
+                            query.limit = 200;
+                            query.hide_hidden_system = !request.show_hidden;
+                            query.excluded_paths = request.exclusions.iter().map(|p| seek_engine::paths::internal(p)).collect();
+                            query.cancellation = Some((generation.clone(), request.generation));
+                            let folders: Vec<PathBuf> = match &request.scope {
+                                Some(folder) => vec![folder.clone()],
+                                None => favorites.iter().map(|(_, f)| f.clone()).filter(|f| f.is_dir()).collect(),
+                            };
+                            let (files, _) = crate::browse::live_search(&folders, &query);
+                            message = Some(if request.scope.is_some() { "Still indexing · searched this folder directly".into() } else { "Still indexing · showing matches from your folders".into() });
+                            files.into_iter().map(|file| {
+                                let mut row = Row::with_dates(file, &mut dates);
+                                row.highlights = crate::highlights::ranges(&row.name, &query);
+                                row
+                            }).collect()
+                        }
+                        Err(error) => { message = Some(error); vec![] }
+                    }
                 } else {
                     message=Some("Indexing files...".into());
                     vec![]
@@ -390,7 +443,14 @@ pub fn start(
                     crate::metrics::phase("cached_rows_materialized");
                     first_cached_search = false;
                 }
-                let mut children:std::collections::HashMap<PathBuf,Vec<Row>>=if request.content {Default::default()} else {request.expanded.iter().map(|folder|(folder.clone(),engine.children(folder,request.show_hidden,&request.exclusions).into_iter().map(Row::new).collect())).collect()};
+                let mut children:std::collections::HashMap<PathBuf,Vec<Row>>=if request.content {Default::default()} else {request.expanded.iter().map(|folder|{
+                    // The index answers for folders it covers; a folder it
+                    // doesn't (or hasn't reached yet) is read from disk, so the
+                    // expand arrow shows what a double-click would.
+                    let mut found=if engine.has_directory(folder){engine.children(folder,request.show_hidden,&request.exclusions)}else{vec![]};
+                    if found.is_empty(){found=crate::browse::listing(folder,request.show_hidden,&request.exclusions).unwrap_or_default();}
+                    (folder.clone(),found.into_iter().map(Row::new).collect())
+                }).collect()};
                 // Only retain a suppression while the index still has the deleted entry.
                 // A same-path file recreated on disk is a new visible item, never hidden.
                 removed_files.retain(|f|std::fs::symlink_metadata(&f.path).is_err_and(|e|e.kind()==std::io::ErrorKind::NotFound));
@@ -399,6 +459,7 @@ pub fn start(
                 for rows in children.values_mut(){rows.retain(|r|!crate::file_changes::under_any(&r.file.path,&removed));}
                 removed_files=engine.refresh_results(&removed_files,&Query::default());
                 let progress_only=message.as_deref()==Some("Indexing this folder...");
+                
                 if result_tx
                     .force_send(Update {
                         all_total,
@@ -428,28 +489,26 @@ pub fn start(
 /// A complete indexed folder listing already contains current metadata. Retain
 /// surviving row positions by joining it once, rather than re-querying every
 /// previous path and moving newly modified files to the top during scrolling.
+/// A folder read again keeps the order it was shown in, so rows don't jump
+/// while the person looks at them; what is new since (a finished download, a
+/// file saved by another app) goes first, newest first, where it is seen,
+/// and what is gone drops out. `files` comes newest first.
 fn retain_browse_order(previous: &[Found], files: Vec<Found>) -> Vec<Found> {
-    let mut current: std::collections::HashMap<_, _> = files
-        .iter()
-        .enumerate()
-        .map(|(i, f)| (f.path.clone(), i))
-        .collect();
+    let known: std::collections::HashSet<&PathBuf> = previous.iter().map(|f| &f.path).collect();
+    let mut current: std::collections::HashMap<PathBuf, Found> = std::collections::HashMap::new();
     let mut order = Vec::with_capacity(files.len());
+    for file in files {
+        if !known.contains(&file.path) {
+            order.push(file.path.clone());
+        }
+        current.insert(file.path.clone(), file);
+    }
     for old in previous {
-        if let Some(index) = current.remove(&old.path) {
-            order.push(index);
+        if current.contains_key(&old.path) {
+            order.push(old.path.clone());
         }
     }
-    for (index, file) in files.iter().enumerate() {
-        if current.remove(&file.path).is_some() {
-            order.push(index);
-        }
-    }
-    let mut files: Vec<_> = files.into_iter().map(Some).collect();
-    order
-        .into_iter()
-        .map(|i| files[i].take().unwrap())
-        .collect()
+    order.into_iter().filter_map(|path| current.remove(&path)).collect()
 }
 fn helper_action(install: bool) -> Result<(), String> {
     use windows_sys::Win32::{System::Threading::*, UI::Shell::*};
@@ -501,6 +560,19 @@ fn helper_action(install: bool) -> Result<(), String> {
 }
 
 impl Row {
+    /// Whether two result lists show the same files with the same size,
+    /// date and highlights, in the same order.
+    pub fn same_rows(a: &[Row], b: &[Row]) -> bool {
+        a.len() == b.len()
+            && a.iter().zip(b).all(|(a, b)| {
+                a.file.path == b.file.path
+                    && a.file.size == b.file.size
+                    && a.file.mtime == b.file.mtime
+                    && a.file.kind == b.file.kind
+                    && a.highlights == b.highlights
+                    && a.snippet == b.snippet
+            })
+    }
     pub(crate) fn new(file: Found) -> Self {
         Self::with_date(file, None)
     }
@@ -513,7 +585,10 @@ impl Row {
             })
             .unwrap_or_default()
     }
-    fn with_dates(file: Found, dates: &mut std::collections::HashMap<u32, String>) -> Self {
+    pub(crate) fn with_dates(
+        file: Found,
+        dates: &mut std::collections::HashMap<u32, String>,
+    ) -> Self {
         if dates.len() >= 512 && !dates.contains_key(&file.mtime) {
             return Self::new(file);
         }
@@ -643,6 +718,73 @@ fn shell_open(path: &std::path::Path, reveal: bool) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn all_locations_reaches_full_pages_after_startup_and_preserves_totals_on_refresh() {
+        use super::*;
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("owned");
+        std::fs::create_dir(&root).unwrap();
+        for n in 0..1105 {
+            std::fs::write(root.join(format!("file-{n:04}.txt")), b"owned").unwrap();
+        }
+        let (backend, updates, worker) = start(
+            Some(root),
+            temp.path().join("profile"),
+            seek_engine::SourceMode::Walker,
+            vec![],
+        );
+        let ask = |id, offset| {
+            backend.generation.store(id, Ordering::Relaxed);
+            backend
+                .tx
+                .send(Command::Search(Request {
+                    generation: id,
+                    all_offset: offset,
+                    show_hidden: true,
+                    ..Default::default()
+                }))
+                .unwrap();
+            let began = Instant::now();
+            loop {
+                if let Ok(update) = updates.try_recv()
+                    && update.generation == id
+                    && update.status.ready
+                    && !update.progress_only
+                    && update.all_total.is_some()
+                {
+                    break update;
+                }
+                assert!(
+                    began.elapsed().as_secs() < 10,
+                    "All locations never supplied its indexed page total"
+                );
+                std::thread::sleep(std::time::Duration::from_millis(2));
+            }
+        };
+        let first = ask(1, 0);
+        let total = first.all_total.unwrap();
+        assert!(total >= 1105);
+        assert_eq!(first.rows.len(), 500);
+        let second = ask(2, 500);
+        assert_eq!(second.all_total, Some(total));
+        assert_eq!(second.rows.len(), 500);
+        let last = ask(3, 1000);
+        assert_eq!(last.all_total, Some(total));
+        assert_eq!(last.rows.len(), total - 1000);
+        let unique = first
+            .rows
+            .iter()
+            .chain(&second.rows)
+            .chain(&last.rows)
+            .map(|r| &r.file.path)
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(unique.len(), total);
+        let restored = ask(4, 0);
+        assert_eq!(restored.all_total, Some(total));
+        assert_eq!(restored.rows.len(), 500);
+        backend.tx.send(Command::Stop).unwrap();
+        worker.join().unwrap();
+    }
     #[test]
     fn batch_dates_match_uncached_rows_and_bound_temporary_memory() {
         let mut dates = std::collections::HashMap::new();
@@ -804,7 +946,7 @@ mod tests {
         worker.join().unwrap();
     }
     #[test]
-    fn browsing_keeps_survivors_in_place_with_current_metadata_and_new_files_at_end() {
+    fn browsing_keeps_survivors_in_place_and_shows_new_files_first() {
         let file = |name: &str, size| Found {
             path: name.into(),
             kind: 0,
@@ -819,7 +961,8 @@ mod tests {
             rows.iter()
                 .map(|r| (r.path.to_str().unwrap(), r.size))
                 .collect::<Vec<_>>(),
-            [("a", 1), ("c", 2), ("new", 3)]
+            // A new download is seen at once, at the top, not below the fold.
+            [("new", 3), ("a", 1), ("c", 2)]
         );
         let request = Request {
             scope: Some("folder".into()),

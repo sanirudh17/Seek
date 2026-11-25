@@ -5,6 +5,7 @@ use std::{
     sync::{Arc, Mutex, OnceLock, Weak},
 };
 
+use gpui::AnimationExt as _;
 use gpui::{
     AnyElement, App, Axis, Bounds, DefiniteLength, Div, Element, ElementId, FontStyle, FontWeight,
     GlobalElementId, HighlightStyle, Hsla, Image, ImageFormat, ImageSource, InspectorElementId,
@@ -2330,6 +2331,8 @@ pub(crate) struct NodeContext {
     pub(crate) table_actions: Option<Arc<TableActionsFn>>,
     pub(crate) image_source: Option<Arc<super::text_view::ImageSourceFn>>,
     pub(crate) link_click_handler: Option<Arc<LinkClickHandlerFn>>,
+    /// Seek: task-list checkbox clicks.
+    pub(crate) task_toggle: Option<Arc<super::text_view::TaskToggleFn>>,
     pub(crate) markdown_extensions: Arc<MarkdownExtensions>,
     /// This frame's streamed fade-in, when any text is still fading.
     pub(crate) stream_fade: Option<Arc<StreamFadeFrame>>,
@@ -3285,6 +3288,7 @@ impl BlockNode {
         style: &TextViewStyle,
         line_height: Pixels,
         indent: Pixels,
+        toggle: Option<(Arc<super::text_view::TaskToggleFn>, usize, usize)>,
     ) -> Div {
         h_flex()
             .w_full()
@@ -3322,6 +3326,11 @@ impl BlockNode {
                 } else {
                     CHECK_SVG_LIGHT
                 };
+                // The fill and tick fade in (or out) when the box changes,
+                // so a click reads as a change rather than a swap.
+                let link = style.link();
+                let rest = style.muted_foreground();
+                let key = toggle.as_ref().map_or(ix, |(_, start, _)| *start);
                 this.child(
                     div()
                         .flex()
@@ -3339,15 +3348,44 @@ impl BlockNode {
                                 .rounded(px(4.))
                                 .border(px(1.5))
                                 .border_color(style.muted_foreground())
-                                .when(checked, |this| {
-                                    this.bg(style.link()).border_color(style.link()).child(
-                                        img(Arc::new(Image::from_bytes(
-                                            ImageFormat::Svg,
-                                            check_svg.to_vec(),
-                                        )))
-                                        .size(rems(0.75)),
+                                .when_some(toggle, |this, (handler, start, end)| {
+                                    this.cursor_pointer().on_mouse_down(
+                                        gpui::MouseButton::Left,
+                                        move |_, window, cx| {
+                                            cx.stop_propagation();
+                                            handler(start, end, checked, window, cx);
+                                        },
                                     )
-                                }),
+                                })
+                                .child(
+                                    img(Arc::new(Image::from_bytes(
+                                        ImageFormat::Svg,
+                                        check_svg.to_vec(),
+                                    )))
+                                    .size(rems(0.75))
+                                    .with_animation(
+                                        gpui::ElementId::NamedInteger(
+                                            if checked { "tick-on" } else { "tick-off" }.into(),
+                                            key as u64,
+                                        ),
+                                        gpui::Animation::new(std::time::Duration::from_millis(220))
+                                            .with_easing(|t: f32| 1. - (1. - t).powi(3)),
+                                        move |this, t| this.opacity(if checked { t } else { 1. - t }),
+                                    ),
+                                )
+                                .with_animation(
+                                    gpui::ElementId::NamedInteger(
+                                        if checked { "task-on" } else { "task-off" }.into(),
+                                        key as u64,
+                                    ),
+                                    gpui::Animation::new(std::time::Duration::from_millis(220))
+                                        .with_easing(|t: f32| 1. - (1. - t).powi(3)),
+                                    move |this, t| {
+                                        let on = if checked { t } else { 1. - t };
+                                        this.bg(link.opacity(on))
+                                            .border_color(if on > 0.5 { link } else { rest })
+                                    },
+                                ),
                         ),
                 )
             })
@@ -3377,8 +3415,13 @@ impl BlockNode {
                 children,
                 spread,
                 checked,
-                ..
+                span,
             } => {
+                let toggle = node_cx
+                    .task_toggle
+                    .clone()
+                    .zip(*span)
+                    .map(|(handler, span)| (handler, span.start, span.end));
                 let body = body_font_size(node_cx, window);
                 let indent = body * 1.4;
                 div()
@@ -3437,6 +3480,7 @@ impl BlockNode {
                                         &node_cx.style,
                                         window.line_height(),
                                         indent,
+                                        toggle.clone(),
                                     ));
                                 }
                                 BlockNode::List { .. } => {
@@ -3480,6 +3524,7 @@ impl BlockNode {
                                             &node_cx.style,
                                             window.line_height(),
                                             indent,
+                                            toggle.clone(),
                                         ));
                                     } else {
                                         // Indent continuation blocks to align with a

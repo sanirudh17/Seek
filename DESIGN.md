@@ -5,26 +5,26 @@ colors:
   accent-default: "#909090"
   light-text: "#202020"
   light-muted: "#505050"
-  light-glass: "#ffffffcc"
+  light-glass: "#ffffff"
   light-solid: "#ffffff"
   light-sidebar-solid: "#f3f3f3"
   light-line: "#00000014"
   light-hover: "#0000000c"
-  light-sheet: "#f8f9fcfa"
+  light-sheet: "#ffffff"
   dark-text: "#f4f4f4"
   dark-muted: "#a0a0a0"
-  dark-glass: "#000000cc"
+  dark-glass: "#000000b8"
   dark-solid: "#080808"
   dark-chrome-solid: "#111111"
   dark-sidebar-solid: "#0b0b0b"
   dark-line: "#ffffff14"
   dark-hover: "#ffffff10"
-  dark-sheet: "#141414f5"
+  dark-sheet: "#0000001f"
   light-settings-card: "#ffffff70"
   light-control: "#ffffff80"
   light-control-hover: "#00000007"
   light-control-selected: "#00000018"
-  dark-settings-card: "#ffffff04"
+  dark-settings-card: "#00000000"
   dark-control: "#ffffff08"
   dark-control-hover: "#ffffff10"
   dark-control-selected: "#ffffff2e"
@@ -36,48 +36,53 @@ colors:
   light-toolbar-group-end: "#ffffff45"
   dark-toolbar-group-start: "#ffffff0e"
   dark-toolbar-group-end: "#ffffff03"
-  light-popup-glass: "#f1f1f1cc"
-  dark-popup-glass: "#202020f0"
+  light-popup-glass: "#f7f7f7"
+  dark-popup-glass: "#232323"
   menu-accent-wash: "#90909024"
 typography:
   toolbar-icon:
-    fontFamily: "Segoe Fluent Icons"
+    iconFamily: "Hugeicons SVG"
     fontSize: "14px"
     fontWeight: 400
   body:
-    fontFamily: "Segoe UI Variable Text"
+    fontFamily: "Figtree"
     fontSize: "13px"
   pane-icon:
-    fontFamily: "Segoe Fluent Icons"
+    iconFamily: "Hugeicons SVG"
     fontSize: "16px"
     fontWeight: 400
   settings-control:
-    fontFamily: "Segoe UI Variable Text"
+    fontFamily: "Figtree"
     fontSize: "13px"
     fontWeight: 400
     lineHeight: "16px"
   settings-navigation:
-    fontFamily: "Segoe UI Variable Text"
+    fontFamily: "Figtree"
     fontSize: "13px"
     fontWeight: 400
     lineHeight: "20px"
   settings-title:
-    fontFamily: "Segoe UI Variable Text"
+    fontFamily: "Figtree"
     fontSize: "19px"
     fontWeight: 600
   section-title:
-    fontFamily: "Segoe UI Variable Text"
+    fontFamily: "Figtree"
     fontSize: "18px"
     fontWeight: 600
   card-title:
-    fontFamily: "Segoe UI Variable Text"
+    fontFamily: "Figtree"
     fontSize: "14px"
     fontWeight: 600
   description:
-    fontFamily: "Segoe UI Variable Text"
+    fontFamily: "Figtree"
     fontSize: "12px"
+  sidebar-section:
+    fontFamily: "Figtree"
+    fontSize: "12px"
+    fontWeight: 500
+    lineHeight: "20px"
   metadata:
-    fontFamily: "Segoe UI Variable Text"
+    fontFamily: "Figtree"
     fontSize: "11px"
   text-preview:
     fontFamily: "Consolas"
@@ -180,7 +185,7 @@ components:
 
 **Creative North Star: "Windows Finder on Neutral Glass"**
 
-Finder proportions meet Windows file artwork, caption behavior and Segoe UI. The interface is compact, quiet and practical: neutral black and white surfaces keep filenames and real file previews dominant. System, Light and Dark are explicit appearance choices.
+Finder proportions meet Windows file artwork and caption behavior, with Figtree interface text and Hugeicons controls. The interface is compact, quiet and practical: neutral black and white surfaces keep filenames and real file previews dominant. System, Light and Dark are explicit appearance choices.
 
 This document records the current interface, including the bounded Stage 4 selection and Settings corrections, principally `app/src/appearance.rs`, `interface.rs`, `settings_view.rs`, `settings.rs` and `assets.rs`. It describes implementation and the user's selected direction; it does not certify screenshot fidelity, backdrop appearance on every device, or final visual acceptance.
 
@@ -204,13 +209,13 @@ The default accent is Graphite. Reading saved settings migrates the former defau
 
 The light palette uses charcoal text on white; the dark palette uses near-white text on black. Muted text carries metadata and explanatory copy. Lines and hover fills are low-opacity neutral overlays. In solid mode, sidebar and chrome gain their opaque palette surfaces. Sheets have their own denser surface for readable settings and menus.
 
-Glass-mode menus use the separate light/dark popup tokens in the frontmatter. Menu hover and selection use the saved accent at alpha (0.14), with normal foreground text; `menu-accent-wash` records the Graphite default. Solid-mode menus use the existing sheet surface. The menu surface stays translucent while the native window supplies acrylic blur.
+Glass-mode menus use the separate light/dark popup tokens in the frontmatter. Menu hover and selection use the saved accent at alpha (0.14), with normal foreground text; `menu-accent-wash` records the Graphite default. Solid-mode menus use the existing sheet surface. Menu and popover surfaces are opaque even in glass mode (dark #232323, light #f7f7f7): popups sit over busy file lists and their text must never show rows through it. The window itself keeps its glass.
 
 **The Continuous Glass Rule.** With glass enabled, apply the root tint once. Keep sidebar, toolbar background, table and footer transparent over it. Small toolbar groups and the search field add their specified neutral gradient surfaces without tinting the entire pane again.
 
 ## Typography
 
-Segoe UI Variable Text is the interface text family. Most toolbar symbols use Segoe Fluent Icons at normal weight in muted gray. Body text uses the compact base size. Toolbar glyphs are (14px), except pane-toggle and search glyphs (16px). Hidden-file visibility, Info and Settings use (14px) SVGs centered in full-size wrappers. The header has no location title. Settings title and section headings provide a restrained hierarchy. Metadata and footer text use the smallest role. Consolas is reserved for plain-text previews. Preserve readable casing; do not introduce display typography.
+Figtree is the interface text family. Controls use the shared Hugeicons SVG family at 1.75 stroke in muted gray; native file-association artwork remains unchanged. Body text uses the compact base size. Toolbar glyphs are (14px), except pane-toggle and search glyphs (16px). Hidden-file visibility, Info and Settings use (14px) SVGs centered in full-size wrappers. The header has no location title. Settings title and section headings provide a restrained hierarchy. Metadata and footer text use the smallest role. Consolas is reserved for plain-text previews. Preserve readable casing; do not introduce display typography.
 
 ## Layout
 
@@ -222,15 +227,15 @@ The Favorites sidebar content and its expanded animated slot both measure (204px
 
 Content mode adds its own compact status row above results, using the frontmatter height and metadata role with (12px) horizontal gaps. Location names and search status truncate within the available width. Results use List view; the Matching line column replaces Date Modified at (360px) wide. Icons and Gallery controls are disabled while Content mode is active.
 
-Settings use an (820px x 620px) modal capped at (94%) of window width and (92%) of height, a (54px) header and a (200px) category rail. Categories are Appearance, Files and search, Locations, and Helper. The content scrolls independently with (20px) padding. Separate cards use (16px) internal padding and (12px) corners; labels and controls align left. Default view uses a compact (242px) segmented frame with three (80px) buttons that ends immediately after Gallery.
+Settings use a (900px x 650px) popup capped at (94%) of window width and (92%) of height, a (52px) header and a (188px) category rail. Search is separated from navigation. Seven existing categories retain their options; labels and descriptions use 24px separation from controls and 20px vertical row padding. Long descriptions stack above controls. Background softening has its own row; content-location Save is compact; cache controls are stacked. The Settings surface follows window opacity live, with no file-list text painted beneath it.
 
 Settings navigation retains (40px) rows with a (20px) centered icon slot, (18px) artwork and a (20px) text slot separated by (12px). Native popup rows are (28px) logical pixels. The Type menu is compact, bounded from (144px) to (180px) wide. Popup menus omit separator rows and visible scrollbars; wheel scrolling and keyboard navigation remain available when content exceeds the viewport.
 
 ## Elevation & Depth
 
-Glass uses GPUI's native `Blurred` background with one neutral root tint at (80%) opacity; sidebar and chrome remain transparent. GPUI owns backdrop composition and its platform fallback. Solid mode requests an opaque background. Native blur/Mica appearance depends on Windows and requires visual verification; API configuration alone is not evidence of visible glass.
+Glass uses backend-owned Windows system acrylic with full-client DWM frame extension, retaining one material across native window states. New profiles use a neutral black root tint at 72%; window opacity is adjustable from 0-100%. Glass content/chrome paint no second fill; sidebar tint follows a cubic response and the popup adds 12% black tint. Light mode, high contrast and disabled system transparency remain opaque. Native Windows blur still exists at zero app tint. Idle performance and transient animation appearance require separate verification.
 
-Main surfaces have no decorative shadows. The toolbar's compact rounded groups use a neutral vertical gradient, with distinct light/dark endpoints in the frontmatter; search fades its hover surface toward (65%) opacity. Settings and the sort menu use a border and a restrained shadow, recorded in the sidecar. Settings has its own nearly opaque neutral sheet, softly layered cards, and fine-border gradient controls; theme selection and category selection use neutral control fills. Native window rounding is requested through DWM. The sidebar has one user-authorized width transition (160ms) using smoothstep easing, `t*t*(3-2*t)`. Reversal starts at its current width. Request animation frames only while transitioning; no idle animation loop or decorative perpetual motion is part of this system.
+Main surfaces have no decorative shadows. The toolbar's compact rounded groups use a neutral vertical gradient, with distinct light/dark endpoints in the frontmatter; search fades its hover surface toward (65%) opacity. Settings and the sort menu use a border and a restrained shadow, recorded in the sidecar. Settings has its own nearly opaque neutral sheet, softly layered cards, and fine-border gradient controls; theme selection and category selection use neutral control fills. Native window rounding is requested through DWM. The sidebar width transition uses the motion module's critically damped spring (see Motion). Reversal starts at its current width. Request animation frames only while transitioning; no idle animation loop or decorative perpetual motion is part of this system.
 
 ## Shapes
 
@@ -238,14 +243,17 @@ Controls have small rounded corners; shared theme radii are in the frontmatter. 
 
 ## Components
 
-- **Toolbar:** Segoe Fluent Icons supplies the Windows symbols in normal weight and softer muted gray; tooltips and accessible labels name the actions. Other controls retain licensed Kit SVG artwork, adjusted to stroke (1.5) by the application asset wrapper without vendor edits. Caption glyphs are (11px) inside Windows `WindowControlArea` targets, including red close hover. The hidden-file visibility action uses the document-plus SVG through Kit `Icon::default().path(...)`, preserving inherited paint tint. Info appears selected only while its inspector is visible: the panel preference is enabled and an item is selected. The current view uses a saved-accent wash and normal foreground glyph; unused toolbar space remains draggable. Toolbar buttons explicitly use zero horizontal and vertical padding; icon/SVG content does not shrink inside the target. Kit's outer focus halo is disabled (`Theme.focus_ring = false`), retaining its thin keyboard-focus line (1px) without spilling across neighboring controls.
+Quick Look uses a 34px eye action aligned at the inspector's top right for images and supported PDF/DOCX/XLSX documents; the Enlarge text button is removed. Space from the file list or context-menu Quick Look opens the existing native reader; Ctrl+I toggles the inspector. Open uses the 200 ms entrance and close the 150 ms exit from Motion, opacity/position only with constant bounds, a cancellable finite close task and generation guard. Image Fit and 100% refer to the active decoded pixels, identified as original or preview resolution, with Ctrl+scroll zoom. Original decoded image pixels now supply 100% within explicit source/dimension/allocation bounds, with a labelled preview-only fallback. Final GUI acceptance remains recorded in the ledger. The latest user request reinstates the single Quick Look eye/menu/Space entry pattern.
+
+
+- **Toolbar:** controls use the shared Hugeicons SVG family with native Windows caption behavior and file artwork. Icons stay centered in fixed-size targets; selected controls use a restrained accent wash. Labels and tooltips identify actions. The results-list frame focus indicator is locally suppressed while keyboard selection remains visible. Preserve whole-window native glass and system minimize/restore transitions; do not suppress animation or force runtime backdrop activation.
 - **Toolbar state:** view and action buttons share one custom state style: a 14% accent wash for pressed/selected states, normal text for active icons and muted text otherwise. Hidden items, sort, Info and Settings use the same fill as the view switcher. Info is selected only when its inspector is visible.
 - **Search:** a flexible rounded rectangle with a subtle neutral gradient, fine border and muted search icon; focus strengthens the border. Query chips live inside the search flow. Content mode adds a compact ghost button beside the search glyph in the prefix, using the `search-content-mode` height and padding, an (11px) Content label and an (11px) SVG X. Its accessible action is Exit content search; activating it returns to filename search.
 - **Type and native menus:** the Type chip opens the compact native GPUI type menu and retains its remove action. Search suggestions distinguish Name contains, Content contains and file-type interpretations. The ellipsis control groups All items, Largest files, Largest folders, Search file contents, Type and file actions in the incumbent toolbar. Menus share the approved popup surfaces, (28px) rows, (14%) accent hover/selection and normal foreground text; use no separators or visible scrollbar. The local Kit options preserve wheel and keyboard interaction.
-- **Content status:** a transparent row above results uses the `content-status` dimensions and muted metadata role. Up to two configured folder names appear directly; larger sets use a location count. The adjacent summary carries search progress, matches, skipped files, errors and limit status. A tooltip supplies full configured paths and the bounded-search limits: (4 MiB) per file, (8 MiB) expanded document text, (3 seconds) per search and (200) matches, plus skipped-file categories and guidance to narrow the folder when a limit is reached.
+- **Content status:** keep a compact status row with configured locations, checked/matching/skipped/unreadable counts and explicit quick-result or completion state. The complete direct scan is cancellable and authoritative; do not reinstate the old global time or 200-match cutoff. Per-file input and expanded-text limits remain explicit. Match excerpts show up to five numbered lines in the inspector with visible truncation.
 - **Navigation:** compact selected sidebar rows use a subdued neutral hover wash and normal foreground text. Generic sidebar line icons use muted foreground when unselected. Windows supplies Favorites artwork, file association icons and generic yellow folders. Folder rows share one native yellow folder icon from the atlas; do not request separate shell images for each folder. Bundled yellow folder and file-kind artwork remain fallbacks.
 - **List and previews:** unstriped rows use hover/selection for state. Bounded visible-file shell requests replace fallback artwork asynchronously; supported images and videos request real thumbnails. Folder rows reuse the shared atlas icon. Large selected previews request a (768px) edge; this is source resolution, not a fixed display size. Large folder previews use native Windows artwork of at least (256px), preserving the small atlas icon for rows rather than stretching (32px) artwork. Preserve image aspect ratio. Gallery has one large central preview and a bottom thumbnail strip (155px); its inspector omits the duplicate image. Hide the inspector without a selected item.
-- **Settings:** regular (13px) control labels, semibold card titles, section headings and modal title use their frontmatter roles. System, Light and Dark use explicit icon-and-label rows inside their (100px) buttons: non-shrinking (16px) SVGs at stroke (1.5), with an (8px) icon/label gap. Custom children bypass automatic button icon sizing. The glass control is a working On/Off switch. Accent swatches are (24px) rounded squares in (32px) targets; the Kit ColorPicker pipette and six-digit hex Apply control both change the saved accent. Hidden/system visibility uses a native Kit dropdown. Default view is the compact List/Icons/Gallery segmented frame; choosing it changes the current app view immediately and saves the future default. Locations has a real All drives / Custom folders dropdown, custom path input and exclusions input; only Save locations is an accent-filled primary button. Secondary controls, Done and navigation use normal foreground text and neutral gradient/selected surfaces. Shared controls are (34px) high with zero vertical padding and a (16px) line height for regular (13px) labels. Choice selectors keep their labels left aligned with an independently positioned right chevron (12px); action buttons retain centered labels. Secondary ghost text also maps to normal foreground through `accent_foreground`; stronger neutral selected fills remain distinct in both themes. Changes to indexed locations take effect on next launch.
+- **Settings:** 13px Figtree controls, 32px flat targets (4% foreground fill, 1px line, no gradient), centered action labels and 8px rounded rectangles. Appearance and default-view choices use text-only buttons; dropdown labels remain left aligned with an independent chevron. Eleven functional pages share searchable, independently scrollable navigation/content. Previews controls change real requests and rendering; text auto-save/backups remain under Text editing. Saved programs are configured as an executable and separate arguments and run only through explicit actions. F1 opens the shared keyboard reference.
 - **Content locations:** Files and search adds a separate Content search locations card using the incumbent settings card and input styling. Downloads and Documents are the defaults. A semicolon-separated full-folder-path input and neutral Save content locations action configure the scope; leaving it empty disables content search. Saving applies the content locations to the current search. The existing Locations category continues to configure filename indexing separately.
 - **Footer:** one thin combined path/status band. Keep inaccessible-location and catch-up information legible there; Content mode carries its separate search summary above results.
 
@@ -266,8 +274,131 @@ Controls have small rounded corners; shared theme radii are in the frontmatter. 
 
 ## Unreleased interaction follow-up (2026-10-20)
 
-Source implementation awaiting an approved app build: suggestions belong to the actual search-field layout, rather than a screen-coordinate offset. Tab content appears independently of motion: 140 ms tab insertion, 120 ms active-tab wash and 100 ms closing-slot contraction; no result-list fade or stagger. Windows client-area animation preference disables spatial effects. No motion dependency or framework update. Up to eight inactive view snapshots share immutable rendered rows, bounded by 8 MiB per view and 24 MiB overall; evicted views reload normally.
+Source implementation awaiting an approved app build: suggestions belong to the actual search-field layout, rather than a screen-coordinate offset. Tab content appears independently of motion: tab insertion, active-tab wash and closing-slot contraction use the Motion durations; no result-list fade or stagger. Windows client-area animation preference disables spatial effects. No motion dependency or framework update. Up to eight inactive view snapshots share immutable rendered rows, bounded by 8 MiB per view and 24 MiB overall; evicted views reload normally.
 
 List/grid multi-selection uses a stable range anchor and an independent caret. Selected rows use the existing accent wash; Ctrl-moving the caret leaves the selection unchanged. Permanent deletion now initially focuses the red Delete permanently button, explicitly requested by the user; Left/Right or Tab toggles Cancel/Delete, Escape cancels, and the captured selection remains one-shot. Rename/new-folder buttons also support arrows while their text fields retain text navigation.
 
 Windows 11 system Desktop Acrylic replaces legacy accent blur where supported, with the existing fallback on older systems. Native API acceptance does not establish visual correctness during transitions. Painted-frame timing, restored/maximized popup alignment, Light/Dark focus styling, wheel routing and transition appearance still require the user's approved build. Do not label these visually verified from source tests.
+
+## Revamp 1.2 — preview recovery pattern
+
+Preserve the preview stage and page controls. Show the native failure with a human-readable operation prefix; long details scroll within 120 DIP. Retry and Copy diagnostics remain labelled secondary actions. These controls use the incumbent palette until the separate glass/inspector redesign. Native shape and critique are in docs/revamp/. No raster-layout change is part of this reliability item.
+
+
+### Startup entrance
+The native window stays hidden until saved appearance and a successful first presentation. With Windows client animations enabled, content enters at 88% opacity and reaches full opacity over 120 ms. No layout size changes and no persistent frame timer. Native first-paint checks do not substitute for transition video inspection.
+
+
+### Interface typography update
+Figtree is bundled locally (upright variable, regular/medium/semibold), with Windows fallback for other glyphs. Preserve document/code fonts and native PDF rendering. See docs/revamp/TYPOGRAPHY.md and the bundled SIL OFL. Do not scale text as a bitmap.
+
+
+Revamp tab plates are 224 by 28px in a 38px strip with 2px gaps and 20px icon tiles. Selected/resting/hover fills are 10/4/7% foreground. Plus sits beside the last tab. Monocode-style open/close slots use the Motion entrance/exit and clip fixed-width content. Windows animation preference is retained. Full motion acceptance remains pending.
+
+Information panel motion uses a fixed-width slot with the Motion entrance (open) and exit (close) slide and fade. Its width is reserved once on opening and released after closing, never animated per frame. Reversing a transition uses its current progress; cancellable close tasks have generation checks. Windows animation-off mode applies immediately. Spreadsheet framing has table content width plus 2px border, capped by its viewport, retaining horizontal scrolling. Image zoom adds Ctrl +/- and Ctrl+0/1, plus 32px zoom-out/in controls; mouse wheel behavior stays.
+
+Quick Look image panning uses a fixed clipped viewport and explicit centered-image offsets with symmetric axis bounds. An overflowing image has an open-hand cursor, changing to a closed hand during a left-button drag. Drag deltas are clamped independently to each axis; non-overflowing axes stay fixed. Shift+arrow keys pan by 40 logical pixels. Fit, file changes and new Quick Look sessions reset position; release outside and loss of activation cancel a held grab. Panning adds no idle task or ticker.
+
+Word Quick Look uses a centered max-900px text reader, 16px Figtree with 28px line height, 24px inset spacing and a clearly labelled excerpt cap. The outer reader scrolls continuously; the former nested short text scroller is bypassed in Quick Look. Excel Quick Look centers its content, uses 13px data text, 20px line height, 10px vertical/16px horizontal cell padding and 112-220px columns, while the compact inspector table retains its density. Quick Look eye artwork is the Monocode Hugeicons variant, rendered directly at 13px so ButtonIcon sizing cannot override it. Reset / Fit is an explicit labelled action with a reset icon. Windows maps grab styles to its single native hand resource.
+
+Image toolbar refinement: 48px row, 32px non-shrinking +/- controls, a separate group with 120px Fit image and 80px 100% text buttons, a 52px percentage readout, then flexible truncated help text. Labels are actual rendered children rather than accessibility labels alone. The reset glyph is rendered directly at 14px. Fit can upscale to the available frame (bounded at 16x); Actual is 1x preview pixels. Selected mode is visibly highlighted. Image viewport geometry subtracts the new toolbar height.
+
+### Phase-two refinement
+
+Favorites and Locations occupy a 220 logical-pixel sidebar; shortcut hints and query-history blocks stay in Jump. Contextual menus group everyday item actions; the three-dot menu groups search modes and global tools. The palette contains the full command set and saved/recent management. Saved commands uses aligned labels, a compact multiline arguments editor with separate token help, one footer row and a program-window/play outline. History uses compact Undo/Redo and a short capacity/archive footer. Keyboard descriptions start after a proportional 36% key column and a 32-pixel gap.
+
+## Motion
+
+All animation timing lives in `app/src/motion.rs`; `scripts/check-motion.ps1` fails when an `Animation`, easing curve or elapsed-time motion comparison is written anywhere else. Adapted from Monodrive's motion vocabulary.
+
+| Token | Value | Use |
+|---|---|---|
+| `ENTER` | 200 ms | Surfaces appearing: panels, panes, drop previews, new tabs, Quick Look open |
+| `EXIT` | 150 ms | Surfaces leaving; always faster than entrances |
+| `STATE` | 120 ms | In-place state changes: active-tab wash, settings page/sheet fade, window fade-in |
+| `PREVIEW` | 150 ms | Drop previews (drag-to-split) growing and fading in |
+| `SETTLE` | 180 ms | Short settle after a drop lands |
+| `SPRING` | 260 ms | Reversible movement: sidebar width, split drop zones, column scrolling |
+
+Curves: `ease_out` is `cubic-bezier(0.22, 1, 0.36, 1)`, a fast start with a long gentle landing. `spring` is a critically damped response `1 - (1 + wt)e^(-wt)` (w = 9), normalised to land exactly with no overshoot. Nothing eases in.
+
+Rules:
+- Animate opacity, position and size only; never animate content or row lists.
+- Reversible movement starts from the current on-screen value, so changing direction partway never jumps.
+- When Windows "Show animations in Windows" is off (`motion::enabled()` is false), every transition renders its end state at once and finite close tasks complete immediately.
+- No animation loops while idle: frames are requested only while a transition is running, so idle CPU returns to zero.
+
+## Split panes
+
+Panes are rounded (8 px) cards on the chrome surface, separated by a 6 px gap that is also the divider's hit area. The focused pane has a 1 px accent border; other panes use the hairline line colour. A divider tints to 28% accent on hover, shows a resize cursor, and double-click shares the space equally. Panes keep at least 260 px width side by side or 180 px height when stacked. Each pane has its own 38 px tab strip and 30 px footer (location, item count, state). The search field in the top bar always belongs to the focused pane. A new pane fades in over the Motion entrance. Dragging files over an unfocused pane outlines it in accent with an 8% accent wash.
+
+Tabs can be dragged: an accent 2 px insertion line marks the slot while reordering or moving a tab to another pane's strip.
+
+## Drag-to-split
+
+While a tab or sidebar folder is dragged over a pane's body, an accent rectangle (16% fill, 2 px border at 65%, 8 px radius, 6 px inset) covers the half nearest the pointer: left, right, top or bottom. It grows from 92% of its half and fades in with `PREVIEW`, slides between halves with the spring, and disappears when the drag leaves the pane or Esc is pressed. The tab strip itself keeps reorder/move behaviour and never shows the preview. On drop the new pane fades in from 55% opacity with `SETTLE`. A pane cannot be split by dragging its only tab onto itself.
+
+## Column view
+
+Columns are 240 px by default (150-640 px, dragged at a 6 px edge that tints to 28% accent), separated by hairlines. Rows are 28 px with a 16 px icon, the name, and a muted chevron for folders. The focused column marks selected items with an 18% accent fill and the caret with an 8% foreground wash; ancestor columns mark the folder on the path with the 8% wash. The last column previews the selected folder or shows a summary (preview, name, kind, size, modified) at least 300 px wide. When the column set changes, the strip scrolls with the motion spring so the focused column and preview stay in view; Windows animation-off moves it at once.
+
+## Document pane
+
+A document pane is a pane card like any other, with a 44 px header on the chrome surface: a muted file glyph, the name (medium weight) over "kind · size · modified" (11 px muted), then 28 px Reload and Close icon buttons. The body is the Quick Look reader, the document preview, a contained image, or the file icon with a short note for unsupported kinds. Its border takes the accent while its reader holds keyboard focus.
+
+## Related folders
+
+A 36 px row on the chrome surface under the focused tab strip. Chips share the tab plates' shape language: 26 px tall, 6 px radius, 4% foreground at rest, 7% on hover, 10% with full-strength text for the open folder, a 13 px folder glyph and a label up to 180 px; the tooltip shows the full path. Pills were rejected so the two adjacent rows keep one radius scale. A ghost "+" button with the same radius opens the menu. Dropping folders or tabs tints the row with an 8% accent wash. Empty rows show a one-line muted hint.
+
+## Sidebar groups
+
+While dragging in the sidebar, the row under the pointer (or the whole group, for a dragged group) takes the accent wash; there is no insertion line. Files dragged onto the middle of a sidebar folder row move into it; onto its edges, or anywhere else in a group, the folder is added to that group.
+
+Group headers are 30 px rows: a 12 px chevron and the name in 12 px medium muted text, like the section headings. Naming a group replaces the header with a full-width standard-height field whose placeholder is "Group name"; Enter saves, Esc keeps the current name. An empty group shows no sentence; a blank drop row appears only while something is dragged. Items inside a group indent to 22 px. The info panel shows "Open in document pane" (panel-right glyph) beside Quick Look for any selected file.
+
+## Organize review sheet
+
+A 520 px modal sheet (14 px radius, modal surface and border). Title "Organize <folder>" at 15 px semibold. Each group is one row: a small switch whose on colour is the text colour, the folder name at 13 px semibold with its count right-aligned, the rule in one 12 px muted line, then up to three file names "and N more". A switched-off row mutes its text. The footer holds "N files stay where they are" (muted, left), Cancel and the primary Organize N. The primary button is the inverse of the surface (text-colour fill, surface-colour label), used for the one committing action of a sheet. Keyboard: Up/Down move between rows and buttons, Space toggles, Enter organizes, Esc cancels.
+
+## Toast
+
+A 36 px, 10 px radius pill centred 40 px above the window's bottom edge on the modal surface with a soft shadow: one line of 13 px text and, when the action can be reversed, a medium-weight Undo text button. It enters with the motion entrance and leaves on its own after six seconds.
+
+## Split button
+
+A primary action with an attached 22 px chevron segment inside one 6 px radius outline, divided by a 1 px rule. The chevron opens a small menu of variants. First use: the editors' Save, whose menu offers Save a Copy.
+
+## Empty-space menu
+
+Right-clicking empty space opens one compact menu: create and organize actions, Properties, Paste, the view choices and Show Hidden Files, then Sort by. Shortcuts are right-aligned in 12 px muted text; the current view and sort carry the menu's check mark.
+
+## Update indicator
+
+A 22 px ghost icon at the right of the sidebar footer, shown only when a newer release exists. Its popover is a 300 px card: "Seek x.y.z" with Download on one line (a ring and percentage replace the button while downloading, then Restart), a divider, and the release notes as short lines with 4 px dots. Errors are one short line; details go to the log.
+
+## Cloud badge
+
+Files that are cloud placeholders not stored on this PC carry a 13 px muted cloud-download glyph after the name (list) or before the size (grid), with a "Not downloaded" tooltip.
+
+## Phase 5 interface remap
+
+Presentation only; every control, setting, menu entry and shortcut remains (docs/revamp/5-INVENTORY.md).
+
+- **One label, no helper line.** A control is named once. Explanations that are not needed to act live in a tooltip on the label; placeholders replace labels that repeated them. No taglines, key-hint footers or status words that say nothing ("Folder contents", "Up to date").
+- **Selection:** list rows, grid tiles and column rows share a 26% accent wash, visible with the default graphite accent in both themes.
+- **Controls:** flat 32 px buttons, 8 px radius, a 4% foreground fill and a 1 px line; no gradients. Toolbar groups use the same 4% fill with no border.
+- **Switches:** the on track is the text colour (white in dark, near-black in light); off is the theme's neutral track. No On/Off text.
+- **Settings:** a 56 px row per setting, label left (13 px medium) and control right; section titles 17 px semibold; Done on the page title line.
+- **Popups:** opaque menu and popover surfaces (dark #232323, light #f7f7f7).
+- **Jump:** the field is the header ("Jump to a folder or run a command"); results follow, no title or footer.
+
+## Redesign (November 22)
+
+- **Type:** Geist for the interface, Geist Mono for keys, sizes, dates, paths and code (OFL, bundled). Scale and radii live in `app/src/tokens.rs`: text 11 / 12 / 13 / 15 / 20; radii 7 row, 8 control, 12 card, 4 thumbnail; menu rows 30, buttons 28, fields 32.
+- **Menus:** one floating card style everywhere (12 radius, 5 padding, 30 px rows with 7 px rounded neutral highlights, hairline separators, Geist Mono shortcuts). Jump: a 48 px field, a glyph per group, short labels.
+- **Rows:** list, column, sidebar and grid highlights are inset and rounded with the row radius; selection is a 26% accent wash; hover is a group hover on the row.
+- **Panes:** the focused pane alone shows a 32% text-colour outline; panes share space without hard minimums at render time.
+- **Scrollbars:** overlay, 4 px soft thumb in the text colour, visible while scrolling or hovered, fading after 3 s.
+- **Settings:** each setting is a rounded card with a 10% border; Theme, Default view and Saved commands' Required selection are sliding segmented controls; descriptions live in label tooltips. Keyboard reference: a card per group, short action labels, Geist Mono key caps.
+- **Readers:** an icon toolbar (search, pencil, more; eye/document for Read/Source), a slightly darker line-number column with centred numbers, and a footer with only encoding and line endings. Preview failures show the file icon, "Can't preview this file", one plain reason and Open / Try again.
+- **Icons:** Hugeicons throughout; Icons view, Gallery and Sort glyphs drawn in the same style (24 grid, 1.75 stroke, round caps).

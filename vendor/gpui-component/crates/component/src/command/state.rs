@@ -727,10 +727,11 @@ impl CommandState {
             .flex_row()
             .items_center()
             .w_full()
-            .gap_2()
-            .px_2()
-            .py_1p5()
-            .text_sm()
+            .gap(px(10.))
+            .px(px(10.))
+            .min_h(px(34.))
+            .py_0()
+            .text_size(px(13.))
             .rounded(self.item_radius(window, cx))
             .when(selected, |this| {
                 this.bg(cx.theme().accent)
@@ -741,9 +742,10 @@ impl CommandState {
     fn heading_row(&self, heading: SharedString, cx: &App) -> gpui::Div {
         div()
             .w_full()
-            .px_2()
-            .py_1p5()
-            .text_xs()
+            .px(px(10.))
+            .pt(px(10.))
+            .pb(px(4.))
+            .text_size(px(11.))
             .font_medium()
             .text_color(cx.theme().muted_foreground)
             .child(heading)
@@ -847,6 +849,7 @@ impl CommandState {
             .id(self.matched[matched_ix].index_path)
             .test_support()
             .role(Role::ListBoxOption)
+            .when_some(item.label_text().cloned(), |row, label| row.aria_label(label))
             .aria_selected(selected)
             .when(disabled, |this| this.text_color(muted_foreground))
             .when(!disabled, |this| {
@@ -949,6 +952,9 @@ impl Render for CommandState {
                         .border_color(cx.theme().border)
                         .child(
                             Input::new(&self.query_input)
+                                .min_h(px(48.))
+                                .max_h(px(48.))
+                                .text_size(px(14.))
                                 .prefix(
                                     Icon::new(IconName::Search)
                                         .text_color(cx.theme().muted_foreground),

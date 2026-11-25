@@ -32,6 +32,28 @@ foreach($link in @($m.start_shortcut,$m.desktop_shortcut)){
 $id=if($m.test_root){'Seek.PackagingTest.'+(Split-Path $m.test_root -Leaf).Substring(15)}else{'Seek'}
 if($m.registry_id -ne $id){throw 'Unexpected uninstall registry key'}
 Remove-Item -LiteralPath ('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\'+$id) -Force -ErrorAction SilentlyContinue
+# The "Open in Seek" Explorer entries, only when they run this seek.exe.
+foreach($key in @('Directory\shell\Seek','Directory\Background\shell\Seek','Drive\shell\Seek','*\shell\Seek','Directory\shell\SeekOpen','Drive\shell\SeekOpen','CLSID\{52205fd8-5dfb-447d-801a-d0b52f2e83e1}\shell\opennewwindow')){
+ $path='HKCU:\Software\Classes\'+$key
+ $command=(Get-ItemProperty -LiteralPath ($path+'\command') -ErrorAction SilentlyContinue).'(default)'
+ if($command -and $command.StartsWith('"'+(Join-Path $install 'seek.exe')+'"')){Remove-Item -LiteralPath $path -Recurse -Force}
+}
+# Seek as an application Windows lists ("Open with", Settings > Apps), only when it is this seek.exe.
+$application='HKCU:\Software\Classes\Applications\seek.exe'
+$command=(Get-ItemProperty -LiteralPath ($application+'\shell\open\command') -ErrorAction SilentlyContinue).'(default)'
+if($command -and $command.StartsWith('"'+(Join-Path $install 'seek.exe')+'"')){
+ Remove-Item -LiteralPath $application -Recurse -Force
+ Remove-ItemProperty -LiteralPath 'HKCU:\Software\RegisteredApplications' -Name 'Seek' -ErrorAction SilentlyContinue
+ Remove-Item -LiteralPath 'HKCU:\Software\Seek\Capabilities' -Recurse -Force -ErrorAction SilentlyContinue
+ if((Test-Path -LiteralPath 'HKCU:\Software\Seek') -and -not (Get-ChildItem -LiteralPath 'HKCU:\Software\Seek')){Remove-Item -LiteralPath 'HKCU:\Software\Seek' -Force -ErrorAction SilentlyContinue}
+}
+# Seek as the default file manager: give folders and drives back to File Explorer.
+foreach($key in @('Directory\shell','Drive\shell')){
+ $path='HKCU:\Software\Classes\'+$key
+ # A key's default value can't be removed by the name '(default)'; the registry API clears it.
+ $shell=[Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Classes\'+$key,$true)
+ if($shell){if($shell.GetValue('') -eq 'SeekOpen' -and -not $shell.OpenSubKey('SeekOpen')){$shell.DeleteValue('',$false)};$shell.Close()}
+}
 # Delete only known package files; never recursively remove a program directory.
 foreach($file in @('seek.exe','seek-helper.exe','seek.ico','README.md','LICENSE','THIRD-PARTY-NOTICES.txt','Install.ps1','Install.cmd','Uninstall.ps1','Uninstall.cmd','Update.ps1','install-manifest.json')){
  $path=Join-Path $install $file

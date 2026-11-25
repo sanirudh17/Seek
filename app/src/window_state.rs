@@ -47,7 +47,20 @@ pub fn initial(saved: Option<WindowBounds>, cx: &App) -> WindowBounds {
                 .iter()
                 .any(|display| caption.intersects(&display.bounds()))
         })
-        .unwrap_or_else(|| WindowBounds::centered(size(px(1100.), px(700.)), cx))
+        .unwrap_or_else(|| WindowBounds::centered(first_size(cx), cx))
+}
+
+/// The first window covers 70% of the primary display, never less than the
+/// minimum window size.
+fn first_size(cx: &App) -> Size<Pixels> {
+    let screen = cx
+        .primary_display()
+        .map(|display| display.bounds().size)
+        .unwrap_or(size(px(1571.), px(1000.)));
+    size(
+        (screen.width * 0.7).max(px(960.)),
+        (screen.height * 0.7).max(px(550.)),
+    )
 }
 
 pub fn persist_on_quit(remembered: Remembered, data: PathBuf, cx: &mut App) {

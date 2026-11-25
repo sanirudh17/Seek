@@ -12,6 +12,7 @@ pub mod qos;
 pub mod query;
 pub mod walk;
 mod watch;
-pub use engine::{Engine, Found, Options, SourceMode, Status};
+pub use engine::{Engine, Found, Options, SavedIndex, SourceMode, Status, search_live};
 pub use query::Query;
+pub use watch::FolderWatch;
 pub fn no_materialize() {}

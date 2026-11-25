@@ -35,6 +35,8 @@ pub(super) struct TableOptions {
     pub(super) stripe: bool,
     /// Set to use border style of the table.
     pub(super) bordered: bool,
+    /// Show the whole-table keyboard focus indicator.
+    pub(super) focus_indicator: bool,
     /// The cell size of the table.
     pub(super) size: Size,
     /// Height of each header row. `None` uses [`Size::table_row_height`].
@@ -47,6 +49,7 @@ impl Default for TableOptions {
             scrollbar_visible: Edges::all(true),
             stripe: false,
             bordered: true,
+            focus_indicator: true,
             size: Size::default(),
             header_row_height: None,
         }
@@ -120,6 +123,13 @@ where
         self
     }
 
+    /// Show a keyboard focus indicator around the table frame (default: true).
+    /// Disabling this keeps keyboard focus, row selection and navigation intact.
+    pub fn focus_indicator(mut self, visible: bool) -> Self {
+        self.options.focus_indicator = visible;
+        self
+    }
+
     /// Set the height of each header row.
     ///
     /// Column-group rows use the same height, so the whole header is this
@@ -158,6 +168,7 @@ where
 {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let bordered = self.options.bordered;
+        let focus_indicator = self.options.focus_indicator;
         let focus_handle = self.state.focus_handle(cx);
         self.state.update(cx, |state, _| {
             state.options = self.options;
@@ -188,7 +199,9 @@ where
             // Clicking a row focuses the table too, so only keyboard focus
             // shows it, as CSS `:focus-visible` does.
             .when(
-                focus_handle.is_focused(window) && window.last_input_was_keyboard(),
+                focus_indicator
+                    && focus_handle.is_focused(window)
+                    && window.last_input_was_keyboard(),
                 |this| this.focus_ring_style(window, cx),
             )
     }

@@ -12,6 +12,7 @@ use std::collections::{BTreeMap, HashMap};
 mod children;
 mod largest;
 mod prior_cache;
+pub mod storage;
 use prior_cache::PriorCache;
 
 #[derive(Clone, Copy)]

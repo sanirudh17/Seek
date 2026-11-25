@@ -1,0 +1,341 @@
+{
+  "version": 1,
+  "tools": [
+    {
+      "name": "search",
+      "core": true,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "query": "string",
+        "folder": "string",
+        "limit": "integer",
+        "cursor": "string"
+      },
+      "required": [
+        "query"
+      ]
+    },
+    {
+      "name": "search_content",
+      "core": true,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "text": "string",
+        "folder": "string",
+        "limit": "integer"
+      },
+      "required": [
+        "text",
+        "folder"
+      ]
+    },
+    {
+      "name": "list_dir",
+      "core": true,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "path": "string",
+        "show_hidden": "boolean",
+        "limit": "integer",
+        "cursor": "string"
+      },
+      "required": [
+        "path"
+      ]
+    },
+    {
+      "name": "file_info",
+      "core": true,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "path": "string"
+      },
+      "required": [
+        "path"
+      ]
+    },
+    {
+      "name": "largest",
+      "core": true,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "folder": "string",
+        "folders": "boolean",
+        "limit": "integer"
+      },
+      "required": []
+    },
+    {
+      "name": "folder_size",
+      "core": true,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "path": "string"
+      },
+      "required": [
+        "path"
+      ]
+    },
+    {
+      "name": "read_text",
+      "core": true,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "path": "string",
+        "offset": "integer",
+        "max_bytes": "integer"
+      },
+      "required": [
+        "path"
+      ]
+    },
+    {
+      "name": "recent",
+      "core": true,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "limit": "integer"
+      },
+      "required": []
+    },
+    {
+      "name": "favorites",
+      "core": true,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {},
+      "required": []
+    },
+    {
+      "name": "copy",
+      "core": true,
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "inputs": {
+        "paths": "array",
+        "folder": "string",
+        "wait_seconds": "integer",
+        "request_id": "string"
+      },
+      "required": [
+        "paths",
+        "folder"
+      ]
+    },
+    {
+      "name": "move",
+      "core": true,
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "inputs": {
+        "paths": "array",
+        "folder": "string",
+        "wait_seconds": "integer",
+        "request_id": "string"
+      },
+      "required": [
+        "paths",
+        "folder"
+      ]
+    },
+    {
+      "name": "rename",
+      "core": true,
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "inputs": {
+        "path": "string",
+        "name": "string",
+        "dry_run": "boolean",
+        "confirm": "string",
+        "wait_seconds": "integer",
+        "request_id": "string"
+      },
+      "required": []
+    },
+    {
+      "name": "trash",
+      "core": true,
+      "readOnly": false,
+      "destructive": true,
+      "idempotent": false,
+      "inputs": {
+        "paths": "array",
+        "wait_seconds": "integer",
+        "request_id": "string"
+      },
+      "required": [
+        "paths"
+      ]
+    },
+    {
+      "name": "create_folder",
+      "core": true,
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "inputs": {
+        "folder": "string",
+        "name": "string",
+        "wait_seconds": "integer",
+        "request_id": "string"
+      },
+      "required": [
+        "folder",
+        "name"
+      ]
+    },
+    {
+      "name": "undo",
+      "core": true,
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "inputs": {
+        "wait_seconds": "integer",
+        "request_id": "string"
+      },
+      "required": []
+    },
+    {
+      "name": "job_status",
+      "core": true,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "id": "string",
+        "wait_seconds": "integer"
+      },
+      "required": [
+        "id"
+      ]
+    },
+    {
+      "name": "storage_overview",
+      "core": false,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "path": "string"
+      },
+      "required": [
+        "path"
+      ]
+    },
+    {
+      "name": "find_duplicates",
+      "core": false,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "folder": "string",
+        "limit": "integer"
+      },
+      "required": [
+        "folder"
+      ]
+    },
+    {
+      "name": "find_similar_images",
+      "core": false,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "folder": "string",
+        "similarity": "string",
+        "limit": "integer"
+      },
+      "required": [
+        "folder"
+      ]
+    },
+    {
+      "name": "largest_files",
+      "core": false,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "folder": "string",
+        "limit": "integer"
+      },
+      "required": [
+        "folder"
+      ]
+    },
+    {
+      "name": "organize",
+      "core": false,
+      "readOnly": false,
+      "destructive": false,
+      "idempotent": false,
+      "inputs": {
+        "folder": "string",
+        "mode": "string",
+        "groups": "array",
+        "dry_run": "boolean",
+        "confirm": "string",
+        "wait_seconds": "integer",
+        "request_id": "string"
+      },
+      "required": []
+    },
+    {
+      "name": "list_worktrees",
+      "core": false,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {},
+      "required": []
+    },
+    {
+      "name": "worktree_status",
+      "core": false,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "path": "string"
+      },
+      "required": [
+        "path"
+      ]
+    },
+    {
+      "name": "saved_searches",
+      "core": false,
+      "readOnly": true,
+      "destructive": false,
+      "idempotent": true,
+      "inputs": {
+        "limit": "integer"
+      },
+      "required": []
+    }
+  ]
+}

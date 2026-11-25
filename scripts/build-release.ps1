@@ -27,7 +27,7 @@ try{
  foreach($name in @('Install.cmd','Install.ps1','Uninstall.cmd','Uninstall.ps1','Update.ps1')){Copy-Item -LiteralPath (Join-Path $root ('packaging/'+$name)) -Destination $folder}
  $zip=Join-Path $output ('Seek-'+$productVersion+'-windows-x64.zip')
  Add-Type -AssemblyName System.IO.Compression.FileSystem
- [IO.Compression.ZipFile]::CreateFromDirectory($folder,$zip,[IO.Compression.CompressionLevel]::Optimal,$true)
+ & (Join-Path $PSScriptRoot 'write-update-zip.ps1') -PackageDirectory $folder -Destination $zip
  $hash=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
  [IO.File]::WriteAllText((Join-Path $output 'SHA256SUMS.txt'),($hash+'  '+(Split-Path $zip -Leaf)+"`n"),[Text.UTF8Encoding]::new($false))
  Write-Host ('Update package: '+$zip)

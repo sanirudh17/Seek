@@ -14,15 +14,13 @@ The exact production incident was not reproduced in a fresh temporary-profile GU
 
 ## Enlarged preview
 
-An **Enlarge preview** button opens a viewport-sized reading surface. PDFs request a raster edge up to 1536 px instead of 768 px. Existing document, image, video-thumbnail and bounded plain-text/Markdown previews remain available as the selection changes. Up/Down or Previous/Next file changes the selection; Left/Right changes PDF pages or presentation slides. Escape/Close returns to the normal panel. Destructive/background shortcuts are blocked while the enlarged surface is active.
+An **Enlarge preview** button opens a viewport-sized reading surface. PDFs request a raster edge up to 1536 px instead of 768 px. Existing document, image, video-thumbnail and bounded plain-text/Markdown previews remain available as the selection changes. Up/Down or Previous/Next file changes the selection; Left/Right changes PDF pages. Escape/Close returns to the normal panel. Destructive/background shortcuts are blocked while the enlarged surface is active.
 
 This is a selected-item preview, not a new external viewer. Plain text is limited to 80 lines/8 KiB, Word fallback to 100 lines/12,000 characters, and existing first-sheet Excel limits remain. No video playback or Markdown layout engine was added.
 
-## PowerPoint
+## PowerPoint - superseded by revamp 1.5
 
-Supported modern packages: `.pptx`, `.pptm`, `.ppsx`. The preview first tries the package's saved first-slide image, then a real Windows shell thumbnail; both are explicitly first-slide previews. Slide text is available in presentation relationship order, with page controls and a 24,000-character cap per slide. Later slides never reuse the first slide's artwork. Legacy `.ppt` uses a real shell thumbnail when available and otherwise reports unavailable.
-
-This does **not** reproduce full slide formatting, diagrams or animations on every slide. It does not launch Office, run macros, follow external relationships, host preview handlers or install a converter. The format was researched against [Microsoft's PresentationML structure](https://learn.microsoft.com/en-us/office/open-xml/presentation/structure-of-a-presentationml-document). XML/ZIP, image dimensions and decompressed sizes are bounded inside the existing disposable host.
+Presentations now show details and an Open in PowerPoint action only. Saved-slide artwork, slide text and their renderer tests have been removed. Historical measurements below describe the old 1.0.2 implementation, not current preview support.
 
 ## Complete All locations
 

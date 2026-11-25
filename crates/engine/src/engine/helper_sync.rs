@@ -372,7 +372,12 @@ pub(super) fn initial(
                     let listings = graft_roots(roots, |root| {
                         scans.remove(root).unwrap().into_values().collect()
                     });
-                    shared.install(Index::build(listings, 0, crate::query::now_secs(), &[]));
+                    shared.install(Index::build(
+                        listings,
+                        0,
+                        crate::query::now_secs(),
+                        &crate::places::home(),
+                    ));
                 }
                 if shared.live.read().unwrap().is_none() {
                     return Err("Helper sent no initial index".into());

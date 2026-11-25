@@ -1,0 +1,42 @@
+﻿{
+    "captured_at":  "2026-11-22T06:55:36.1570644Z",
+    "executable_sha256":  "9E191CCA58BE6EB19499480C9C43D4B91E227C9D6CB98F1F01ED879B469CE5B7",
+    "hardware":  "AMD Ryzen 7 7445HS w/ Radeon 740M Graphics, 15.2 GB RAM",
+    "index_entries":  3541474,
+    "catching_up_during_run":  true,
+    "key_delay_ms":  110,
+    "presents_during_5s_idle":  39,
+    "cpu_ms_during_5s_idle":  5796.9,
+    "private_working_set_bytes":  298844160,
+    "worst_ui_stall_ms":  null,
+    "worst_scroll_stall_ms":  6.01,
+    "runs":  [
+
+             ],
+    "scrolling":  [
+                      {
+                          "round":  0,
+                          "longest_ui_stall_ms":  6.01,
+                          "ui_stalls_over_16ms":  0,
+                          "ui_stalls_over_50ms":  0,
+                          "presents":  220,
+                          "p95_present_gap_ms":  95.78
+                      },
+                      {
+                          "round":  1,
+                          "longest_ui_stall_ms":  5.26,
+                          "ui_stalls_over_16ms":  0,
+                          "ui_stalls_over_50ms":  0,
+                          "presents":  119,
+                          "p95_present_gap_ms":  103.01
+                      },
+                      {
+                          "round":  2,
+                          "longest_ui_stall_ms":  5.46,
+                          "ui_stalls_over_16ms":  0,
+                          "ui_stalls_over_50ms":  0,
+                          "presents":  82,
+                          "p95_present_gap_ms":  139.27
+                      }
+                  ]
+}

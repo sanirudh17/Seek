@@ -54,6 +54,7 @@ pub(crate) struct DirectXRenderer {
     /// In that case we want to discard the first frame that we draw as we got reset in the middle of a frame
     /// meaning we lost all the allocated gpu textures and scene resources.
     skip_draws: bool,
+    first_frame_presented: bool,
 }
 
 /// Direct3D objects
@@ -194,6 +195,7 @@ impl DirectXRenderer {
             width: 1,
             height: 1,
             skip_draws: false,
+            first_frame_presented: false,
         })
     }
 
@@ -338,7 +340,12 @@ impl DirectXRenderer {
             return Ok(());
         }
         self.render(scene, background_appearance)?;
-        self.present()
+        self.present()?;
+        self.first_frame_presented = true;
+        Ok(())
+    }
+    pub(crate) fn has_presented_frame(&self) -> bool {
+        self.first_frame_presented
     }
 
     /// Clear the render target for `background_appearance` and encode every

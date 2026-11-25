@@ -251,6 +251,16 @@ impl RenderOnce for Checkbox {
             unchecked_border.opacity(0.5)
         };
         let radius = cx.theme().radius.min(px(4.));
+        // The fill springs with the tick, so the box changes rather than swaps.
+        let fill = spring(
+            (self.id.clone(), "fill"),
+            if checked { 1. } else { 0. },
+            cx.theme().motion_tokens().spring_control,
+            window,
+            cx,
+        )
+        .clamp(0., 1.);
+        let input_background = cx.theme().input_background();
         let disabled_text_color = cx.theme().muted_foreground;
         let instance_style = self.style.clone();
         base.role(self.role)
@@ -300,17 +310,21 @@ impl RenderOnce for Checkbox {
                     .flex_shrink_0()
                     .border_1()
                     .rounded(radius)
-                    .when(!checked, |this| {
-                        this.bg(cx.theme().input_background())
-                            .when(!self.disabled, |this| this.border_color(unchecked_border))
+                    .bg(input_background)
+                    .when(!self.disabled, |this| {
+                        this.border_color(if fill > 0.5 { checked_color } else { unchecked_border })
+                    })
+                    .when(fill > 0. && !self.disabled, |this| {
+                        this.child(
+                            gpui::div()
+                                .absolute()
+                                .inset_0()
+                                .rounded(radius)
+                                .bg(checked_color.opacity(fill)),
+                        )
                     })
                     .styles(|styles| {
                         styles
-                            .checked(|style| {
-                                style
-                                    .border_color(checked_color)
-                                    .bg(cx.theme().tokens.primary)
-                            })
                             .disabled(|style| {
                                 style
                                     .border_color(disabled_indicator_color)

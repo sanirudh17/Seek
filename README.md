@@ -4,8 +4,8 @@
 
 <h1 align="center">Seek</h1>
 
-<p align="center"><strong>Fast, local file search for Windows.</strong><br/>
-Find a file, inspect it, and get back to work.</p>
+<p align="center"><strong>A fast, local file manager and search for Windows.</strong><br/>
+Find a file, look inside it, tidy your folders, and get back to work.</p>
 
 <p align="center">
   <a href="https://github.com/sanirudh17/Seek/releases/latest"><img src="https://img.shields.io/github/v/release/sanirudh17/Seek?label=download" alt="Latest release" /></a>
@@ -15,129 +15,152 @@ Find a file, inspect it, and get back to work.</p>
 
 ## Overview
 
-Seek searches filenames using a local index and renders a compact native GPUI interface. It runs as your ordinary Windows account. There is no account sign-in, AI model, telemetry service, tray, global hotkey, app autostart or resident updater process. Closing the last tab quits Seek. The optional indexing helper is a separate, explicitly installed service.
+Seek is a native Windows file manager built around a local filename index. It browses folders in split panes and tabs, searches names and contents, previews documents and pictures, renames and organizes files, and shows where your disk space goes. Everything runs on your PC under your ordinary Windows account: there is no sign-in, cloud service, telemetry, tray icon or background updater. An optional helper service speeds up indexing on NTFS drives and is only installed when you ask for it.
 
-**1.0.2** includes tabs, folder browsing, file actions, filename/type filters, on-demand content search, and previews in the resizable information panel. The default sidebar uses the current account's Windows Known Folders, including redirected OneDrive locations. Your index and settings are never part of the download. See [CHANGELOG](CHANGELOG.md).
+Release notes for each version are on the [Releases](https://github.com/sanirudh17/Seek/releases) page.
 
 ## Contents
 
 - [Download and install](#download-and-install)
-- [Everyday use](#everyday-use)
-- [Keyboard and mouse commands](#keyboard-and-mouse-commands)
-- [Search and previews](#search-and-previews)
+- [Features](#features)
+- [Keyboard shortcuts](#keyboard-shortcuts)
 - [Settings and saved data](#settings-and-saved-data)
 - [Optional helper](#optional-helper)
 - [Update and uninstall](#update-and-uninstall)
 - [Building from source](#building-from-source)
 - [Project structure](#project-structure)
-- [Known limits and troubleshooting](#known-limits-and-troubleshooting)
+- [Known limits](#known-limits)
 - [License and credits](#license-and-credits)
 
 ## Download and install
 
-Download **[Seek-1.0.2-Setup-x64.exe](https://github.com/sanirudh17/Seek/releases/download/v1.0.2/Seek-1.0.2-Setup-x64.exe)** from [Releases](https://github.com/sanirudh17/Seek/releases/latest). Requires x64 Windows; tested on Windows 11. Windows 10 and physical HDR/mixed-DPI setups remain unverified.
+Download the **Setup EXE** from the [latest release](https://github.com/sanirudh17/Seek/releases/latest). Seek needs x64 Windows and is tested on Windows 11.
 
-1. Double-click the installer normally, without **Run as administrator**.
-2. Accept the license. If Seek is already installed, close it and approve replacing its program files; saved data is retained.
+1. Run the installer normally, without **Run as administrator**.
+2. Accept the license. If Seek is already installed, close it and approve replacing its program files; your saved data is kept.
 3. Choose whether to add a desktop shortcut. A Start menu shortcut is always created.
 4. Open **Seek** from Start.
 
-The program installs in `%LOCALAPPDATA%\Programs\Seek` and registers in **Settings > Apps > Installed apps** for this account only, with a native uninstaller. It does not install the helper service. Existing program files and shortcuts require replacement approval; saved data is retained. The package is unsigned, so Windows may display reputation warnings, and managed computers may restrict the bundled PowerShell install scripts.
+Seek installs in `%LOCALAPPDATA%\Programs\Seek` for your account only and appears in **Settings > Apps > Installed apps** with its own uninstaller. The installer never installs the helper service. The package is not code-signed, so Windows may show a reputation warning.
 
-The separate `Seek-1.0.2-windows-x64.zip` asset supports the existing in-app updater and portable use. The normal download is the **Setup EXE**. Portable saved data still goes under your current account's `%LOCALAPPDATA%\Seek`, not beside the executable.
-
-To verify the download against the separately supplied `SHA256SUMS.txt`:
+Each release also has a portable ZIP (used by the in-app updater) and a `SHA256SUMS.txt` file. To check a download:
 
 ```powershell
-Get-FileHash .\Seek-1.0.2-Setup-x64.exe -Algorithm SHA256
+Get-FileHash .\Seek-<version>-Setup-x64.exe -Algorithm SHA256
 ```
 
-## Everyday use
+## Features
 
-Choose Downloads, Desktop, Documents, Pictures, Videos, Music or a drive in the sidebar. On a first launch without a saved index, All locations shows labelled recent files from priority folders while the full drive scan continues. These early results are provisional; filename searches become complete when indexing finishes. Type a filename or a fragment in the search field. Use the **Name contains** suggestion for literal matching, or choose a matching **Type** suggestion. Remove a filter using its chip's cross; the chip dropdown changes its type.
+### Browse
 
-The view controls select List, Icons or Gallery. Click a column heading to sort. Folders can expand inline in List. The toolbar actions menu provides **All items**, **Largest files** and **Largest folders**; select **All items** to return from a largest-items view. Largest views show up to 200 indexed candidates; indexed size values can be approximate, with exact metadata loaded for selected/visible items where available.
+- **Split panes and tabs.** Split right or down, drag dividers, zoom one pane, and move or copy files between panes. Each pane has its own tabs, and clicking a pane focuses it.
+- **Four views.** List (with inline folder expansion), Icons (size, spacing and label position are adjustable), Gallery (with an optional large preview) and Columns.
+- **Live folders.** A folder on screen updates the moment something changes on disk: a finished download, a file saved by another app, or a change made by a coding agent. New items appear at the top.
+- **Sidebar.** Your Windows folders (including OneDrive-redirected ones), drives, saved searches and your own groups, with icons in your accent colour. Drag folders onto it to pin them.
+- **Addresses.** Type a path, `%TEMP%`, `~` or `cd <folder>` in the search field and press Enter to go straight there.
+- **Information panel.** Details, dates, size on disk, ownership and a preview of the selection, in a resizable panel.
+- **Reopen as you left it.** Panes, tabs and folders come back when you start Seek (can be turned off).
 
-Right-click a selected item, or use the toolbar actions menu, for Open, Open with, Reveal in Explorer, Copy/Cut/Paste, path/name copying, Rename, New folder, Recycle Bin and Properties. Menus are GPUI menus; Open with and Properties launch Windows dialogs. Dragging inside Seek moves files into the target folder, using Windows conflict dialogs. External drag-out uses Copy; clipboard file copy/paste is the fallback for targets that do not accept a drag.
+### Search
 
-## Keyboard and mouse commands
+- **Filename search** over the local index, with type and extension filters (`photo ext:jpg`, `report ext:pdf`) and suggestions as you type.
+- **Content search** inside text, code, Markdown, Word documents and PDFs in the folders you choose. Results stream in while the scan runs, and skipped or unreadable files are listed.
+- **Largest files and folders** anywhere in the index.
+- **Saved and recent searches**, shown in the sidebar and in Jump.
 
-Shortcuts act inside the focused Seek window, not globally. File operations require the results list/grid to have focus. Search-field shortcuts continue to edit text normally. Settings and confirmation dialogs capture their own keys.
+### Look inside files
 
-| Command | What it does |
+- **Quick Look** (Space) for pictures, PDFs, Word documents and Excel sheets: zoom, pan, actual size, and page and file navigation from the keyboard.
+- **Previews** in the information panel and Gallery, loaded only for what you select.
+- **Document panes** open text, code and Markdown beside your files for reading or editing, with find, optional auto-save and optional backups.
+- **Image tools** for common picture tasks from the information panel.
+
+### Work with files
+
+- **Everyday actions:** open, open with, reveal, copy, cut, paste, rename, new folder, Recycle Bin, permanent delete and properties, from menus, the keyboard or drag and drop.
+- **Undo and redo** for file operations, with an operation history that can recover from interrupted work.
+- **Multi-select** with Ctrl and Shift; consecutive selected rows show as one block.
+
+### Rename and organize
+
+- **Batch rename** with live preview: replace text, number names, or build a list of steps (replace, add text, change case and more) with variables and saved presets. Conflicts are shown before anything changes.
+- **Suggest names** reads names from what files say about themselves: a document's title or first heading, a slide deck's first title, an invoice's number and date, music tags, or a photo's date taken. The rules are fixed, so the same file always gets the same suggestion. Only names that say nothing (scan0001, untitled, Document1, IMG_1234, random IDs) are replaced automatically; a name you chose is only ever offered an alternative.
+- **Organize a folder** by type, by date taken (Year and Month folders) or by name (camera sequences and versions of one document). You review the groups first, and one Undo puts everything back.
+
+### Storage
+
+- **Overview** of a drive or folder: space used and free, a breakdown by kind, and the largest folders with drill-down.
+- **Cleanup suggestions** for caches apps rebuild on their own (developer tools, browsers, editors, chat apps, graphics drivers), old temporary files, crash dumps, app logs, unfinished downloads, old installers and build folders in long-untouched projects. Sign-in tokens, locally installed packages and tracked source folders are never offered. Everything goes to the Recycle Bin and can be undone.
+- **Find duplicates** confirms identical files by their full contents and checks each file again just before moving it. Hard links, cloud placeholders and system files are left out, and identical folders are found too.
+- **Similar images** finds resized, recompressed or lightly edited copies of a picture at three levels, in one folder or everywhere. Pictures are compared upright and by colour, and shown side by side; nothing is selected for you, and one picture of every group always stays.
+
+### Jump and commands
+
+- **Jump** (Ctrl+K) goes to any folder, recent file, saved search, setting, view or command, including Storage, Find duplicates and Find similar images.
+- **Saved commands** run a program of your choice on the selection, with explicit arguments. Saving a command never runs it.
+- **Worktrees** lists Git repositories and their worktrees with their status.
+
+### Coding agents
+
+Seek is an MCP server (`seek.exe --mcp`), so coding agents such as Claude Code, Codex and others can search, read and tidy files through it. Agents can only change files inside the folders you allow in **Settings > Agents**, changes go through the same undo history as your own, and organizing needs a reviewed plan first. The page shows which agents are connected and what they did. See [docs/MCP.md](docs/MCP.md).
+
+### Windows integration
+
+- **Default file manager** (optional): folders and drives you open from anywhere, and Win+E, open in Seek. Turning it off gives everything back to File Explorer.
+- **Explorer menu:** "Open in Seek" on folders and drives, and "Show in Seek" on files.
+- **Open with:** Seek is listed when Windows asks which app to use.
+
+### Appearance
+
+Light, dark or system theme; Windows glass (Mica or Acrylic) with adjustable tint and intensity, or a picture background; an accent colour used sparingly across the window.
+
+## Keyboard shortcuts
+
+Shortcuts work inside Seek's window, not system-wide. Press **F1** in Seek for the full list.
+
+| Keys | Action |
 | --- | --- |
-| **Ctrl+T** or the tab-bar **+** | Duplicate the current folder/search into a new tab. |
-| **Ctrl+Enter** | Open the selected folder in a new tab; otherwise duplicate the current search. |
-| **Ctrl+Tab** | Switch to the next tab, wrapping at the end. |
-| **Ctrl+Shift+Tab** | Switch to the previous tab. |
-| **Ctrl+W** or a tab's **x** | Close the active/chosen tab. Closing the last tab quits the app. |
-| **Ctrl+L** | Focus the search field. |
-| **Ctrl+1** | Switch to List view. |
-| **Ctrl+2** | Switch to Icons view. |
-| **Ctrl+3** | Switch to Gallery view. Content results use List. |
-| **Up / Down** | Move file selection. Down from an open search-suggestions list enters that menu. |
-| **Right / Left** | Expand/collapse the selected folder inline in List. |
-| **Enter** | Open the selected item; in search suggestions, apply **Name contains**. |
-| **Space** | Toggle the selected item's information panel when the file list has focus. |
-| **Ctrl+A** | Select all displayed result rows; in the search field, select its text. |
-| **Ctrl+C** | Copy selected files to the Windows clipboard, or copy selected search text. |
-| **Ctrl+X** | Cut selected files for a move, or cut selected search text. |
-| **Ctrl+V** | Paste files into the current folder, or paste text into the search field. |
-| **Ctrl+Shift+C** | Copy the selected item's full path. |
-| **F2** | Rename the selected file/folder. |
-| **Delete** | Move the selected items to the Recycle Bin. |
-| **Shift+Delete** | Open permanent-delete confirmation. **Delete permanently** has default focus; Enter confirms. Left/Right or Tab switches to Cancel; Escape cancels. |
-| **F5** | Rerun the current content search. |
-| **Escape** | Dismiss suggestions/Settings or cancel the current dialog; otherwise clear the active search state. |
-| **Tab / Shift+Tab** | Move keyboard focus between dialog controls; Escape cancels permanent deletion. |
-| **Ctrl+click / Shift+click** | Toggle a selected row / extend a range from its original anchor. |
-| **Shift+arrows / Ctrl+arrows** | Extend a selection / move the caret without changing selected items. In Icons/Gallery, Up/Down moves by a grid row. |
-| **Left / Right on buttons** | Move between buttons; in rename/new-folder input fields these keys still edit text. |
-| **Double-click** | Open a file or folder. |
-| **Drag the info panel's left border** | Resize the panel; its width is remembered. |
+| Ctrl+L | Search or go to a folder |
+| Ctrl+K | Jump |
+| Ctrl+T / Ctrl+W | New tab / close tab |
+| Ctrl+Tab / Ctrl+Shift+Tab | Next / previous tab |
+| Ctrl+Enter | Open folder in a new tab |
+| Alt+0 / Alt+1-9 | All locations / sidebar items |
+| Ctrl+1 / 2 / 3 / 4 | List / Icons / Gallery / Columns |
+| Ctrl+J | Icon view options |
+| Ctrl+B | Toggle sidebar |
+| Ctrl+I | Toggle information panel |
+| Ctrl+, | Settings |
+| Ctrl+\ / Ctrl+Shift+\ | Split right / down |
+| Ctrl+Shift+W | Close pane |
+| F6 / Shift+F6 | Next / previous pane |
+| Ctrl+Shift+Enter | Zoom pane |
+| Alt+F5 / Alt+F6 | Copy / move to the other pane |
+| Ctrl+A | Select all |
+| Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste |
+| Ctrl+Shift+C | Copy path |
+| Ctrl+Shift+N | New folder |
+| F2 | Rename |
+| Delete / Shift+Delete | Recycle / delete permanently |
+| Ctrl+Z / Ctrl+Shift+Z | Undo / redo |
+| Space | Quick Look |
+| Up / Down (Quick Look) | Previous / next file |
+| Left / Right (Quick Look) | Previous / next page |
+| Ctrl++ / Ctrl+- / Ctrl+0 / Ctrl+1 | Zoom in / out / fit / actual size |
+| Ctrl+F / Ctrl+S | Find / save in a document pane |
+| F1 | Keyboard shortcuts |
 
-Tabs are **not automatic**: typing a different query changes the current tab and its title. Each explicit tab retains its own search, folder scope, view/sort, selection and scroll position for the current session. Tabs are not restored across app restarts. The native folder/sidebar menu also offers **Open folder in new tab**, and the toolbar menu offers **Open search in new tab**.
-
-## Search and previews
-
-**Filename search** uses the local file index. Examples: `invoice`, `photo ext:jpg`, and `report ext:pdf`. Type suggestions cover Folder, Document, Image, Movie, Audio, Code and Archive, plus matching extensions. Hidden-item visibility changes presentation; it does not remove those entries from the index.
-
-**Content search** starts from the **Content contains** suggestion. By default it searches Downloads and Documents, configurable in Settings. It supports text, code, Markdown, DOCX and PDF text via an installed Windows PDF filter. Windows Search can supply **Quick results (may be incomplete)**; the direct scan continues, deduplicates and remains authoritative. Wait for **Complete** and the searched-file counts before treating the result as finished. Editing the query cancels the previous scan. Failed PDF/Word extraction is retried once after the other files, and persistent failures are listed explicitly.
-
-Only configured content folders are read. Secret/key paths and files, offline/unavailable items, unsupported formats and files over the **4 MiB content-search cap** are skipped and reported. These limits also apply when saved document text is enabled. PDF accuracy depends on a usable text layer/filter; scanned-image PDFs are not OCRed.
-
-The information panel previews images/videos, PDF pages with page controls, the first XLSX sheet as a data table, and a large DOCX shell thumbnail or beginning-of-text fallback. Office is not required. XLSX shows **data, not formatting**, with cached formula values and visible row/column/cell limits. Legacy `.doc` and `.xls` formats are not supported as document previews. Document previews have a **32 MiB input cap and four-second worker limit**; broken, encrypted, unsupported and over-limit documents can show **Preview unavailable**. Previews load only for the current selection; list rows keep icons.
-
-### Folder addresses and enlarged previews
-
-Type `%TEMP%`, `%USERPROFILE%`, `%APPDATA%`, a full drive/UNC folder path or `~`, then press **Enter** or select **Open folder**. This works in Name and Content mode and navigates directly instead of scanning document text. The folder must exist and be accessible to your account.
-
-Select a document and choose **Enlarge preview**. **Up/Down** selects the previous/next file, **Left/Right** changes page or slide, and **Escape** returns to the information panel. In the panel, use the page arrows. All locations includes files and folders in **500-item pages**, with the total and Previous/Next controls at the bottom.
-
-Modern PowerPoint (`.pptx`, `.pptm`, `.ppsx`) displays saved first-slide artwork where available and ordered slide text. Other slides show text, not a reproduction of their graphical layouts. Legacy `.ppt` can use a Windows thumbnail provider but has no slide-text parser. PDF raster frames are cached only in memory (four entries / 24 MiB); changing a file or closing the panel invalidates them. The selected-PDF host exits after two idle seconds and has the same four-second request limit. Enlarged PDFs use a larger raster than panel previews.
 ## Settings and saved data
 
-| Setting | Purpose |
-| --- | --- |
-| Theme, acrylic glass and accent | Follow Windows or choose Light/Dark; control glass and restrained selection accents. |
-| Hidden/system files | Change their visibility while retaining indexed metadata. |
-| Default view | Choose the view applied when opening Seek. |
-| Indexed/excluded locations | Configure the index; save location changes and follow the displayed restart/rebuild guidance. Blank indexed locations means available drives. |
-| Content search locations | Restrict on-demand scans to the folders you choose. |
-| Remember document text for faster content search | Default on. Reuse unchanged PDF/Word extraction; **128 MiB** LRU cap, no age expiry. |
-| Clear cache | Remove saved document text. Disabling remembering also clears it. |
-| Helper | Explicitly install/uninstall the optional elevated NTFS service. |
-| Updates | Default-on check once per app launch; Check now, installed version/status, and Download and restart when a newer stable release exists. |
+Settings are grouped into Appearance, Glass and background, Files and search, Text editing, Previews, Keyboard shortcuts, Saved commands, Locations, Helper, Agents and Updates. Among them: hidden and system files, the default view, reopening panes and tabs, Seek as the default file manager, search ranking, indexed and excluded locations, content search locations, auto-save and backups, preview options and update checks.
 
-Default app data is `%LOCALAPPDATA%\Seek`: the filename index, `settings.json`, window state, opened-item records and document-text cache. Saved document text is compressed, protected with current-user DPAPI and restricted account ACLs. It is dropped when the file changes or is removed, leaves content scope, or is evicted by the cap. It is never shipped in a release package. Each Windows account gets its own data.
+Saved data lives in `%LOCALAPPDATA%\Seek`: the filename index, settings, window and pane layout, opened-item records and, if enabled, saved document text for faster content search. Saved document text is compressed, encrypted for your Windows account and capped in size. Nothing in your profile is part of a download, and each Windows account has its own data.
 
 ## Optional helper
 
-Seek works without the helper, using ordinary-user directory listings and change tracking. **Settings > Helper > Install helper** requests administrator approval only for installing the opt-in service. The app itself remains unelevated. The helper uses NTFS metadata and journal replay for quicker catch-up; unsupported volumes fall back to the ordinary walker. The helper cannot grant access to protected files that your account cannot read.
+Seek works without the helper, using ordinary folder listings and change tracking. **Settings > Helper > Install helper** asks for administrator approval to install a service that reads NTFS metadata and its change journal for faster indexing; the app itself always runs unelevated, and the helper can't read files your account can't. Remove it with **Settings > Helper > Uninstall helper** before uninstalling Seek.
 
-The explicitly installed helper can remain running after the app closes and starts as a Windows service. Remove it with **Settings > Helper > Uninstall helper** before uninstalling Seek; this requires administrator approval again. The ordinary-user app installer never creates a service.
-
-If the app is already removed, this PowerShell command locates the separately installed helper for your account and requests UAC to remove it:
+If Seek is already removed, this removes the helper for your account (it asks for administrator approval):
 
 ```powershell
 $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
@@ -145,84 +168,64 @@ $helper = Join-Path $env:ProgramFiles ("Seek Helper\{0}\seek-helper.exe" -f $sid
 Start-Process -FilePath $helper -Verb RunAs -ArgumentList @('uninstall', '--sid', $sid) -Wait
 ```
 
-It targets the current account's helper, not another user's service. Do not delete its protected Program Files directory manually while the service is installed.
-
 ## Update and uninstall
 
-**Settings > Updates** controls automatic startup checks (on by default). Seek checks the public GitHub release once per app launch, after window creation, with no polling or resident updater. **Check now** works on demand even when startup checks are off. No filenames, queries, paths or document text are sent; GitHub receives the normal network request and app-version user agent.
+**Settings > Updates** checks GitHub for a newer release once when Seek starts (on by default) or when you press **Check now**. No file names, searches or paths are sent. **Download and restart** downloads the release over HTTPS, checks its SHA-256 checksum and contents, replaces the program files and restarts Seek; your saved data and the helper are untouched, and a failed update restores the previous files. You can also install a newer Setup EXE over the current one.
 
-When a newer stable Windows release exists, choose **Download and restart**. This explicitly approves replacing program files and closing all session tabs. Seek downloads via HTTPS, validates the SHA-256 checksum and fixed package contents, prepares a backup, closes, applies the update and restarts without elevation. Saved index/settings/document text and the separately opted-in helper service are preserved. Failed preparation leaves Seek open; apply failures attempt to restore previous files and keep a diagnostic result in the temporary update folder. The unsigned package checksum detects corruption; it is not a publisher signature, so update trust depends on the GitHub repository.
-
-For a manual update, close Seek, download the newer Setup EXE and run it. Approve replacement of program files; saved data stays in your profile.
-
-Uninstall through **Windows Settings > Apps > Installed apps > Seek**, or run **Uninstall.exe** in `%LOCALAPPDATA%\Programs\Seek`. Confirm removal of program files and shortcuts. A separate **default-No** prompt asks whether to delete the saved index, settings and document-text cache. Choose No to keep them. Unexpected extra files in the program folder are preserved. The native uninstaller retains an already opted-in helper and says so; remove that service in Seek Settings first if desired. The legacy Uninstall.cmd remains available for older installations.
-
-For an uninstalled portable copy, remove its extracted program folder yourself. Its profile data is separate; remove `%LOCALAPPDATA%\Seek` only if you intend to discard all saved data. Recycle personal files through Explorer rather than deleting a similarly named document folder.
+Uninstall from **Windows Settings > Apps > Installed apps > Seek**, or run `Uninstall.exe` in `%LOCALAPPDATA%\Programs\Seek`. A separate prompt (default No) asks whether to delete your saved data. The uninstaller also removes Seek's Explorer menu entries and gives folders back to File Explorer.
 
 ## Building from source
 
-Creating the Setup EXE also requires [NSIS 3](https://nsis.sourceforge.io/) (`makensis.exe`); the installer/uninstaller use zlib compression.
-
-Use Rust **1.96.0 x86_64-pc-windows-msvc**, Visual Studio 2022 Build Tools with **Desktop development with C++**, and Windows SDK **10.0.26100.0**, including `rc.exe` and `fxc.exe`. The toolchain and framework revisions are pinned; do not update them merely to build a release.
+Requirements: Rust **1.96.0 x86_64-pc-windows-msvc**, Visual Studio 2022 Build Tools with **Desktop development with C++**, Windows SDK **10.0.26100.0** (for `rc.exe` and `fxc.exe`), and [NSIS 3](https://nsis.sourceforge.io/) to build the Setup EXE. The toolchain and framework revisions are pinned.
 
 ```powershell
-# Clone the public source and select the release.
 git clone https://github.com/sanirudh17/Seek.git
 cd Seek
-git checkout v1.0.2
 
-# Install the pinned compiler and developer checks.
 rustup toolchain install 1.96.0-x86_64-pc-windows-msvc --component rustfmt --component clippy
 
-# Build the app, helper and developer CLI; check correctness and lints.
 cargo build --workspace --locked
 cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 
-# Build/package the optimized app and optional helper from a clean checkout.
-# Static CRT, stripped release, path remapping, license files and SHA256SUMS included.
+# Optimized app, helper, portable ZIP, Setup EXE and SHA256SUMS.
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-release.ps1
 ```
 
-The package appears under `target/release-package/`. No signing, helper installation or GitHub upload happens during a build. The `-SkipBuild` option only packages existing release binaries after checking version metadata; use it only after a verified clean build.
+The package appears under `target/release-package/`. Building never signs, installs the helper or uploads anything.
 
-A development run with its own disposable index and restricted scope:
+For development, run Seek with its own disposable index and profile so your saved data is never touched:
 
 ```powershell
-# --root limits the filename index; --data keeps tests away from your saved profile.
 cargo run -p seek -- --walker --root "$env:TEMP" --data .bench-data/development-profile
-
-# Independent directory-listing correctness check using the developer CLI.
-cargo run -p seek-cli -- verify --root "$env:TEMP" --data .bench-data/development-profile
 ```
 
-Content scope is a separate Settings choice: `--root` alone is not a content-search privacy boundary. Owned fixture scripts configure content scope explicitly. Native desktop test scripts optionally use Orca; the installed application does not depend on it. Historical measurements and their scope/limitations are in [PROGRESS.md](PROGRESS.md) and [docs/STAGE_C_POLISH.md](docs/STAGE_C_POLISH.md).
+A copy run with `--data` never changes Explorer's menu entries or default-app settings.
 
 ## Project structure
 
 ```text
 app/                    Native GPUI app, Windows resources and icon
-crates/engine/          Adapted fsearch-crossplatform index and Windows drivers
-crates/seek-helper/     Opt-in service and explicit admin install/uninstall commands
+crates/engine/          Filename index, search and Windows file system drivers
+crates/seek-helper/     Optional indexing service and its install commands
 crates/seek-cli/        Developer verifier and benchmark tools
-vendor/gpui-component/  Pinned GPUI Kit source and documented local patches
-vendor/gpui-windows/    Pinned Windows backend and documented local patches
-packaging/              Per-user install/uninstall scripts and supplemental notices
-scripts/                Build, validation and diagnostic tools
-docs/                   Evidence, known limits and development reports
+vendor/gpui-component/  Pinned GPUI Kit source with documented local patches
+vendor/gpui-windows/    Pinned Windows backend with documented local patches
+packaging/              Installer, uninstaller and supplemental notices
+scripts/                Build, packaging and validation tools
+docs/                   Design notes, measurements and reference documents
 THIRD-PARTY-NOTICES.txt Full redistribution notices and license texts
 ```
 
-## Known limits and troubleshooting
+## Known limits
 
-- First indexing and no-helper whole-drive catch-up can take time. The status bar reports progress; cached results appear first. An indexing folder must not be confused with a known-empty folder.
-- Protected folders can remain inaccessible to your ordinary account. Counts identify recorded inaccessible paths; there is not yet a built-in path browser for them.
-- Content results are complete only within the configured scope, supported formats and stated caps, with skips/unreadable files disclosed. Windows Search alone is not complete.
-- External file drag works with tested Explorer/browser targets; individual chat apps and all upload interfaces are not verified. Use Copy/Paste when necessary.
-- High contrast/transparency settings, Windows builds, GPU drivers, HDR and monitor scaling can affect glass. Physical HDR/mixed-DPI and other-machine verification remain coverage limits.
-- If the app will not start, check that you extracted the whole package and are using x64 Windows. Managed PowerShell policy or antivirus/reputation controls can block the install script. Do not run Seek elevated to work around a policy.
-- No second enabled standard account was available on the release machine. To test independently, create one in **Windows Settings > Accounts > Other users > Add account > Add a user without a Microsoft account**, keep its account type **Standard**, then sign into it. Account creation requires an administrator. Install there, check its own sidebar folders, then uninstall once keeping data and once deleting disposable test data. Do not copy another account's Seek data into it.
+- The first index of a whole drive takes a while without the helper. Cached results appear first and the status bar shows progress.
+- Folders your account can't read stay unreadable; Seek never elevates to reach them.
+- Content search covers only the folders you choose, supported formats and files up to 4 MiB. Scanned PDFs without a text layer are not read.
+- Cloud placeholders (files not downloaded to this PC) are never downloaded by search, previews, duplicates or similar images.
+- Glass appearance depends on Windows transparency settings, the GPU driver and display scaling.
+- Managed PCs may block unsigned installers; don't run Seek as administrator to work around a policy.
 
 ## License and credits
 
-Seek's own code is [MIT](LICENSE). Redistribution includes [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt), with complete license texts and required attributions for shipped components and conservative build dependencies. The filename engine derives from [fsearch-crossplatform](https://github.com/threehymns/fsearch-crossplatform) (Noah Dunnagan / threehymns, MIT); UI uses [GPUI](https://github.com/zed-industries/zed) and [GPUI Kit](https://github.com/longbridge/gpui-component) (Apache-2.0), plus Lucide artwork. Existing licenses and patch/provenance records remain beside vendored sources. Dependency licenses govern their respective components.
+Seek's own code is [MIT](LICENSE). Releases include [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt) with the complete license texts of shipped components. The filename engine derives from [fsearch-crossplatform](https://github.com/threehymns/fsearch-crossplatform) (MIT). The interface uses [GPUI](https://github.com/zed-industries/zed) and [GPUI Kit](https://github.com/longbridge/gpui-component) (Apache-2.0), Hugeicons and Lucide artwork, and the Figtree and Geist fonts (SIL OFL). Each dependency's license governs its component.

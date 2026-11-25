@@ -357,6 +357,10 @@ impl Record {
             crate::walk::FLAG_SYSTEM
         } else {
             0
+        } | if a & crate::walk::CLOUD_ATTRIBUTES != 0 && !self.directory {
+            crate::walk::FLAG_CLOUD
+        } else {
+            0
         }
     }
 }

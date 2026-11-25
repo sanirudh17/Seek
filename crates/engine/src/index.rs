@@ -294,6 +294,36 @@ impl Index {
             .map(|d| d as u32)
     }
 
+    /// The listings this index was built from, read back from the index:
+    /// `Index::build` on them gives the same tree, so new ranking weights
+    /// apply without walking the disk again. Folder ids are the index's own.
+    pub fn relisted(&self) -> Vec<Listing> {
+        let (kind, mtime) = (self.kind(), self.mtime());
+        (0..self.d as u32)
+            .into_par_iter()
+            .map(|d| {
+                let mut names = Vec::new();
+                let ents = self
+                    .children(d)
+                    .map(|e| {
+                        let name = self.name(e);
+                        let ent = crate::walk::RawEnt {
+                            name_off: names.len() as u32,
+                            name_len: name.len() as u16,
+                            kind: kind[e],
+                            size: self.size_of(e),
+                            mtime: mtime[e],
+                            child: self.dir_of(e as u32).unwrap_or(crate::walk::NONE),
+                        };
+                        names.extend_from_slice(name);
+                        ent
+                    })
+                    .collect();
+                Listing { id: d, names, ents }
+            })
+            .collect()
+    }
+
     pub fn children(&self, d: u32) -> std::ops::Range<usize> {
         let s = self.dir_start()[d as usize] as usize;
         s..s + self.dir_len()[d as usize] as usize
@@ -523,6 +553,7 @@ impl Index {
             .split(|&b| b == b'/')
             .filter(|c| !c.is_empty())
             .collect();
+        let weights = Weights::current();
         let mut prior = vec![0i8; d];
         let mut depth = vec![0u8; d];
         // How many leading components of `home` this dir's path matches;
@@ -536,11 +567,11 @@ impl Index {
             hm[k] = match hm[p] {
                 u8::MAX => u8::MAX,
                 h if h as usize >= comps.len() => h,
-                h if comps[h as usize] == nm => h + 1,
+                h if comps[h as usize].eq_ignore_ascii_case(nm) => h + 1,
                 _ => u8::MAX,
             };
             let entered_home = hm[k] as usize == comps.len() && (hm[p] as usize) < comps.len();
-            let adj = prior_adjust(nm, depth[k]) + if entered_home { 15 } else { 0 };
+            let adj = weights.adjust(nm, depth[k]) + if entered_home { 15 } else { 0 };
             prior[k] = (prior[p] as i32 + adj).clamp(-100, 60) as i8;
         }
         drop((names, name_off, name_len));
@@ -1067,41 +1098,109 @@ pub fn char_bit(b: u8) -> u64 {
     }
 }
 
-#[rustfmt::skip]
-const BUNDLE_EXTS: &[&[u8]] = &[
-    b".framework", b".bundle", b".plugin", b".appex", b".kext", b".xpc", b".lproj", b".xcassets", b".photoslibrary",
-    b".musiclibrary", b".tvlibrary", b".imovielibrary", b".dSYM", b".xcarchive", b".sdk", b".platform",
-];
+/// One rule of the location prior: everything under a folder with this
+/// name (any letter case) moves up (positive) or down (negative) in
+/// ranking. `top` rules apply only to a folder directly under a drive, such
+/// as `C:\Windows`. Weights add up along a path, clamped to -100..60.
+/// Demoting never hides a file: a weaker match in a user folder can only
+/// overtake it, and an exact name still ranks first (see `Engine::search`).
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct FolderWeight {
+    pub name: String,
+    pub weight: i32,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub top: bool,
+}
 
-/// How much a directory's name moves everything under it in ranking.
-fn prior_adjust(name: &[u8], _depth: u8) -> i32 {
-    if name == b"Applications" {
-        return 30;
+/// Seek's default folder weights for Windows. docs/SEARCH_RANKING.md
+/// explains each and how to override them in `ranking.json`.
+pub fn default_weights() -> Vec<FolderWeight> {
+    let w = |name: &str, weight, top| FolderWeight {
+        name: name.into(),
+        weight,
+        top,
+    };
+    vec![
+        w("Downloads", 16, false),
+        w("Desktop", 14, false),
+        w("Documents", 12, false),
+        w("Pictures", 8, false),
+        w("Videos", 6, false),
+        w("Music", 6, false),
+        w("OneDrive", 6, false),
+        w("source", 6, false),
+        w("repos", 6, false),
+        w("Windows", -45, true),
+        w("ProgramData", -30, true),
+        w("Program Files", -12, true),
+        w("Program Files (x86)", -12, true),
+        w("$Recycle.Bin", -70, true),
+        w("System Volume Information", -70, true),
+        w("$WinREAgent", -40, true),
+        w("Recovery", -40, true),
+        w("AppData", -25, false),
+        w("WinSxS", -30, false),
+        w("node_modules", -30, false),
+        w("__pycache__", -30, false),
+        w("site-packages", -30, false),
+        w("venv", -30, false),
+        w("bower_components", -30, false),
+        w("Temp", -20, false),
+        w("tmp", -15, false),
+        w("Cache", -20, false),
+        w("Caches", -20, false),
+        w("INetCache", -20, false),
+        w("Logs", -15, false),
+        w("target", -12, false),
+        w("obj", -12, false),
+        w("build", -10, false),
+        w("dist", -10, false),
+        w("out", -8, false),
+        w("vendor", -10, false),
+        w("Packages", -10, false),
+    ]
+}
+
+static WEIGHTS: std::sync::RwLock<Option<Vec<FolderWeight>>> = std::sync::RwLock::new(None);
+
+/// Replace the folder weights the next `Index::build` uses (None: defaults).
+pub fn set_weights(weights: Option<Vec<FolderWeight>>) {
+    *WEIGHTS.write().unwrap() = weights;
+}
+
+/// The folder weights in use.
+pub fn weights() -> Vec<FolderWeight> {
+    WEIGHTS
+        .read()
+        .unwrap()
+        .clone()
+        .unwrap_or_else(default_weights)
+}
+
+/// The weights, keyed by lowercase name, for one build.
+struct Weights(HashMap<Vec<u8>, (i32, bool)>);
+
+impl Weights {
+    fn current() -> Weights {
+        Weights(
+            weights()
+                .into_iter()
+                .map(|w| (w.name.to_lowercase().into_bytes(), (w.weight, w.top)))
+                .collect(),
+        )
     }
-    if name.ends_with(b".app") {
-        return -25;
-    }
-    if BUNDLE_EXTS
-        .iter()
-        .any(|x| name.len() > x.len() && name[name.len() - x.len()..].eq_ignore_ascii_case(x))
-    {
-        return -20;
-    }
-    if name.first() == Some(&b'.') {
-        return -25;
-    }
-    match name {
-        b"Downloads" => 16,
-        b"Desktop" | b"Documents" => 12,
-        b"AppData" => -20,
-        b"Library" => -20,
-        b"Caches" | b"caches" | b"cache" | b"Cache" | b"Logs" | b"DerivedData"
-        | b"CoreSimulator" => -20,
-        b"node_modules" | b"__pycache__" | b"site-packages" | b"Pods" | b"venv"
-        | b"bower_components" => -30,
-        b"target" | b"build" | b"dist" | b"out" | b"vendor" | b"deps" | b"tmp" | b"temp" => -12,
-        b"folders" | b"Containers" | b"Group Containers" => -10,
-        b"Application Support" => -5,
-        _ => 0,
+
+    /// How much a directory's name moves everything under it in ranking.
+    /// `depth` 2 is a folder directly under a drive (`/C:/Windows`).
+    fn adjust(&self, name: &[u8], depth: u8) -> i32 {
+        if name.first() == Some(&b'.') {
+            // .git, .cargo, .vs, .venv and other tool folders.
+            return -25;
+        }
+        let lower = name.to_ascii_lowercase();
+        match self.0.get(&lower) {
+            Some(&(weight, top)) if !top || depth == 2 => weight,
+            _ => 0,
+        }
     }
 }

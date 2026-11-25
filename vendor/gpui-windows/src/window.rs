@@ -50,6 +50,7 @@ pub struct WindowsWindowState {
     pub border_offset: WindowBorderOffset,
     pub appearance: Cell<WindowAppearance>,
     pub background_appearance: Cell<WindowBackgroundAppearance>,
+    requested_background: Cell<Option<WindowBackgroundAppearance>>,
     pub scale_factor: Cell<f32>,
     pub restore_from_minimized: Cell<Option<Box<dyn FnMut(RequestFrameOptions)>>>,
 
@@ -88,6 +89,15 @@ pub struct WindowsWindowState {
     pub(crate) draw_coordinator: Rc<DrawCoordinator>,
     fullscreen: Cell<Option<StyleAndBounds>>,
     initial_placement: Cell<Option<WindowOpenStatus>>,
+    /// A requested window stays native-hidden until a fully rendered frame is
+    /// submitted. GPUI may render this one hidden frame; no idle repaint loop.
+    show_after_first_frame: Cell<bool>,
+    activate_after_first_frame: Cell<bool>,
+    /// Minimized or hidden (from WM_SIZE / WM_SHOWWINDOW), after Glint's
+    /// surface guard: the material is kept active only while visible.
+    pub(crate) surface_hidden: Cell<bool>,
+    /// A taskbar restore is cloaked until its first fresh frame is presented.
+    pub(crate) reveal_pending: Cell<bool>,
     hwnd: HWND,
     pub(crate) a11y: RefCell<Option<A11yState>>,
 }
@@ -166,6 +176,7 @@ impl WindowsWindowState {
             border_offset,
             appearance: Cell::new(appearance),
             background_appearance: Cell::new(WindowBackgroundAppearance::Opaque),
+            requested_background: Cell::new(None),
             scale_factor: Cell::new(scale_factor),
             restore_from_minimized: Cell::new(restore_from_minimized),
             min_size,
@@ -187,6 +198,10 @@ impl WindowsWindowState {
             display: Cell::new(display),
             fullscreen: Cell::new(fullscreen),
             initial_placement: Cell::new(initial_placement),
+            show_after_first_frame: Cell::new(false),
+            activate_after_first_frame: Cell::new(false),
+            surface_hidden: Cell::new(false),
+            reveal_pending: Cell::new(false),
             hwnd,
             invalidate_devices,
             draw_coordinator,
@@ -259,6 +274,10 @@ impl WindowsWindowInner {
     /// has no notification for a window fully covered by other windows, so
     /// that case reports `Visible`.
     pub(crate) fn visibility(&self) -> WindowVisibility {
+        if self.state.show_after_first_frame.get() {
+            // Permit GPUI's initial draw without making the HWND visible.
+            return WindowVisibility::Visible;
+        }
         let is_visible =
             unsafe { IsWindowVisible(self.hwnd).as_bool() && !IsIconic(self.hwnd).as_bool() };
         if is_visible {
@@ -372,9 +391,10 @@ impl WindowsWindowInner {
         };
         match open_status.state {
             WindowOpenState::Maximized => unsafe {
-                SetWindowPlacement(self.hwnd, &open_status.placement)
+                let mut placement = open_status.placement;
+                placement.showCmd = SW_SHOWMAXIMIZED.0 as u32;
+                SetWindowPlacement(self.hwnd, &placement)
                     .context("failed to set window placement")?;
-                ShowWindowAsync(self.hwnd, SW_MAXIMIZE).ok()?;
             },
             WindowOpenState::Fullscreen => {
                 unsafe {
@@ -572,6 +592,8 @@ impl WindowsWindow {
         let this = context.inner.take().transpose()?;
         let hwnd = creation_result?;
         let this = this.unwrap();
+        #[cfg(feature = "seek-bench")]
+        crate::seek_observer::milestone("native_window_created_hidden");
 
         register_drag_drop(&this)?;
         set_non_rude_hwnd(hwnd, true);
@@ -584,7 +606,17 @@ impl WindowsWindow {
             if !params.focus {
                 placement.showCmd = SW_SHOWNOACTIVATE.0 as u32;
             }
-            unsafe { SetWindowPlacement(hwnd, &placement)? };
+            // Size/place while hidden. The app's factory can now apply its
+            // saved dark mode and backdrop before any pixels become visible.
+            let mut hidden = placement;
+            hidden.showCmd = SW_HIDE.0 as u32;
+            unsafe { SetWindowPlacement(hwnd, &hidden)? };
+            this.state.initial_placement.set(Some(WindowOpenStatus {
+                placement,
+                state: WindowOpenState::Windowed,
+            }));
+            this.state.show_after_first_frame.set(true);
+            this.state.activate_after_first_frame.set(params.focus);
         } else {
             this.state.initial_placement.set(Some(WindowOpenStatus {
                 placement,
@@ -817,6 +849,11 @@ impl PlatformWindow for WindowsWindow {
     }
 
     fn activate(&self) {
+        if self.state.show_after_first_frame.get() {
+            self.state.activate_after_first_frame.set(true);
+            self.frame_demand.request();
+            return;
+        }
         let hwnd = self.0.hwnd;
         let this = self.0.clone();
         self.0
@@ -918,6 +955,14 @@ impl PlatformWindow for WindowsWindow {
     }
 
     fn set_background_appearance(&self, background_appearance: WindowBackgroundAppearance) {
+        if self
+            .state
+            .requested_background
+            .replace(Some(background_appearance))
+            == Some(background_appearance)
+        {
+            return;
+        }
         let hwnd = self.0.hwnd;
         let actual = match background_appearance {
             WindowBackgroundAppearance::Opaque => {
@@ -930,7 +975,13 @@ impl PlatformWindow for WindowsWindow {
                 WindowBackgroundAppearance::Transparent
             }
             WindowBackgroundAppearance::Blurred => {
-                if set_window_composition_attribute(hwnd, Some((0, 0, 0, 0)), 4) {
+                // Retain one compositor-owned material across window states.
+                // Stable blur takes priority over eliminating mild native
+                // resampling during Windows animation (the user's preference).
+                set_window_composition_attribute(hwnd, None, 0);
+                if dwm_set_window_composition_attribute(hwnd, 3)
+                    || set_window_composition_attribute(hwnd, Some((0, 0, 0, 0)), 4)
+                {
                     WindowBackgroundAppearance::Blurred
                 } else if dwm_set_window_composition_attribute(hwnd, 2) {
                     WindowBackgroundAppearance::MicaBackdrop
@@ -939,6 +990,7 @@ impl PlatformWindow for WindowsWindow {
                 }
             }
             WindowBackgroundAppearance::MicaBackdrop => {
+                set_window_composition_attribute(hwnd, None, 0);
                 if dwm_set_window_composition_attribute(hwnd, 2) {
                     WindowBackgroundAppearance::MicaBackdrop
                 } else {
@@ -946,6 +998,7 @@ impl PlatformWindow for WindowsWindow {
                 }
             }
             WindowBackgroundAppearance::MicaAltBackdrop => {
+                set_window_composition_attribute(hwnd, None, 0);
                 if dwm_set_window_composition_attribute(hwnd, 4) {
                     WindowBackgroundAppearance::MicaAltBackdrop
                 } else {
@@ -954,6 +1007,23 @@ impl PlatformWindow for WindowsWindow {
             }
         };
         self.state.background_appearance.set(actual);
+        // Match native caption behavior (also used by Monocode): let Windows
+        // animate maximize/minimize/restore according to the user's OS setting.
+        let disable_transition = 0i32;
+        unsafe {
+            let result = DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_TRANSITIONS_FORCEDISABLED,
+                (&disable_transition as *const i32).cast(),
+                std::mem::size_of::<i32>() as u32,
+            );
+            if std::env::var_os("SEEK_GLASS_TRACE").is_some() {
+                eprintln!(
+                    "Seek native transitions disabled={disable_transition} result={result:?}"
+                );
+            }
+            result.log_err();
+        }
         if std::env::var_os("SEEK_GLASS_TRACE").is_some() {
             eprintln!("Seek backdrop requested={background_appearance:?} actual={actual:?}");
         }
@@ -998,6 +1068,19 @@ impl PlatformWindow for WindowsWindow {
 
     fn on_request_frame(&self, callback: Box<dyn FnMut(RequestFrameOptions)>) {
         self.state.callbacks.request_frame.set(Some(callback));
+        if self.state.show_after_first_frame.get() {
+            // Hidden HWNDs do not receive an invalidated WM_PAINT. Queue one
+            // initial draw after GPUI has finished constructing the window.
+            unsafe {
+                PostMessageW(
+                    Some(self.0.hwnd),
+                    crate::events::WM_GPUI_FORCE_UPDATE_WINDOW,
+                    WPARAM::default(),
+                    LPARAM::default(),
+                )
+                .log_err();
+            }
+        }
     }
 
     fn on_input(&self, callback: Box<dyn FnMut(PlatformInput) -> DispatchEventResult>) {
@@ -1064,6 +1147,23 @@ impl PlatformWindow for WindowsWindow {
             .borrow_mut()
             .draw(scene, self.state.background_appearance.get())
             .log_err();
+        // A cloaked taskbar restore shows once this fresh frame is on screen.
+        if presented.is_some() && self.state.reveal_pending.get() {
+            finish_reveal(&self.state, self.0.hwnd);
+        }
+        if presented.is_some()
+            && self.state.renderer.borrow().has_presented_frame()
+            && self.state.show_after_first_frame.replace(false)
+        {
+            #[cfg(feature = "seek-bench")]
+            crate::seek_observer::milestone("first_frame_painted_while_hidden");
+            self.0.set_window_placement().log_err();
+            #[cfg(feature = "seek-bench")]
+            crate::seek_observer::milestone("first_window_revealed");
+            if self.state.activate_after_first_frame.replace(false) {
+                self.activate();
+            }
+        }
         #[cfg(feature = "seek-bench")]
         if presented.is_some() {
             crate::seek_observer::observe(crate::seek_observer::SeekFrameEvent::Presented(
@@ -1661,7 +1761,46 @@ fn dwm_set_window_composition_attribute(hwnd: HWND, backdrop_type: u32) -> bool 
             std::mem::size_of_val(&backdrop_type) as u32,
         );
 
-        result.is_ok()
+        if result.is_err() {
+            return false;
+        }
+        // Match Glint's full-client material contract. Setting only the
+        // material attribute leaves the default non-client frame boundaries,
+        // which are different for restored and maximized windows.
+        // The material covers the whole client area. It is extended from the
+        // bottom edge (further than any window is tall) rather than as a
+        // "sheet of glass" (-1 on every side): with a top frame margin, DWM
+        // draws its own caption buttons there, and they show faintly through
+        // the translucent toolbar beside Seek's own.
+        let margins = if backdrop_type == 1 {
+            windows::Win32::UI::Controls::MARGINS {
+                cxLeftWidth: 1,
+                cxRightWidth: 1,
+                cyTopHeight: 1,
+                cyBottomHeight: 1,
+            }
+        } else {
+            windows::Win32::UI::Controls::MARGINS {
+                cxLeftWidth: 0,
+                cxRightWidth: 0,
+                cyTopHeight: 0,
+                cyBottomHeight: 32_767,
+            }
+        };
+        let extended = DwmExtendFrameIntoClientArea(hwnd, &margins).is_ok();
+        if std::env::var_os("SEEK_GLASS_TRACE").is_some() {
+            eprintln!("Seek DWM client frame backdrop={backdrop_type} extended={extended}");
+        }
+        if !extended && backdrop_type != 1 {
+            let none = 1u32;
+            let _ = DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_SYSTEMBACKDROP_TYPE,
+                (&none as *const u32).cast(),
+                std::mem::size_of::<u32>() as u32,
+            );
+        }
+        extended
     }
 }
 
@@ -1779,4 +1918,48 @@ mod tests {
             1
         );
     }
+}
+
+/// Glint's reveal gate, for taskbar restores of a glass window: Windows would
+/// otherwise show the retained stale frame and the inactive backdrop, then
+/// swap both in front of the person. The window stays cloaked from the restore
+/// command until a fresh frame is presented (or a 3 s fallback fires).
+pub(crate) const REVEAL_TIMER_ID: usize = 0x5345_454b;
+
+pub(crate) fn set_cloaked(hwnd: HWND, cloaked: bool) -> bool {
+    use windows::Win32::Graphics::Dwm::{DWMWA_CLOAK, DWMWA_CLOAKED, DwmGetWindowAttribute};
+    let value = i32::from(cloaked);
+    unsafe {
+        if DwmSetWindowAttribute(hwnd, DWMWA_CLOAK, (&value as *const i32).cast(), 4).is_err() {
+            return false;
+        }
+        let mut physical = 0u32;
+        DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, (&mut physical as *mut u32).cast(), 4).is_ok()
+            && ((physical & 1 != 0) == cloaked)
+    }
+}
+
+/// Windows' own minimize/restore animations: on for minimizing, off for a
+/// cloaked restore (it would animate an invisible window).
+pub(crate) fn set_transitions_disabled(hwnd: HWND, disabled: bool) {
+    let flag = i32::from(disabled);
+    unsafe {
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_TRANSITIONS_FORCEDISABLED,
+            (&flag as *const i32).cast(),
+            4,
+        );
+    }
+}
+
+pub(crate) fn finish_reveal(state: &WindowsWindowState, hwnd: HWND) {
+    if !state.reveal_pending.replace(false) {
+        return;
+    }
+    unsafe {
+        let _ = windows::Win32::Graphics::Dwm::DwmFlush();
+        let _ = KillTimer(Some(hwnd), REVEAL_TIMER_ID);
+    }
+    set_cloaked(hwnd, false);
 }

@@ -19,6 +19,10 @@ fn key(path: &Path) -> Vec<u8> {
     k
 }
 pub fn read(folder: &Path) -> Result<Vec<Found>, String> {
+    // A ZIP file, or a folder inside one, lists its entries read-only.
+    if let Some((zip, inner)) = crate::archive::split(folder) {
+        return crate::archive::list(&zip, &inner);
+    }
     if !std::fs::metadata(folder)
         .map_err(|e| e.to_string())?
         .is_dir()
@@ -54,6 +58,25 @@ pub fn read(folder: &Path) -> Result<Vec<Found>, String> {
         })
         .collect())
 }
+/// One finite folder read with the same visibility, exclusion and newest-first
+/// order the search worker applies. Used for panes that are not focused, so
+/// their listings never share or cancel the focused pane's search generation.
+pub fn listing(folder: &Path, hidden: bool, excluded: &[PathBuf]) -> Result<Vec<Found>, String> {
+    let q = Query {
+        hide_hidden_system: !hidden,
+        excluded_paths: excluded
+            .iter()
+            .map(|p| seek_engine::paths::internal(p))
+            .collect(),
+        ..Default::default()
+    };
+    let mut files: Vec<Found> = read(folder)?
+        .into_iter()
+        .filter(|r| q.kind_ok(r.kind) && q.path_allowed(&seek_engine::paths::internal(&r.path)))
+        .collect();
+    files.sort_unstable_by(|a, b| b.mtime.cmp(&a.mtime).then(a.path.cmp(&b.path)));
+    Ok(files)
+}
 fn fetch(folder: PathBuf, revision: u64, tx: &Sender<Command>, active: Option<&AtomicUsize>) {
     let began = Instant::now();
     let result = read(&folder);
@@ -77,6 +100,9 @@ pub struct Cache {
     queued: VecDeque<PathBuf>,
     active: Arc<AtomicUsize>,
     tx: Sender<Command>,
+    /// Folders that changed while being read: read again once that read ends,
+    /// since it may have listed them before the change.
+    again: std::collections::HashSet<Vec<u8>>,
 }
 impl Cache {
     pub fn new(tx: Sender<Command>) -> Self {
@@ -88,6 +114,7 @@ impl Cache {
             queued: VecDeque::new(),
             active: Arc::new(AtomicUsize::new(0)),
             tx,
+            again: Default::default(),
         }
     }
     pub fn prime(&mut self, folders: &[(String, PathBuf)]) {
@@ -130,6 +157,11 @@ impl Cache {
         self.pending.remove(&k);
     }
     pub fn refresh(&mut self, folder: &Path) {
+        let k = key(folder);
+        if self.pending.contains_key(&k) {
+            self.again.insert(k);
+            return;
+        }
         self.queue(folder, true);
     }
     fn queue(&mut self, folder: &Path, priority: bool) {
@@ -176,8 +208,12 @@ impl Cache {
             return;
         }
         self.pending.remove(&k);
+        let again = self.again.remove(&k);
         self.entries.retain(|(p, _)| *p != k);
         self.entries.push_back((k, result));
+        if again {
+            self.queue(&folder, true);
+        }
         while self.entries.len() > 1
             && (self.entries.len() > 8
                 || self
@@ -404,5 +440,73 @@ mod tests {
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].path.file_name().unwrap(), "redirected.txt");
         assert!(target.join("redirected.txt").exists());
+    }
+}
+
+/// Most entries a live search looks at, and how long it may run.
+const LIVE_ENTRIES: usize = 300_000;
+const LIVE_DEADLINE: std::time::Duration = std::time::Duration::from_secs(4);
+
+/// Searches folders by walking them, with the engine's own matching
+/// (`Query::match_path`), for when the index can't answer: it is still being
+/// built, or the folder is outside every indexed location. Bounded by entry
+/// count and time, cancelled with the query; says whether it stopped early.
+pub fn live_search(folders: &[PathBuf], query: &Query) -> (Vec<Found>, bool) {
+    let deadline = Instant::now() + LIVE_DEADLINE;
+    let mut found = Vec::new();
+    let mut seen = 0usize;
+    let mut stopped = false;
+    let mut queue: VecDeque<PathBuf> = folders.iter().cloned().collect();
+    // The query's scope is the folder itself; the walk already stays inside.
+    let mut query = query.clone();
+    query.scope = None;
+    while let Some(folder) = queue.pop_front() {
+        if query.cancelled() {
+            stopped = true;
+            break;
+        }
+        if seen >= LIVE_ENTRIES || Instant::now() >= deadline {
+            stopped = true;
+            break;
+        }
+        let Ok(entries) = read(&folder) else { continue };
+        for mut entry in entries {
+            seen += 1;
+            let path = seek_engine::paths::internal(&entry.path);
+            if entry.kind & 3 == seek_engine::walk::KIND_DIR && query.path_allowed(&path) {
+                queue.push_back(entry.path.clone());
+            }
+            if let Some(score) = query.match_path(&path, entry.kind, entry.size, entry.mtime) {
+                entry.score = score;
+                found.push(entry);
+            }
+        }
+    }
+    found.sort_unstable_by(|a, b| b.score.cmp(&a.score).then_with(|| a.path.cmp(&b.path)));
+    found.truncate(query.limit.max(1));
+    (found, stopped)
+}
+
+#[cfg(test)]
+mod live_tests {
+    use super::*;
+
+    #[test]
+    fn live_search_matches_like_the_index() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("deep/er")).unwrap();
+        std::fs::write(dir.path().join("notes.txt"), "x").unwrap();
+        std::fs::write(dir.path().join("deep/er/plan.txt"), "x").unwrap();
+        std::fs::write(dir.path().join("trip.md"), "x").unwrap();
+        let mut query = Query::parse(".txt", "").unwrap();
+        query.limit = 200;
+        let (found, stopped) = live_search(&[dir.path().to_path_buf()], &query);
+        assert!(!stopped);
+        let names: Vec<_> = found
+            .iter()
+            .map(|f| f.path.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names.len(), 2, "{names:?}");
+        assert!(names.contains(&"plan.txt".to_string()));
     }
 }

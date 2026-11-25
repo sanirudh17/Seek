@@ -362,7 +362,7 @@ pub(crate) fn docx(bytes: &[u8], cancelled: &impl Fn() -> bool) -> Result<String
     }
     Ok(text)
 }
-fn pdf(bytes: Vec<u8>, cancelled: &impl Fn() -> bool) -> Result<String, String> {
+pub(crate) fn pdf(bytes: Vec<u8>, cancelled: &impl Fn() -> bool) -> Result<String, String> {
     let job = crate::child_job::Job::new().map_err(|e| e.to_string())?;
     let mut child = Command::new(std::env::current_exe().map_err(|e| e.to_string())?)
         .arg("--content-extract-pdf")
@@ -467,11 +467,31 @@ pub(crate) fn extract(
 
 fn matching_line(text: &str, needle: &str) -> Option<String> {
     let needle = needle.to_lowercase();
-    text.lines().enumerate().find_map(|(i, line)| {
-        let lower = line.to_lowercase();
-        let offset = lower.find(&needle)?;
-        // Locate by character rather than reusing byte offsets from Unicode folding.
-        let before = lower[..offset].chars().count();
+    if needle.is_empty() {
+        return None;
+    }
+    let mut matches = vec![];
+    for (index, line) in text.lines().enumerate() {
+        let folded = line.to_lowercase();
+        let Some(offset) = folded.find(&needle) else {
+            continue;
+        };
+        if matches.len() == 5 {
+            if let Some(last) = matches.last_mut() {
+                *last = format!("{last} [more matching lines]");
+            }
+            break;
+        }
+        // Unicode lowercase may expand one source character into several.
+        // Walk folded byte lengths to map back to the original characters.
+        let mut bytes = 0;
+        let before = line
+            .chars()
+            .position(|character| {
+                bytes += character.to_lowercase().map(char::len_utf8).sum::<usize>();
+                bytes > offset
+            })
+            .unwrap_or(0);
         let start = before.saturating_sub(50);
         let sample: String = line
             .chars()
@@ -479,14 +499,18 @@ fn matching_line(text: &str, needle: &str) -> Option<String> {
             .take(180)
             .map(|c| if c.is_control() { ' ' } else { c })
             .collect();
-        Some(format!(
-            "{}: {}{}",
-            i + 1,
-            if start > 0 { "…" } else { "" },
-            sample
-        ))
-    })
+        let tail = line.chars().nth(start + 180).is_some();
+        matches.push(format!(
+            "{}: {}{}{}",
+            index + 1,
+            if start > 0 { "\u{2026}" } else { "" },
+            sample,
+            if tail { "\u{2026}" } else { "" }
+        ));
+    }
+    (!matches.is_empty()).then(|| matches.join("\n"))
 }
+
 #[cfg(test)]
 pub fn search(
     query: &str,
@@ -825,6 +849,22 @@ pub(crate) fn plan(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn match_excerpts_keep_five_line_numbers_and_disclose_truncation() {
+        let text =
+            "first\nneedle one\nneedle two\nneedle three\nneedle four\nneedle five\nneedle six";
+        let excerpt = matching_line(text, "needle").unwrap();
+        assert_eq!(excerpt.lines().count(), 5);
+        assert!(excerpt.starts_with("2: needle one"));
+        assert!(excerpt.ends_with("[more matching lines]"));
+        assert!(!excerpt.contains("needle six"));
+        let long = format!("{}\u{130} needle{}", "a".repeat(120), "z".repeat(200));
+        let excerpt = matching_line(&long, "NEEDLE").unwrap();
+        assert!(excerpt.starts_with("1: \u{2026}"));
+        assert!(excerpt.contains("\u{130} needle"));
+        assert!(excerpt.ends_with('\u{2026}'));
+        assert!(matching_line("text", "").is_none());
+    }
     #[test]
     fn document_failures_retry_once_after_every_first_attempt() {
         let root = tempfile::tempdir().unwrap();

@@ -99,6 +99,10 @@ pub(crate) type ImageSourceFn = dyn Fn(&gpui::SharedUri) -> gpui::ImageSource + 
 pub(crate) type LinkClickHandlerFn =
     dyn Fn(&SharedString, &ClickEvent, &mut Window, &mut App) + Send + Sync;
 
+/// Seek: a task-list checkbox was clicked. Receives the list item's source
+/// byte range start and end, and whether it was checked.
+pub(crate) type TaskToggleFn = dyn Fn(usize, usize, bool, &mut Window, &mut App) + Send + Sync;
+
 /// Kept by the element only, so unlike the handlers the state carries, it
 /// may hold a `ScrollHandle`.
 pub(crate) type RevealHandlerFn = dyn Fn(Bounds<Pixels>, &mut Window, &mut App);
@@ -155,6 +159,7 @@ pub struct TextView {
     code_block_highlighter: Option<Arc<CodeBlockHighlighterFn>>,
     table_actions: Option<Arc<TableActionsFn>>,
     link_click_handler: Option<Arc<LinkClickHandlerFn>>,
+    task_toggle: Option<Arc<TaskToggleFn>>,
     image_source: Option<Arc<ImageSourceFn>>,
     reveal_handler: Option<Rc<RevealHandlerFn>>,
     markdown_extensions: Arc<MarkdownExtensions>,
@@ -202,6 +207,7 @@ impl TextView {
             code_block_highlighter: None,
             table_actions: None,
             link_click_handler: None,
+            task_toggle: None,
             image_source: None,
             reveal_handler: None,
             markdown_extensions: Arc::default(),
@@ -226,6 +232,7 @@ impl TextView {
             code_block_highlighter: None,
             table_actions: None,
             link_click_handler: None,
+            task_toggle: None,
             image_source: None,
             reveal_handler: None,
             markdown_extensions: Arc::default(),
@@ -250,6 +257,7 @@ impl TextView {
             code_block_highlighter: None,
             table_actions: None,
             link_click_handler: None,
+            task_toggle: None,
             image_source: None,
             reveal_handler: None,
             markdown_extensions: Arc::default(),
@@ -394,6 +402,15 @@ impl TextView {
     ///
     /// The handler receives the resolved URL and the original GPUI click event.
     /// Without a handler, links open through App::open_url.
+    /// Seek: make task-list checkboxes clickable.
+    pub fn on_task_toggle<F>(mut self, handler: F) -> Self
+    where
+        F: Fn(usize, usize, bool, &mut Window, &mut App) + Send + Sync + 'static,
+    {
+        self.task_toggle = Some(Arc::new(handler));
+        self
+    }
+
     pub fn on_link_click<F>(mut self, handler: F) -> Self
     where
         F: Fn(&SharedString, &ClickEvent, &mut Window, &mut App) + Send + Sync + 'static,
@@ -685,6 +702,7 @@ impl Element for TextView {
             state.code_block_highlighter = code_block_highlighter;
             state.table_actions = self.table_actions.clone();
             state.link_click_handler = self.link_click_handler.clone();
+            state.task_toggle = self.task_toggle.clone();
             state.image_source = self.image_source.clone();
             state.set_markdown_extensions(self.markdown_extensions.clone(), cx);
             if let Some(motion) = &self.motion {

@@ -26,6 +26,7 @@ pub fn run(manifest: &str) -> i32 {
                     size: meta.len(),
                     edge: crate::media::PREVIEW_EDGE,
                     details: false,
+                    text_preview: true,
                     folder: false,
                 },
                 page: case.page,

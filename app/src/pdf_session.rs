@@ -13,12 +13,28 @@ use std::{
 #[derive(Default)]
 pub struct Loader {
     session: Option<Session>,
+    budget: crate::preview_diagnostics::Budget,
 }
 impl Loader {
     pub fn clear(&mut self) {
         self.session = None;
     }
     pub fn load(&mut self, key: &Key, cancelled: &dyn Fn() -> bool) -> Result<Preview, String> {
+        let mut budget = std::mem::take(&mut self.budget);
+        let result = crate::preview_diagnostics::recover(
+            |timeout| self.load_once(key, cancelled, timeout),
+            &mut budget,
+            cancelled,
+        );
+        self.budget = budget;
+        result
+    }
+    fn load_once(
+        &mut self,
+        key: &Key,
+        cancelled: &dyn Fn() -> bool,
+        timeout: Duration,
+    ) -> Result<Preview, String> {
         if key
             .file
             .path
@@ -26,29 +42,17 @@ impl Loader {
             .is_none_or(|s| !s.eq_ignore_ascii_case("pdf"))
         {
             self.clear();
-            return crate::document_preview::load(key, cancelled);
+            return crate::document_preview::load_with_timeout(key, cancelled, timeout);
         }
         if !self.session.as_mut().is_some_and(|s| s.valid(key)) {
             self.clear();
             self.session = Some(Session::start(key)?);
         }
-        let result = self.session.as_mut().unwrap().page(key, cancelled);
-        match result {
-            Err(ref e) if e == "Preview renderer closed" && !cancelled() => {
-                self.clear();
-                self.session = Some(Session::start(key)?);
-                let result = self.session.as_mut().unwrap().page(key, cancelled);
-                if result.is_err() {
-                    self.clear();
-                }
-                result
-            }
-            Err(e) => {
-                self.clear();
-                Err(e)
-            }
-            Ok(value) => Ok(value),
+        let result = self.session.as_mut().unwrap().page(key, cancelled, timeout);
+        if result.is_err() {
+            self.clear();
         }
+        result
     }
 }
 struct Session {
@@ -58,6 +62,8 @@ struct Session {
     _job: crate::child_job::Job,
     key: Key,
     stamp: Stamp,
+    spawned_ms: u64,
+    first_reply: bool,
 }
 impl Session {
     fn start(key: &Key) -> Result<Self, String> {
@@ -71,6 +77,7 @@ impl Session {
         let executable = std::env::var_os("SEEK_TEST_PREVIEW_HOST")
             .map(std::path::PathBuf::from)
             .unwrap_or(executable);
+        let spawned_ms = crate::preview_diagnostics::now_ms();
         let mut child = Command::new(executable)
             .args([
                 "--document-preview-host",
@@ -78,13 +85,19 @@ impl Session {
                 "--document-job",
             ])
             .arg(&job.name)
+            .args([
+                "--preview-parent-version",
+                env!("CARGO_PKG_VERSION"),
+                "--preview-parent-protocol",
+                "1",
+            ])
             .arg("--document-file")
             .arg(&key.file.path)
             .args(["--document-page", "0"])
             .creation_flags(0x08000000)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            .stderr(crate::preview_diagnostics::stderr())
             .spawn()
             .map_err(|e| e.to_string())?;
         let input = child.stdin.take().ok_or("Missing preview input")?;
@@ -96,6 +109,8 @@ impl Session {
             _job: job,
             key: key.clone(),
             stamp,
+            spawned_ms,
+            first_reply: true,
         })
     }
     fn valid(&mut self, key: &Key) -> bool {
@@ -103,11 +118,16 @@ impl Session {
             && Stamp::read(key).as_ref() == Some(&self.stamp)
             && self.child.try_wait().is_ok_and(|s| s.is_none())
     }
-    fn page(&mut self, key: &Key, cancelled: &dyn Fn() -> bool) -> Result<Preview, String> {
+    fn page(
+        &mut self,
+        key: &Key,
+        cancelled: &dyn Fn() -> bool,
+        timeout: Duration,
+    ) -> Result<Preview, String> {
         writeln!(self.input, "{} {}", key.page, key.file.edge)
             .and_then(|_| self.input.flush())
             .map_err(|_| "Preview renderer closed")?;
-        let deadline = Instant::now() + Duration::from_secs(4);
+        let deadline = Instant::now() + timeout;
         let mut bytes = Vec::new();
         let mut buffer = [0u8; 16384];
         let mut expected = None;
@@ -147,6 +167,14 @@ impl Session {
                     }
                     let info: Wire =
                         serde_json::from_slice(&bytes[..split]).map_err(|e| e.to_string())?;
+                    crate::preview_diagnostics::validate(&info.version, info.protocol)?;
+                    if self.first_reply {
+                        crate::preview_diagnostics::record(
+                            "host_start_timing",
+                            serde_json::json!({"host_pid":self.child.id(),"process_entry_ms":info.host_started_ms.saturating_sub(self.spawned_ms),"clock":"system wall clock, not cache-flushed"}),
+                        );
+                        self.first_reply = false;
+                    }
                     if let Some(error) = info.error {
                         return Err(error);
                     }
@@ -160,7 +188,10 @@ impl Session {
                 }
             } else {
                 if self.child.try_wait().map_err(|e| e.to_string())?.is_some() {
-                    return Err("Preview renderer closed".into());
+                    return Err(crate::preview_diagnostics::host_error(
+                        self.child.id(),
+                        "Preview renderer closed",
+                    ));
                 }
                 std::thread::sleep(Duration::from_millis(2));
             }
@@ -198,7 +229,9 @@ pub fn serve(bytes: &[u8]) -> anyhow::Result<()> {
     writer.WriteBytes(bytes)?;
     writer.StoreAsync()?.join()?;
     writer.DetachStream()?;
-    let document = PdfDocument::LoadFromStreamAsync(&input)?.join()?;
+    let document = PdfDocument::LoadFromStreamAsync(&input)
+        .and_then(|operation| operation.join())
+        .map_err(|error| anyhow::anyhow!("Windows could not open this PDF ({error})"))?;
     let start = Instant::now();
     let active = Arc::new(AtomicBool::new(false));
     let last = Arc::new(AtomicU64::new(0));
@@ -265,6 +298,7 @@ mod tests {
                 mtime: 0,
                 edge: 1536,
                 details: false,
+                text_preview: true,
                 folder: false,
             },
             page: 0,

@@ -4,6 +4,7 @@ use crate::{
     icons::{self, Kind},
 };
 use gpui::RenderImage;
+use std::os::windows::fs::MetadataExt;
 use std::{
     collections::{HashMap, HashSet},
     io::Read,
@@ -12,6 +13,12 @@ use std::{
 };
 // Covers the largest preview at 200% DPI without enlarging a small list icon.
 pub const PREVIEW_EDGE: u16 = 768;
+const MAX_ORIGINAL_PIXELS: u64 = 24_000_000;
+fn original_key(key: &Key) -> bool {
+    key.edge == crate::document_preview::ENLARGED_EDGE
+        && !key.folder
+        && icons::kind(&key.path, false) == Kind::Image
+}
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Key {
     pub path: PathBuf,
@@ -19,6 +26,7 @@ pub struct Key {
     pub size: u64,
     pub edge: u16,
     pub details: bool,
+    pub text_preview: bool,
     pub folder: bool,
 }
 impl Key {
@@ -29,12 +37,23 @@ impl Key {
             size: row.file.size,
             edge,
             details,
+            text_preview: true,
             folder: row.file.kind & 3 == seek_engine::walk::KIND_DIR,
         }
+    }
+    pub fn info(row: &Row, text_preview: bool) -> Self {
+        let mut key = Self::new(row, 0, true);
+        key.text_preview = text_preview;
+        key
     }
 }
 #[derive(Clone, Default)]
 pub struct Details {
+    pub bytes: Option<u64>,
+    pub size_on_disk: Option<u64>,
+    pub attributes: Option<String>,
+    pub volume: Option<String>,
+    pub owner: Option<String>,
     pub created: String,
     pub modified: String,
     pub opened: String,
@@ -44,13 +63,22 @@ pub struct Details {
 #[derive(Clone)]
 pub enum Value {
     Image(Option<Arc<RenderImage>>),
-    Details(Details),
+    Details(Box<Details>),
 }
 impl Value {
     fn bytes(&self) -> usize {
         match self {
             Self::Image(Some(i)) => i.as_bytes(0).map_or(0, |b| b.len()),
-            Self::Details(d) => d.text.as_ref().map_or(0, |t| t.len()) + 1024,
+            Self::Details(d) => {
+                std::mem::size_of::<Details>()
+                    + d.created.len()
+                    + d.modified.len()
+                    + d.opened.len()
+                    + [&d.text, &d.attributes, &d.volume, &d.owner, &d.error]
+                        .into_iter()
+                        .map(|value| value.as_ref().map_or(0, String::len))
+                        .sum::<usize>()
+            }
             _ => 64,
         }
     }
@@ -62,14 +90,14 @@ pub struct Reply {
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Fingerprint {
-    file: Option<(std::time::SystemTime, u64)>,
+    file: Option<(std::time::SystemTime, u64, u32)>,
     opened: Option<std::time::SystemTime>,
 }
 impl Fingerprint {
     fn read(key: &Key, data: &std::path::Path) -> Self {
-        let file = std::fs::metadata(&key.path)
+        let file = std::fs::symlink_metadata(&key.path)
             .ok()
-            .and_then(|m| Some((m.modified().ok()?, m.len())));
+            .and_then(|m| Some((m.modified().ok()?, m.len(), m.file_attributes())));
         let opened = key
             .details
             .then(|| {
@@ -153,7 +181,14 @@ impl Worker {
                                 continue;
                             }
                             let value = if key.details {
-                                Value::Details(details(&key, &data))
+                                Value::Details(Box::new(details(&key, &data)))
+                            } else if original_key(&key) {
+                                Value::Image(
+                                    original_image(&key, &|| {
+                                        work.lock().unwrap().get(&key) != Some(&stamp)
+                                    })
+                                    .ok(),
+                                )
                             } else {
                                 Value::Image(if initialized {
                                     svg_preview(&key).or_else(|| thumbnail(&key).ok())
@@ -305,7 +340,17 @@ impl Cache {
                 removed.push(i)
             }
         }
-        while self.items.len() > self.capacity || self.bytes > self.budget {
+        while self.items.len() > self.capacity
+            || self.bytes
+                > self.budget.saturating_add(
+                    self.items
+                        .iter()
+                        .filter(|(key, _)| original_key(key))
+                        .map(|(_, (value, _))| value.bytes())
+                        .max()
+                        .unwrap_or(0),
+                )
+        {
             let key = self
                 .items
                 .iter()
@@ -322,6 +367,61 @@ impl Cache {
         removed
     }
 }
+fn original_image(key: &Key, cancelled: &impl Fn() -> bool) -> Result<Arc<RenderImage>, String> {
+    use image::ImageDecoder;
+    use std::{fs::OpenOptions, io::BufReader, os::windows::fs::OpenOptionsExt};
+    if cancelled() {
+        return Err("Image request cancelled".into());
+    }
+    let file = OpenOptions::new()
+        .read(true)
+        .share_mode(1)
+        .custom_flags(0x00200000 | 0x00100000)
+        .open(&key.path)
+        .map_err(|e| e.to_string())?;
+    let metadata = file.metadata().map_err(|e| e.to_string())?;
+    if !metadata.is_file()
+        || metadata.len() > 64 * 1024 * 1024
+        || crate::content::unavailable(&key.path, &metadata)
+    {
+        return Err("Original image is unavailable or exceeds the input limit".into());
+    }
+    let mut reader = image::ImageReader::new(BufReader::new(file))
+        .with_guessed_format()
+        .map_err(|e| e.to_string())?;
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(8192);
+    limits.max_image_height = Some(8192);
+    limits.max_alloc = Some(128 * 1024 * 1024);
+    reader.limits(limits);
+    let mut decoder = reader.into_decoder().map_err(|e| e.to_string())?;
+    let (width, height) = decoder.dimensions();
+    if width == 0 || height == 0 || u64::from(width) * u64::from(height) > MAX_ORIGINAL_PIXELS {
+        return Err("Original image exceeds the 24-megapixel display limit".into());
+    }
+    let orientation = decoder.orientation().map_err(|e| e.to_string())?;
+    if cancelled() {
+        return Err("Image request cancelled".into());
+    }
+    let mut decoded = image::DynamicImage::from_decoder(decoder).map_err(|e| e.to_string())?;
+    decoded.apply_orientation(orientation);
+    let mut pixels = decoded.into_rgba8();
+    // GPUI consumes premultiplied BGRA; image decoders return straight RGBA.
+    let bytes: &mut [u8] = pixels.as_mut();
+    for chunk in bytes.chunks_mut(64 * 1024) {
+        if cancelled() {
+            return Err("Image request cancelled".into());
+        }
+        for pixel in chunk.chunks_exact_mut(4) {
+            let alpha = u16::from(pixel[3]);
+            let red = (u16::from(pixel[0]) * alpha + 127) / 255;
+            pixel[0] = ((u16::from(pixel[2]) * alpha + 127) / 255) as u8;
+            pixel[1] = ((u16::from(pixel[1]) * alpha + 127) / 255) as u8;
+            pixel[2] = red as u8;
+        }
+    }
+    Ok(Arc::new(RenderImage::new(vec![image::Frame::new(pixels)])))
+}
 fn date(value: std::io::Result<std::time::SystemTime>) -> String {
     value
         .ok()
@@ -330,7 +430,7 @@ fn date(value: std::io::Result<std::time::SystemTime>) -> String {
         .unwrap_or_else(|| "Unavailable".into())
 }
 fn details(key: &Key, data: &std::path::Path) -> Details {
-    let meta = match std::fs::metadata(&key.path) {
+    let meta = match std::fs::symlink_metadata(&key.path) {
         Ok(m) => m,
         Err(e) => {
             return Details {
@@ -350,14 +450,30 @@ fn details(key: &Key, data: &std::path::Path) -> Details {
                 .to_string()
         })
         .unwrap_or_else(|| "Not opened in Seek".into());
-    let preview = (!key.folder && matches!(icons::kind(&key.path, false), Kind::Text | Kind::Code))
-        .then(|| read_text(&key.path));
+    let regular = meta.is_file()
+        && meta.file_attributes()
+            & windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT
+            == 0;
+    let available = regular && !crate::content::unavailable(&key.path, &meta);
+    let preview = (key.text_preview
+        && available
+        && !key.folder
+        && matches!(icons::kind(&key.path, false), Kind::Text | Kind::Code))
+    .then(|| read_text(&key.path));
     let (text, error) = match preview {
         Some(Ok(text)) => (Some(text), None),
         Some(Err(e)) => (None, Some(format!("Text preview unavailable: {e}"))),
         None => (None, None),
     };
+    let (volume, owner) = crate::file_info::storage(&key.path);
     Details {
+        volume,
+        owner,
+        bytes: regular.then_some(meta.len()),
+        size_on_disk: available
+            .then(|| crate::file_info::allocation_size(&key.path, meta.len()))
+            .flatten(),
+        attributes: Some(crate::file_info::attributes(meta.file_attributes())),
         created: date(meta.created()),
         modified: date(meta.modified()),
         opened,
@@ -670,6 +786,53 @@ fn svg_preview(key: &Key) -> Option<Arc<RenderImage>> {
 mod tests {
     use super::*;
     #[test]
+    fn original_images_keep_source_pixels_alpha_orientation_and_cache_residency() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("original.png");
+        image::RgbaImage::from_pixel(2400, 1400, image::Rgba([255, 0, 0, 128]))
+            .save(&path)
+            .unwrap();
+        let mut key = key(1);
+        key.path = path;
+        key.edge = crate::document_preview::ENLARGED_EDGE;
+        let image = original_image(&key, &|| false).unwrap();
+        assert_eq!(
+            (image.size(0).width.0, image.size(0).height.0),
+            (2400, 1400)
+        );
+        assert_eq!(&image.as_bytes(0).unwrap()[..4], &[0, 0, 128, 128]);
+        let mut cache = Cache::new(10, 8 * 1024 * 1024);
+        cache.insert(key.clone(), Value::Image(Some(image)));
+        assert!(
+            cache.contains(&key),
+            "Original pixels must not immediately evict themselves"
+        );
+        assert_eq!(cache.retain_previews(&HashSet::new()).len(), 1);
+        assert!(original_image(&key, &|| true).is_err());
+
+        let path = temp.path().join("oriented.jpg");
+        let mut jpeg = vec![];
+        image::codecs::jpeg::JpegEncoder::new(&mut jpeg)
+            .encode_image(&image::DynamicImage::ImageRgb8(
+                image::RgbImage::from_pixel(2, 3, image::Rgb([255, 0, 0])),
+            ))
+            .unwrap();
+        let exif: &[u8] =
+            b"Exif\0\0II\x2a\0\x08\0\0\0\x01\0\x12\x01\x03\0\x01\0\0\0\x06\0\0\0\0\0\0\0";
+        let mut oriented = vec![0xff, 0xd8, 0xff, 0xe1];
+        oriented.extend_from_slice(&((exif.len() + 2) as u16).to_be_bytes());
+        oriented.extend_from_slice(exif);
+        oriented.extend_from_slice(&jpeg[2..]);
+        std::fs::write(&path, oriented).unwrap();
+        key.path = path;
+        let image = original_image(&key, &|| false).unwrap();
+        assert_eq!((image.size(0).width.0, image.size(0).height.0), (3, 2));
+        let path = temp.path().join("too-wide.png");
+        image::RgbaImage::new(8193, 1).save(&path).unwrap();
+        key.path = path;
+        assert!(original_image(&key, &|| false).is_err());
+    }
+    #[test]
     fn text_preview_preserves_encoded_symbols_and_rejects_binary_logs() {
         let temp = tempfile::tempdir().unwrap();
         let file = temp.path().join("Owned.log");
@@ -831,6 +994,7 @@ mod tests {
             size: 0,
             edge: 32,
             details: false,
+            text_preview: true,
             folder: false,
         }
     }
@@ -934,5 +1098,10 @@ mod tests {
         let d = details(&k, temp.path());
         assert_ne!(d.opened, "Not opened in Seek");
         assert_eq!(d.text.as_deref(), Some("hello"));
+        k.text_preview = false;
+        let metadata_only = details(&k, temp.path());
+        assert!(metadata_only.text.is_none());
+        assert_eq!(metadata_only.bytes, Some(5));
+        assert_ne!(metadata_only.opened, "Not opened in Seek");
     }
 }

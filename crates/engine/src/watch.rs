@@ -29,6 +29,11 @@ pub struct Watch {
 }
 impl Watch {
     pub fn start(root: Vec<u8>, tx: Sender<Change>) -> io::Result<Self> {
+        Self::start_with(root, tx, true)
+    }
+
+    /// `subtree`: changes anywhere below `root`, or only its own entries.
+    fn start_with(root: Vec<u8>, tx: Sender<Change>, subtree: bool) -> io::Result<Self> {
         let wide = crate::paths::extended(&root);
         let directory = unsafe {
             CreateFileW(
@@ -83,7 +88,7 @@ impl Watch {
                             directory,
                             buffer.as_mut_ptr() as _,
                             (buffer.len() * 4) as u32,
-                            1,
+                            i32::from(subtree),
                             FILE_NOTIFY_CHANGE_FILE_NAME
                                 | FILE_NOTIFY_CHANGE_DIR_NAME
                                 | FILE_NOTIFY_CHANGE_SIZE
@@ -202,5 +207,36 @@ impl Drop for Watch {
         unsafe {
             CloseHandle(self.stop as HANDLE);
         }
+    }
+}
+
+/// Watches one folder's own entries (not its subfolders) for a window that
+/// shows it, independent of the index: `changed` runs on a watcher thread
+/// after anything in it is added, removed, renamed or rewritten. Dropping
+/// the watch stops it.
+pub struct FolderWatch {
+    _watch: Watch,
+}
+
+impl FolderWatch {
+    pub fn new(folder: &std::path::Path, changed: impl Fn() + Send + 'static) -> io::Result<Self> {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let watch = Watch::start_with(crate::paths::internal(folder), tx, false)?;
+        // Ends when the watch is dropped: its thread holds the only sender.
+        thread::Builder::new()
+            .name("seek-folder-watch".into())
+            .spawn(move || {
+                while let Ok(change) = rx.recv() {
+                    match change {
+                        Change::Directories(_) | Change::Overflow(_) => changed(),
+                        Change::Error(..) => {
+                            changed();
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+            })?;
+        Ok(Self { _watch: watch })
     }
 }

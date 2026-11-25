@@ -139,6 +139,7 @@ impl Icon {
     }
 
     #[cfg(any(target_os = "macos", target_os = "windows", test))]
+    #[allow(dead_code)]
     pub(crate) fn source_ref(&self) -> &IconSource {
         &self.source
     }

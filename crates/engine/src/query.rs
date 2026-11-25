@@ -396,7 +396,7 @@ impl Query {
         if t.is_empty() || (!negate && self.tokens.iter().filter(|t| !t.negate).count() >= 8) {
             return;
         }
-        let text = t.to_lowercase().into_bytes();
+        let text = nfc(t).to_lowercase().into_bytes();
         let mask = text.iter().fold(0, |m, &b| m | char_bit(b));
         let (loose, start) = if takes_typos(&text, mode) {
             (mask & !char_bit(text[0]), start_bit(text[0]))
@@ -453,8 +453,18 @@ impl Query {
                     .map_or(v.to_string(), |r| format!("{home}{r}"));
                 self.scope = Some(real_path(p).trim_end_matches('/').as_bytes().to_vec());
             }
+            "-in" => {
+                // Leave out everything under a folder.
+                let p = v
+                    .strip_prefix('~')
+                    .map_or(v.to_string(), |r| format!("{home}{r}"));
+                let root = real_path(p).trim_end_matches('/').as_bytes().to_vec();
+                if !root.is_empty() {
+                    self.excluded_paths.push(root);
+                }
+            }
             "size" => self.size = range(v, parse_size)?,
-            "mtime" | "modified" => {
+            "mtime" | "modified" | "mod" => {
                 // mtime:<7d means "modified within the last 7 days".
                 let now = now_secs();
                 let (lo, hi) = range(v, parse_age)?;
@@ -640,6 +650,31 @@ fn real_path(p: String) -> String {
     let to = String::from_utf8_lossy(&crate::paths::internal(&canonical)).into_owned();
     *last = Some((p, to.clone(), std::time::Instant::now()));
     to
+}
+
+/// `s` in Unicode normalisation form C, as Windows stores almost every file
+/// name: a decomposed query (an `e` and a combining accent, as text copied
+/// from a Mac often is) then matches the composed `é` in a name.
+fn nfc(s: &str) -> std::borrow::Cow<'_, str> {
+    use windows_sys::Win32::Globalization::{NormalizationC, NormalizeString};
+    if s.is_ascii() {
+        return s.into();
+    }
+    let wide: Vec<u16> = s.encode_utf16().collect();
+    let mut out = vec![0u16; wide.len() * 3 + 8];
+    let n = unsafe {
+        NormalizeString(
+            NormalizationC,
+            wide.as_ptr(),
+            wide.len() as i32,
+            out.as_mut_ptr(),
+            out.len() as i32,
+        )
+    };
+    if n <= 0 {
+        return s.into();
+    }
+    String::from_utf16_lossy(&out[..n as usize]).into()
 }
 
 /// Split on spaces, keeping "double quoted" runs together.

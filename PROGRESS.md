@@ -1,3 +1,82 @@
+# November 24 — revamp phase ten (MCP server)
+
+Commits: 1b33faf (10.1-10.4 server, tools, pipe, safety, contract), a51962f (10.5 Settings > Agents), 0889f0e (10.6 fixes from agent runs), and this record. Docs: docs/MCP.md.
+
+Verified: unit tests (266 app) for tool strictness and the 16 KB core budget, argument checks, policy (switch and allowed folders), rename tokens (spent, stale), name_taken, the pipe round trip and not-running detection, the activity log's names-only rule and cap, agent config detection and connect arguments, and the contract test. End to end with the built exe on the test profile: stdio with Seek closed (read_text, list_dir, index_unavailable, invalid_argument, unknown tool), and through the running app the four Monodrive tasks plus permission_denied, undo right after a trash in a fresh window, queued copies, and name_taken. Claude Code 2.1.331 did all four tasks from the tools (11 turns, 24 s, $0.12). Agents detected here: Claude Code, Codex, Antigravity CLI (none connected; the runs used per-run configs, nothing was written to the agents' settings).
+
+Unverified: Codex (its configured models aren't available on the signed-in ChatGPT account) and Antigravity CLI (no per-run MCP config; connecting would change its settings); the Connect buttons (not run, to leave the person's agent configs alone); the Settings > Agents page on screen; the background start from a real agent when Seek is closed with the default data folder (the test profile needs --walker --root, so the app was started by hand with --background).
+
+Not built: the all-profile tools cleanup_duplicates, organize, suggest_names, remove_worktree, run_command and a saved commands list, and the optional ui profile.
+
+Decision for review: an agent's copy or move onto a taken name is refused (name_taken) rather than numbered, because the shell would otherwise ask in a dialog nobody sees.
+
+# November 24 — revamp phase nine (storage, duplicates, worktrees)
+
+Commits: f7e38a7 and d85b5d4 (9.1), 82cb5fd (9.2), bb56237 (9.3), 90a569a (9.4); 43d5743 (Quick Look Read/Source switch and icon).
+
+Verified by unit tests (251 app, including 7 worktree tests against a real Git 2.55 repository): storage by category from listings; cleanup's stale-project rule; duplicates group only identical contents (a same-size file differing in the middle is caught by the full hash), hard links are one file, Keep rules, cancel; worktree discovery from .git files and folders, submodules skipped, list/status/config parsing, locked and missing states, a removal plan that refuses the main checkout and locked worktrees, counts untracked files and branch-only commits and changes its fingerprint when they change, and a status refused when the repository's own config sets a command-running filter.
+
+Unverified: none of Phase 9's pages have been looked at in the running app yet (no launch since the user asked to keep launches to big checkpoints); Recycle Bin moves for duplicates and worktrees and their Ctrl+Z on screen; the Recycle Bin capacity warning (reads the person's BitBucket MaxCapacity; untested on a drive where it is exceeded); Git older than 2.36 and the dubious-ownership message (Git's own text is shown); high-contrast and transparency-off for the new pages.
+
+Review fixes (November 24): 9e27d00 (search fallback), e98324e and bfd762b (Quick Look Save, tasks, Copy, checkboxes), e1f0672 (Tools section), 02fbba3, 631873e, ff4497d (Cleanup), ed8658f, b2b2d5a, 5d49990, bce2a7d (Duplicates), f721bbe (Worktrees speed), 7c1eba1 and 7481bba (Storage bars), 413f45d (Quick Look focus). Measured read-only on the development PC: Cleanup finds about 23 GB in 5.7 s; Worktrees' profile walk 0.44 s (30 .git, 4 repositories, 9 worktrees); Duplicates everywhere 18 groups in 2.1 s. Unverified on screen: the latest Storage bars, Duplicates' identical folders and checked moves, Clean up all and Empty Recycle Bin (not run on real data).
+
+Decision for review: 9.4's brief says to recycle the worktree folder and then run git worktree prune. Seek instead recycles the folder and Git's worktrees/<name> record in one operation (Monodrive's approach): Git forgets the worktree the same way, other prunable worktrees are left alone, and Ctrl+Z restores both so Git sees the worktree again. Prune would delete the record permanently and make undo incomplete.
+
+# November 23 — revamp phases seven and eight
+
+Phase 7 commits: c52e408, then the review fixes 667ae43 (palette owns the accent), 3c39de7 (one info-panel action row), b503534, 019da3b and 4784216 (palettes colour the window; intensity), 51aa4f2 (colour restraint), b08b76d (Saved commands), 4405ff8 (icons). Phase 8 commits: 609f336 (8.1), 35b8db1 (8.2), c47a16d (8.3), ec8afa9 and 71b7ded (8.4), 1d23ed5 and 94351b4 (8.5), a95669c, 5f9fea8, 3b1620c, 1523056 (8.6), 473b88e, 21dc85e (review fixes).
+
+Verified in the running app (test profile, fixtures only): palettes in dark (Orchid, Harbor) and light (Orchid); Ctrl+J popover with right labels and the kind detail; Advanced rename preview, apply on two fixture screenshots and one Ctrl+Z restoring both; Resize a fixture JPEG to a 400x260 copy with the original untouched; Markdown front matter, tasks, table, code Copy button, Load images button, format bar Bold and one-step undo. Unit tests (235 app): rename steps and variables, auto increment against batch and disk, presets; image tools never overwrite and leave nothing on a failed write; ZIP listing, traversal/absolute/reserved/link rejection, never-overwrite extraction, compression round trip, read-only guard on file operations; front matter, remote-image detection, format bar; bug-report URL; Explorer command quoting; icon view geometry; palette migration.
+
+Unverified: clicking a task checkbox and Copy in the formatted view after the fixes; Load images with a real web picture; browsing a ZIP in the running app (the user was using the window); Download from the cloud on a real placeholder; the Explorer menu switch (not written to this PC's registry without asking) and --open handing a folder to a running Seek; HEIC conversion (no HEIC file or codec check here); intensity slider and file-list tint on screen; high-contrast and transparency-off for the new surfaces.
+
+Not built: 8.5 Combine PDFs (optional; the pure-Rust merge path would add a PDF-writing dependency and drops bookmarks and form fields); 8.4 table grid editing (the brief allows leaving it out).
+
+Decision for review: the Phase 7 brief said to keep the accent override; it was removed at the user's request because accents did not follow themes.
+
+# November 22 — revamp phase six (search engine)
+
+Commits: 7963c90 (6.1 benchmark, 6.2 engine), 3b0d66e (6.2 app: syntax popover, index mode, ranking setting), and this report. Full tables: docs/benchmarks/PHASE6.md; ranking and query language: docs/SEARCH_RANKING.md.
+
+Measured on the 3.54M-entry C: snapshot with `seek-cli search-bench`: MRR 0.496 -> 0.507, top-1 0.456 -> 0.464, top-5 0.538 -> 0.550; user-folder MRR 0.570 -> 0.591; junk rate 76% -> 55%. No query kind slower beyond run-to-run noise (alternating before/after runs). Engine peak working set ~272 -> ~276 MB; one-off reweight of a saved index 1.7-1.9 s. UI on the release build during catch-up: worst typing stall 31.8 ms (46.4 ms on the launch that reweighted), worst scroll stall 8.3 ms; none over 50 ms. Heimdall (walk index, same machine): Seek faster on 9 of its 10 queries; slower on `main.rs` (6.6 vs 3.4 ms). Everything is not installed.
+
+Verified: 289 workspace tests (new: Windows weights by drive level, case and profile; relisted index rebuilds the same tree; ranking.json reweights a saved index without a rescan and an unreadable file means defaults; -in:, mod:, decomposed queries; name tiers), strict Clippy for engine, CLI and app, motion check.
+
+Unverified: the search syntax popover, the Live/Scan label and the Search ranking row were built and compile but were not opened in the running app (the user asked not to launch it for each change); idle CPU after the full catch-up completes on the 3.5M index; journal-wrap and volume arrival/removal behaviour (existing code, not re-tested in this phase); files whose own names are stored decomposed (NFD) still only match NFD queries.
+
+# November 22 — revamp phase five (interface remap)
+
+Commits: 857df98 and cf6411f (Settings), 0e4e962 (sidebar), 6ef3bf5 (top bar, status bar, Jump, dialogs, selection), ca4b90a (DESIGN.md and inventory). Presentation only; docs/revamp/5-INVENTORY.md lists every control and what moved. Before/after screenshots are in .references/phase5 (ignored).
+
+Verified in the running app, dark and light: Settings pages (rows, tooltips, switches, Done, Updates row), main window (selection, status bar, Jump row), Jump palette. 208 app tests, strict Clippy and the motion check pass. Idle CPU 0.0 ms over 10 s (debug test window, 3 panes); private working set 100 MB there and 379 MB on the 3.54M-entry index during catch-up; release+benchmarks binary 22.0 MB.
+
+Unverified: Windows high-contrast mode and transparency-off for the new surfaces; screen-reader pass over the tooltip-held descriptions; startup time and the binary-size change against Phase 3 were not re-measured.
+
+# November 22 — revamp phase four complete (4.5 not built)
+
+Commits: d6c651b (4.1 Organize, 4.3 empty-space menu and Save split button, drag fixes), 67d7bfe (4.2 Suggest Names), 0667ebd (4.4), cbd5fa5 (opaque popups, update card, column rows), ac27d91 (sidebar drag highlight), 3136160 (4.6).
+
+Verified in the running app (throwaway profile): Organize review, run, toast, Ctrl+Z after restart (files back, empty group folders removed); keep-both on a clash; empty-space menu (shortcuts, checked view); Suggest Names suggestions, Apply and Ctrl+Z; cloud badge on a real OneDrive online-only file; update indicator, popover and failure path; multi-selection drag, drag preview at the pointer, whole-group sidebar drops and row highlight; column rows match list type (measured cap height). Unit tests: 208 app, engine cloud flag; Organize undo across a restart, changed-file skip, folder-is-a-file refusal; Mode::Names conflicts; Save a Copy encoding/no-replace.
+
+Measured: Suggest Names 0.24 ms per file (debug, 200 Markdown files). 4.6 on a 3.54M-entry index copy during catch-up: worst search stall 13.5 ms (was 14.4), worst scroll stall 6.7 ms, first page 10-98 ms, idle presents 8 per 5 s (was 54). Files: docs/benchmarks/large-*.json.
+
+Unverified: the update progress ring and Restart with a real release (no newer release exists; the debug preview simulates it); Save a Copy in the running app; idle CPU after the 30-minute walker catch-up completes; 4.5 picture editing (optional, not built).
+
+Incident: an early mid-drag test with mis-scaled coordinates moved one file out of the user's OneDrive Documents into a fixture folder. It was found in the test journal and moved back unchanged; the test profile's panes now open fixtures only.
+
+# November 4 — revamp item 1.3
+
+Revamp 1.4 core glass/background implementation is recorded on the isolated branch. Combined build, 80 app tests and strict Clippy passed; native material retention and settled maximized dark appearance were checked. Controlled idle, transient frames, high contrast/transparency-off and full background GUI acceptance remain unverified. See docs/revamp/1.4-GLASS-BRIEF.md.
+First-paint gating built and exercised in four owned window modes plus a delayed factory: all launch/close checks and phase ordering passed. 77 tests and strict Clippy passed. Visual flash recording and zero-idle acceptance remain unverified; see [evidence](docs/revamp/1.3-STARTUP.md). Next: glass strength and maximize/restore consistency, per the latest user feedback. No version change or publication.
+
+# November 4 — revamp item 1.2
+
+Preview diagnostics/recovery built and ran in owned profiles: 77 regular app tests, three focused policy/rotation/protocol tests, native mismatched-parent rejection, finite two-attempt broken-file self-test, strict Clippy and 20 desktop assertions per theme. Error details, Retry, Copy diagnostics and valid-PDF recovery checked. First debug fixture preview 232.6 ms, process entry estimate 45 ms; reused normal/enlarged renders 20.0/57.3 ms (not a release or cold-system-cache comparison). The multi-day incident is not reproduced. [Evidence and limits](docs/revamp/1.2-PREVIEW.md). Next: 1.3 first-frame startup visibility. No version change or publication.
+
+# November 4 — isolated revamp, item 1.1
+
+Worktree ../Seek-revamp-glass-panes, branch revamp/glass-quicklook-panes. Item 1.1 built and ran: six updater tests, one explicit published-ZIP extraction, six packaging ZIP checks, owned-window normal launch/exit. Current published ZIP already has forward slashes, so the user's incident remains unreplicated; compatibility/safety improvements and better prefix diagnostics are verified. No version change, push, tag or release. [Execution ledger](docs/REVAMP_PLAN.md), [evidence](docs/revamp/1.1-UPDATER.md). Next: 1.2 preview observability/recovery.
+
 # October 28 — Seek 1.0.2 published and verified
 
 [Seek 1.0.2](https://github.com/sanirudh17/Seek/releases/tag/v1.0.2) is public. GitHub CLI authenticated as `sanirudh17`; GitHub recognizes the requested `sanirudh1017@gmail.com` commit identity as that account. Exact clean build source/tag: `179e236`. The native Setup EXE, updater ZIP and checksums were freshly downloaded without authentication and match local artifacts. The downloaded EXE passed 23 native installer checks again.
@@ -613,3 +692,29 @@ Raw JSONs and methodology: `docs/benchmarks/REPORT.md`. Local intermediate logs 
 
 
 Finish the Stage 2 administrator update/retest gate described at the top and in docs/STAGE2-ADMIN-TESTS.md. Preserve the verified walker path. Do not start Stage 3 before that gate passes. Retain cold-cache/foreground-idle/broad-query/device/stress acceptance checks for Stage 4.
+
+
+Revamp 1.7/2.10 partial feedback pass: normalized Hugeicons and Monocode-style tab plates, stable closing slots, larger sidebar section headings, popup settings rows, full-range opacity and compact/stacked actions. Debug build, 80 tests and strict Clippy passed before the last small closing-slot/heading correction; its source check passed. New tabs and settled appearance were observed, but concurrent user navigation invalidated the multi-step close assertion. Controlled motion/idle and remaining feature-dependent settings pages are still pending.
+
+
+1.5 details-only presentations: 13 native extension checks and no-host guard passed; PDF page turns passed and Word fixture text was observed. Association launch/enlarged handoff remains unverified. 1.6 shared folder activation/history fix builds and passes the 79-test app suite/strict Clippy, with runtime acceptance pending. No release/version change or publication.
+
+
+Review checkpoint: docs/revamp/CURRENT-CHECKLIST.md lists current implemented work, manual checks, shortcuts and all remaining scope. Dedicated presentation launch buttons were removed at the user request; standard double-click/Enter opening remains. Rebuild, focused routing test and strict Clippy passed; direct follow-up GUI assertion was blocked by desktop focus. Full revamp, final measurements and publication remain outstanding.
+
+
+2.1 Quick Look foundation: restricted Enlarge button to image/PDF/DOCX/XLSX types, list-only Space and context-menu opening, Space/Esc closing, Ctrl+I info panel, finite open/close transitions, bounded image Fit/preview-pixel zoom. No app launch per user request. Build, 80 app tests (4 ignored) and strict Clippy passed before the final image loading/error copy refinement; final build checks follow. GUI focus, interrupted transitions, scrolling, motion-off/high-contrast/idle and full-resolution image zoom remain unverified/pending.
+
+Final 2.1 source checks: debug build and strict all-target/all-feature Clippy pass after the loading/error distinction refinement. No Seek window was opened. Keep GUI verification pending.
+
+
+Quick Look feedback follow-up: user confirmed base Quick Look, mouse zoom, file switching, PDF page keys and closing. Added Ctrl++/Ctrl+= zoom in, Ctrl+- zoom out, Ctrl+0 Fit, Ctrl+1 preview 100%, plus/minus buttons, a single Quick Look eye action replacing Enlarge, tight spreadsheet framing, and finite information-panel slide/fade. Combined debug build, 81 tests (4 ignored), strict Clippy and whitespace checks passed. No app reopened; new shortcut/animation/frame GUI acceptance remains pending.
+
+
+Image-panning checkpoint: grab/drag a zoomed preview with cursor feedback and bounded scroll, or Shift+arrows for keyboard panning. Fit/new selection/new reader session resets offsets; mouse release outside and deactivation cancel a held pan. Debug build, 82 app tests (4 ignored), strict Clippy and whitespace checks passed. Launching the owned sample review folder for user acceptance; pointer behavior and all edge/state interactions remain unverified until exercised.
+
+
+Reader/pan checkpoint: explicit fixed-viewport image panning, shared symmetric bounds, Reset / Fit, true 13px Monocode eye, native Windows hand mapping, centered continuous Word reader and centered spacious Excel view implemented. Production build, 82 tests, strict Clippy and five native host audits passed; long Word output was exactly 12,000 characters. Standalone cursor unit test is blocked by offline test-support dependencies, and the new visual/cursor/keyboard behavior remains a manual checkpoint. No GPUI version or release changes.
+
+
+Image-controls checkpoint: confirmed hidden labels were accessibility-only and Fit had been capped at 1x. Fit now scales to the frame up to 16x, while actual remains 1x; visible fixed-width labelled controls, reset icon and current percentage replace the squashed empty controls. Debug build, 82 tests (4 ignored), strict Clippy and whitespace checks passed. A native capture inspected in the running app shows the full Fit image/100% labels, clear reset icon and Fit at 118%. User interaction was active, so no automated input was sent; further mode-switch/keyboard/resize acceptance remains manual.

@@ -51,6 +51,24 @@ pub fn change(
         *anchor = Some(row.file.path.clone());
     }
 }
+/// A plain press on an item that is part of a multi-selection keeps the
+/// selection, so the whole selection can be dragged; releasing without a
+/// drag then selects only that item, as in Explorer.
+pub fn press_keeps_selection(
+    selected: &HashSet<PathBuf>,
+    path: &PathBuf,
+    shift: bool,
+    control: bool,
+) -> bool {
+    !shift && !control && selected.len() > 1 && selected.contains(path)
+}
+/// The selected paths in on-screen order, for a drag.
+pub fn ordered(rows: &[Row], selected: &HashSet<PathBuf>) -> Vec<PathBuf> {
+    rows.iter()
+        .filter(|row| selected.contains(&row.file.path))
+        .map(|row| row.file.path.clone())
+        .collect()
+}
 pub fn next(current: Option<usize>, len: usize, key: &str, columns: usize) -> Option<usize> {
     if len == 0 {
         return None;

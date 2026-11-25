@@ -1,4 +1,5 @@
 use seek_engine::{Engine, Options, Query};
+mod search_bench;
 mod stress;
 use std::{
     collections::BTreeMap,
@@ -354,6 +355,7 @@ fn run() -> Result<(), String> {
         }
         "bench" => bench(&args),
         "stress" => stress::run(&args),
+        "search-bench" => search_bench::run(&args),
         "self-test" => self_test(&args),
         _ => {
             println!(

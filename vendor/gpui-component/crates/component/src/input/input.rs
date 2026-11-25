@@ -619,7 +619,9 @@ impl RenderOnce for Input {
                     // rejects the items that would change the text.
                     let editable = enabled && !capabilities.is_readonly();
                     let mut menu = NativeMenu::new();
-                    if capabilities.is_code_editor() {
+                    if capabilities.is_code_editor()
+                        && (capabilities.has_definition() || capabilities.has_code_actions())
+                    {
                         menu = menu
                             .menu_with_disabled(
                                 t!("Input.Go to Definition"),

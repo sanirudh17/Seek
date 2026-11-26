@@ -88,6 +88,77 @@ mod tests {
             Some(super::Preset::Frost)
         );
     }
+
+    #[test]
+    fn every_syntax_role_reads_at_three_to_one_on_every_palette() {
+        use gpui::{Hsla, hsla, rgb};
+        for dark in [false, true] {
+            let syntax = super::SyntaxPalette::from_tints(super::Tints::new(dark));
+            let resolved = syntax.to_syntax_colors();
+            let roles = [
+                ("keyword", syntax.keyword),
+                ("string", syntax.string),
+                ("number", syntax.number),
+                ("comment", syntax.comment),
+                ("function", syntax.function),
+                ("type", syntax.type_),
+                ("constant", syntax.constant),
+                ("punctuation", syntax.punctuation),
+            ];
+            for (role, expected) in roles {
+                let got = resolved
+                    .style(role)
+                    .and_then(|s| s.color)
+                    .unwrap_or_else(|| panic!("missing syntax role {role}"));
+                assert!(
+                    (got.h - expected.h).abs() < 1e-3
+                        && (got.s - expected.s).abs() < 1e-3
+                        && (got.l - expected.l).abs() < 1e-3,
+                    "role {role} did not round-trip into SyntaxColors: got {got:?}, expected {expected:?}"
+                );
+            }
+            for named in super::PALETTES {
+                let backgrounds: Vec<(&str, Hsla)> = if dark {
+                    let tint = Hsla::from(rgb(named.dark_surface));
+                    let solid_chrome = hsla(tint.h, tint.s * 0.6, 0.075, 1.);
+                    let solid_pane = hsla(tint.h, (tint.s * 1.2).min(0.45), 0.072, 1.);
+                    vec![
+                        ("dark_surface", tint),
+                        ("solid_chrome", solid_chrome),
+                        ("solid_pane", solid_pane),
+                        ("glass_over_dark", Hsla::from(rgb(0x1f2124))),
+                    ]
+                } else {
+                    let surface = Hsla::from(rgb(named.light_sidebar));
+                    let chrome = Hsla {
+                        l: surface.l - 0.015,
+                        s: (surface.s * 1.4).min(1.),
+                        ..surface
+                    };
+                    let pane = Hsla {
+                        l: surface.l + (1. - surface.l) * 0.55,
+                        ..surface
+                    };
+                    vec![
+                        ("light_sidebar", surface),
+                        ("light_chrome", chrome),
+                        ("light_pane", pane),
+                        ("white", Hsla::from(rgb(0xffffff))),
+                    ]
+                };
+                for (role, color) in roles {
+                    for (bg_name, bg) in &backgrounds {
+                        let ratio = super::contrast(color, *bg);
+                        assert!(
+                            ratio >= 3.0,
+                            "{role} on {} {bg_name} (dark={dark}): {ratio:.2}",
+                            named.id
+                        );
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// Refresh on settings/activation, never on an idle timer or each row render.
@@ -192,6 +263,107 @@ impl Tints {
             pink: c(0xc4307e, 0xf07ab0),
             neutral: c(0x6b7280, 0x9ca3af),
         }
+    }
+}
+
+/// The eight syntax-highlighting roles, mapped directly from the active
+/// palette's six tints and neutral so code previews, Quick Look, document
+/// panes and the editor share identical, palette-matched colours.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SyntaxPalette {
+    pub keyword: Hsla,
+    pub string: Hsla,
+    pub number: Hsla,
+    pub comment: Hsla,
+    pub function: Hsla,
+    pub type_: Hsla,
+    pub constant: Hsla,
+    pub punctuation: Hsla,
+}
+
+impl SyntaxPalette {
+    pub fn from_tints(t: Tints) -> Self {
+        Self {
+            keyword: t.purple,
+            string: t.green,
+            number: t.orange,
+            comment: t.neutral,
+            function: t.blue,
+            type_: t.cyan,
+            constant: t.pink,
+            punctuation: t.neutral,
+        }
+    }
+
+    pub fn from_palette(p: Palette) -> Self {
+        Self::from_tints(p.tints)
+    }
+
+    pub fn style(self, role: &str) -> Option<HighlightStyle> {
+        let color = match role {
+            "keyword" | "preproc" | "label" | "title" => self.keyword,
+            "string" | "string.escape" | "string.regex" | "string.special" => self.string,
+            "number" => self.number,
+            "comment" | "comment.doc" => {
+                return Some(HighlightStyle {
+                    color: Some(self.comment),
+                    font_style: Some(gpui::FontStyle::Italic),
+                    ..Default::default()
+                });
+            }
+            "function" | "property" | "attribute" => self.function,
+            "type" | "constructor" | "tag" | "tag.doctype" => self.type_,
+            "constant" | "boolean" | "enum" | "variant" | "variable.special" => self.constant,
+            "punctuation"
+            | "punctuation.bracket"
+            | "punctuation.delimiter"
+            | "punctuation.list_marker"
+            | "punctuation.special"
+            | "operator" => self.punctuation,
+            _ => return None,
+        };
+        Some(HighlightStyle {
+            color: Some(color),
+            ..Default::default()
+        })
+    }
+
+    pub fn to_syntax_colors(self) -> gpui_component::highlighter::SyntaxColors {
+        let entry = |c: Hsla| serde_json::json!({ "color": c });
+        let italic = |c: Hsla| serde_json::json!({ "color": c, "font_style": "italic" });
+        serde_json::from_value(serde_json::json!({
+            "keyword": entry(self.keyword),
+            "preproc": entry(self.keyword),
+            "label": entry(self.keyword),
+            "title": entry(self.keyword),
+            "string": entry(self.string),
+            "string.escape": entry(self.string),
+            "string.regex": entry(self.string),
+            "string.special": entry(self.string),
+            "string.special.symbol": entry(self.constant),
+            "number": entry(self.number),
+            "comment": italic(self.comment),
+            "comment.doc": italic(self.comment),
+            "function": entry(self.function),
+            "property": entry(self.function),
+            "attribute": entry(self.function),
+            "type": entry(self.type_),
+            "constructor": entry(self.type_),
+            "tag": entry(self.type_),
+            "tag.doctype": entry(self.type_),
+            "constant": entry(self.constant),
+            "boolean": entry(self.constant),
+            "enum": entry(self.constant),
+            "variant": entry(self.constant),
+            "variable.special": entry(self.constant),
+            "punctuation": entry(self.punctuation),
+            "punctuation.bracket": entry(self.punctuation),
+            "punctuation.delimiter": entry(self.punctuation),
+            "punctuation.list_marker": entry(self.punctuation),
+            "punctuation.special": entry(self.punctuation),
+            "operator": entry(self.punctuation),
+        }))
+        .expect("valid palette syntax colours")
     }
 }
 
@@ -544,6 +716,7 @@ pub fn apply(settings: &Settings, window: Option<&mut Window>, cx: &mut App) {
         t.colors.popover_foreground = p.text;
         t.colors.caret = p.accent;
         let mut highlight = (*t.highlight_theme).clone();
+        highlight.style.syntax = SyntaxPalette::from_palette(p).to_syntax_colors();
         // A slightly darker column for line numbers, distinct from the text.
         highlight.style.editor_gutter_background = Some(Hsla::from(if mode.is_dark() {
             rgba(0x0000001f)

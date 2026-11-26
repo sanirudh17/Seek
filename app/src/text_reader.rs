@@ -636,7 +636,13 @@ impl Seek {
                     }),
                 );
             } else {
-                preview = preview.font_family(crate::tokens::FONT_MONO).child(text);
+                let lang = crate::code_highlight::language(&row.file.path);
+                let syntax = crate::appearance::SyntaxPalette::from_palette(p);
+                let highlights = crate::code_highlight::highlight_text(lang, &text, &syntax);
+                let styled = StyledText::new(text).with_highlights(highlights);
+                preview = preview
+                    .font_family(crate::tokens::FONT_MONO)
+                    .child(styled);
             }
         } else {
             preview = preview

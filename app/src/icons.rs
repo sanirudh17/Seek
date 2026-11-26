@@ -21,6 +21,32 @@ pub fn kind(path: &Path, folder: bool) -> Kind {
     if folder {
         return Kind::Folder;
     }
+    let name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    if name == ".env"
+        || name.starts_with(".env.")
+        || name.ends_with(".env")
+        || name == "dockerfile"
+        || name.starts_with("dockerfile.")
+        || matches!(
+            name.as_str(),
+            "makefile"
+                | "gemfile"
+                | "rakefile"
+                | ".gitignore"
+                | ".gitattributes"
+                | ".gitconfig"
+                | ".editorconfig"
+        )
+    {
+        return Kind::Code;
+    }
+    if matches!(name.as_str(), "readme" | "license" | "changelog") {
+        return Kind::Text;
+    }
     match path
         .extension()
         .and_then(|e| e.to_str())
@@ -34,11 +60,14 @@ pub fn kind(path: &Path, folder: bool) -> Kind {
         | "sldx" | "sldm" | "odp" => Kind::Powerpoint,
         "pdf" => Kind::Pdf,
         "txt" | "md" | "markdown" | "rtf" | "log" => Kind::Text,
-        "rs" | "py" | "js" | "jsx" | "ts" | "tsx" | "c" | "cc" | "cpp" | "h" | "hpp" | "cs"
-        | "go" | "java" | "swift" | "html" | "css" | "json" | "xml" | "yaml" | "yml" | "toml"
-        | "sh" | "ps1" | "bat" | "sql" | "vue" | "svelte" | "dart" | "kt" | "rb" | "php" => {
-            Kind::Code
-        }
+        "rs" | "py" | "js" | "jsx" | "mjs" | "cjs" | "ts" | "tsx" | "mts" | "cts" | "c" | "cc"
+        | "cpp" | "cxx" | "h" | "hpp" | "hxx" | "cs" | "go" | "java" | "swift" | "html" | "htm"
+        | "xhtml" | "css" | "scss" | "sass" | "less" | "json" | "jsonc" | "xml" | "xaml"
+        | "csproj" | "fsproj" | "vbproj" | "props" | "targets" | "plist" | "rss" | "atom"
+        | "yaml" | "yml" | "toml" | "sh" | "bash" | "zsh" | "fish" | "ps1" | "psm1" | "psd1"
+        | "bat" | "cmd" | "sql" | "vue" | "svelte" | "dart" | "kt" | "kts" | "rb" | "rake"
+        | "gemspec" | "php" | "phtml" | "lua" | "dockerfile" | "ini" | "conf" | "cfg"
+        | "properties" | "diff" | "patch" | "env" => Kind::Code,
         "zip" | "rar" | "7z" | "tar" | "gz" | "bz2" | "xz" | "zst" | "iso" => Kind::Archive,
         "mp3" | "wav" | "flac" | "ogg" | "m4a" | "aac" | "opus" | "mid" => Kind::Audio,
         "mp4" | "mov" | "m4v" | "mkv" | "avi" | "webm" | "wmv" | "mpeg" | "mpg" | "3gp" => {

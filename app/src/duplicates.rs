@@ -24,7 +24,7 @@ use std::{
 
 const SAMPLE: u64 = 64 * 1024;
 /// Most files one search looks at.
-pub const MAX_FILES: usize = 500_000;
+pub const MAX_FILES: usize = 2_000_000;
 const CLOUD: u32 = 0x400000 | 0x40000 | 0x1000;
 const REPARSE: u32 = 0x400;
 
@@ -529,7 +529,7 @@ pub fn identical_folders(groups: &[Group], cancel: &AtomicBool) -> Vec<FolderCop
                 }
             }
         }
-        if candidates.len() >= 500 {
+        if candidates.len() >= 1_000 {
             break;
         }
     }
@@ -573,9 +573,9 @@ pub fn identical_folders(groups: &[Group], cancel: &AtomicBool) -> Vec<FolderCop
     found
 }
 
-/// Smallest file the everywhere search compares; smaller copies rarely
-/// matter for space and would swamp the list.
-pub const EVERYWHERE_MIN: u64 = 1 << 20;
+/// Smallest file the everywhere search compares (64 KB); catches duplicate
+/// photos, screenshots, PDFs and documents while skipping tiny config noise.
+pub const EVERYWHERE_MIN: u64 = 64 << 10;
 
 /// A folder that is really one document an app keeps as a folder (its name
 /// ends in an extension, such as "Clip.glint-studio" or "Library.photoslibrary"):
@@ -681,11 +681,14 @@ pub fn find_everywhere(
     let mut by_size: HashMap<u64, Listed> = HashMap::new();
     let mut report = Report::default();
     let mut projects = HashMap::new();
+    let mut engine_saturated = false;
     if let Some(engine) = engine
         && let Ok(mut query) = seek_engine::Query::parse(&format!("size:>={EVERYWHERE_MIN} kind:file"), "")
     {
         query.limit = MAX_FILES;
-        for found in engine.search(&query).unwrap_or_default() {
+        let matches = engine.search(&query).unwrap_or_default();
+        engine_saturated = matches.len() >= MAX_FILES;
+        for found in matches {
             if system_path(&found.path) || in_project(&found.path, &mut projects) {
                 continue;
             }
@@ -697,10 +700,10 @@ pub fn find_everywhere(
         }
     }
     // The index may not cover the profile (only some locations are indexed,
-    // or it is still being built): then walk the profile too, counting each
-    // file once.
+    // it is still being built, or system folders saturated the raw query
+    // limit): then walk the profile too, counting each file once.
     let covered = engine.is_some_and(|e| e.has_directory(home));
-    if report.files == 0 || !covered {
+    if report.files == 0 || !covered || engine_saturated {
         let known: std::collections::HashSet<String> = by_size
             .values()
             .flatten()

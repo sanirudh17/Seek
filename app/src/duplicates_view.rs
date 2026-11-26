@@ -542,7 +542,7 @@ impl Seek {
             match &state.report {
                 None => {
                     card = card.child(note(
-                        "Search everywhere compares every file of 1 MB or more in your own folders, byte for byte. Windows, programs, app data (including hidden folders such as .codex), projects (Git repositories) and app document bundles are left out, because their copies are needed where they are. In a folder… checks one folder completely. Nothing is selected for you: tick the copies you want to move to the Recycle Bin.".into(),
+                        "Search everywhere compares every file of 64 KB or more in your own folders, byte for byte. Windows, programs, app data (including hidden folders such as .codex), projects (Git repositories) and app document bundles are left out, because their copies are needed where they are. In a folder… checks one folder completely. Nothing is selected for you: tick the copies you want to move to the Recycle Bin.".into(),
                     ))
                 }
                 Some(report) if report.groups.is_empty() => {

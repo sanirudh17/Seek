@@ -51,8 +51,12 @@ impl Suggestion {
 const TEMP_AGE: Duration = Duration::from_secs(24 * 3600);
 /// Installers and disk images in Downloads left alone this long are offered.
 const DOWNLOAD_AGE: Duration = Duration::from_secs(30 * 24 * 3600);
-/// A repository untouched this long has its build folders offered.
+/// A repository untouched this long has its build folders offered under "old projects".
 pub const STALE_REPO: Duration = Duration::from_secs(90 * 24 * 3600);
+/// A repository untouched for at least a week with a large generated build folder.
+pub const RECENT_IDLE_REPO: Duration = Duration::from_secs(7 * 24 * 3600);
+/// Minimum size (50 MiB) for a recent-project generated build folder to be suggested.
+const LARGE_BUILD_MIN: u64 = 50 << 20;
 const BUILD_FOLDERS: [&str; 21] = [
     "node_modules",
     "target",
@@ -79,8 +83,8 @@ const BUILD_FOLDERS: [&str; 21] = [
 /// Items smaller than this aren't worth a line.
 const MIN_ITEM: u64 = 4 << 10;
 /// How long a whole look may take, and how many entries one folder walk reads.
-const DEADLINE: Duration = Duration::from_secs(25);
-const WALK_ENTRIES: usize = 400_000;
+const DEADLINE: Duration = Duration::from_secs(35);
+const WALK_ENTRIES: usize = 500_000;
 const INSTALLERS: [&str; 9] = ["exe", "msi", "msix", "msixbundle", "appx", "appxbundle", "iso", "img", "vhdx"];
 
 #[derive(Clone, Copy)]
@@ -129,10 +133,18 @@ const SPOTS: &[Spot] = &[
     spot(Developer, Home, r".cargo\registry\cache"),
     spot(Developer, Home, r".cargo\registry\src"),
     spot(Developer, Home, r".cargo\git\checkouts"),
+    spot(Developer, Home, r".cargo\git\db"),
     spot(Developer, Local, r"pip\Cache"),
+    spot(Developer, Local, r"pip\http"),
+    spot(Developer, Local, r"pip\http-v2"),
+    spot(Developer, Local, r"pip\wheels"),
     spot(Developer, Local, r"uv\cache"),
     spot(Developer, Local, r"pypoetry\Cache"),
     spot(Developer, Home, r".gradle\caches"),
+    spot(Developer, Home, r".m2\wrapper\dists"),
+    spot(Developer, Home, r"scoop\cache"),
+    spot(Developer, Local, r"Chocolatey\cache"),
+    spot(Developer, Local, r"vcpkg\downloads"),
     // Not Maven's .m2\repository: it also holds what `mvn install` put there
     // from the person's own projects, which can't be downloaded again.
     spot(Developer, Home, r".nuget\packages"),
@@ -206,6 +218,16 @@ const SPOTS: &[Spot] = &[
     spot(Developer, Home, r".cache\electron"),
     spot(Developer, Home, r".cache\electron-builder"),
     spot(Developer, Home, r".cache\prisma"),
+    spot(Developer, Home, r".cache\bazel"),
+    spot(Developer, Home, r".cache\pnpm"),
+    spot(Developer, Home, r".cache\bun"),
+    spot(Developer, Home, r".cache\gradle"),
+    spot(Developer, Home, r".cache\helm"),
+    spot(Developer, Home, r".cache\vcpkg"),
+    spot(Developer, Home, r".cache\composer"),
+    spot(Developer, Home, r".cache\coursier"),
+    spot(Developer, Local, r"JetBrains\*\index"),
+    spot(Developer, Local, r"Android\Sdk\.temp"),
     // Downloaded models: large, and slow to download again.
     // The downloaded models only: .cache\huggingface also keeps the sign-in
     // token, which must never go.
@@ -214,6 +236,8 @@ const SPOTS: &[Spot] = &[
     spot(Models, Home, r".cache\huggingface\datasets"),
     spot(Models, Home, r".cache\torch"),
     spot(Models, Home, r".cache\whisper"),
+    spot(Models, Home, r".cache\clip"),
+    spot(Models, Home, r".cache\sentence_transformers"),
     // Editors and chat apps rebuild these on the next start.
     spot(Apps, Roaming, r"Code\Cache"),
     spot(Apps, Roaming, r"Code\CachedData"),
@@ -227,7 +251,30 @@ const SPOTS: &[Spot] = &[
     spot(Apps, Roaming, r"Code - Insiders\GPUCache"),
     spot(Apps, Roaming, r"Cursor\Cache"),
     spot(Apps, Roaming, r"Cursor\CachedData"),
+    spot(Apps, Roaming, r"Cursor\CachedExtensionVSIXs"),
     spot(Apps, Roaming, r"Cursor\Code Cache"),
+    spot(Apps, Roaming, r"Cursor\GPUCache"),
+    spot(Apps, Roaming, r"Cursor\DawnCache"),
+    spot(Apps, Roaming, r"Cursor\DawnGraphiteCache"),
+    spot(Apps, Roaming, r"Cursor\DawnWebGPUCache"),
+    spot(Apps, Roaming, r"Claude\Cache"),
+    spot(Apps, Roaming, r"Claude\Code Cache"),
+    spot(Apps, Roaming, r"Claude\GPUCache"),
+    spot(Apps, Roaming, r"Claude\DawnCache"),
+    spot(Apps, Roaming, r"Claude\DawnGraphiteCache"),
+    spot(Apps, Roaming, r"Claude\DawnWebGPUCache"),
+    spot(Apps, Roaming, r"Notion\Cache"),
+    spot(Apps, Roaming, r"Notion\Code Cache"),
+    spot(Apps, Roaming, r"Notion\GPUCache"),
+    spot(Apps, Roaming, r"Figma\Cache"),
+    spot(Apps, Roaming, r"Figma\Code Cache"),
+    spot(Apps, Roaming, r"Figma\GPUCache"),
+    spot(Apps, Roaming, r"Obsidian\Cache"),
+    spot(Apps, Roaming, r"Obsidian\Code Cache"),
+    spot(Apps, Roaming, r"Obsidian\GPUCache"),
+    spot(Apps, Roaming, r"Postman\Cache"),
+    spot(Apps, Roaming, r"Postman\Code Cache"),
+    spot(Apps, Roaming, r"Postman\GPUCache"),
     spot(Apps, Roaming, r"Windsurf\Cache"),
     spot(Apps, Roaming, r"Windsurf\CachedData"),
     spot(Apps, Roaming, r"Windsurf\Code Cache"),
@@ -264,9 +311,14 @@ const SPOTS: &[Spot] = &[
     spot(Apps, Local, r"Microsoft\EdgeWebView\User Data\*\Cache"),
     spot(Apps, Local, r"Microsoft\EdgeWebView\User Data\*\Code Cache"),
     spot(Apps, Local, r"Microsoft\EdgeWebView\User Data\*\GPUCache"),
-    // Store apps' web caches and Windows' own internet cache.
+    spot(Apps, Local, r"Microsoft\EdgeWebView\User Data\GrShaderCache"),
+    spot(Apps, Local, r"Microsoft\EdgeWebView\User Data\ShaderCache"),
+    // Store apps' web caches and Windows' own internet/WebCache caches.
     spot(Apps, Local, r"Packages\*\AC\INetCache"),
+    spot(Apps, Local, r"Packages\*\LocalCache\Local\Microsoft\Windows\INetCache"),
     spot(Apps, Local, r"Microsoft\Windows\INetCache"),
+    spot(Apps, Local, r"Microsoft\Windows\Caches"),
+    spot(Apps, Local, r"Microsoft\Windows\WebCache"),
     spot(Apps, Local, r"Microsoft\Windows\SharedWebView\EBWebView\*\Cache"),
     spot(Apps, Local, r"Microsoft\Windows\SharedWebView\EBWebView\*\Code Cache"),
     spot(Apps, Local, r"NVIDIA Corporation\*\CefCache"),
@@ -304,6 +356,16 @@ const SPOTS: &[Spot] = &[
     spot(Browsers, Local, r"Opera Software\*\Default\Cache"),
     spot(Browsers, Roaming, r"Opera Software\*\Default\Code Cache"),
     spot(Browsers, Roaming, r"Opera Software\*\Default\GPUCache"),
+    spot(Browsers, Local, r"Arc\User Data\*\Cache"),
+    spot(Browsers, Local, r"Arc\User Data\*\Code Cache"),
+    spot(Browsers, Local, r"Arc\User Data\*\GPUCache"),
+    spot(Browsers, Local, r"Dia\User Data\*\Cache"),
+    spot(Browsers, Local, r"Dia\User Data\*\Code Cache"),
+    spot(Browsers, Local, r"Perplexity\Comet\User Data\*\Cache"),
+    spot(Browsers, Local, r"Perplexity\Comet\User Data\*\Code Cache"),
+    spot(Browsers, Local, r"Thorium\User Data\*\Cache"),
+    spot(Browsers, Local, r"Thorium\User Data\*\Code Cache"),
+    spot(Browsers, Local, r"Floorp\Profiles\*\cache2"),
     // Graphics drivers rebuild compiled shaders as games and apps run.
     spot(Shaders, Local, r"D3DSCache"),
     spot(Shaders, Local, r"NVIDIA\DXCache"),
@@ -326,12 +388,21 @@ const SPOTS: &[Spot] = &[
     spot(Crashes, Local, r"EpicGamesLauncher\Saved\Crashes"),
     // Logs apps rotate on their own.
     spot(Logs, Local, r"Docker\log"),
+    spot(Logs, Roaming, r"Docker\log"),
+    spot(Logs, Local, r"JetBrains\*\log"),
+    spot(Logs, Roaming, r"Claude\logs"),
+    spot(Logs, Roaming, r"Cursor\logs"),
+    spot(Logs, Roaming, r"Code\logs"),
+    spot(Logs, Roaming, r"Antigravity\logs"),
     spot(Logs, Local, r"EpicGamesLauncher\Saved\Logs"),
     spot(Logs, Local, r"Battle.net\Logs"),
     spot(Logs, Local, r"Riot Games\Riot Client\Logs"),
     spot(Logs, Home, r".gradle\daemon"),
     // What installers and updaters leave behind.
     spot(Leftovers, Local, r"SquirrelTemp"),
+    spot(Leftovers, Local, r"AnthropicClaude\packages"),
+    spot(Leftovers, Local, r"Discord\packages"),
+    spot(Leftovers, Local, r"Slack\packages"),
     spot(Leftovers, Local, r"Downloaded Installations"),
     spot(Leftovers, Local, r"Microsoft\Windows\Temporary Internet Files"),
 ];
@@ -372,7 +443,7 @@ fn profile_caches(home: &Path) -> Vec<(Group, PathBuf)> {
         .iter()
         .map(|b| (home.join("AppData").join(b), 0))
         .collect();
-    let deadline = Instant::now() + Duration::from_secs(4);
+    let deadline = Instant::now() + Duration::from_secs(6);
     while let Some((dir, depth)) = stack.pop() {
         if Instant::now() >= deadline {
             break;
@@ -394,7 +465,12 @@ fn profile_caches(home: &Path) -> Vec<(Group, PathBuf)> {
                     .map(|p| (Browsers, p)),
             );
         }
-        if depth > 0 && (is_plain_dir(&dir.join("Code Cache")) || is_plain_dir(&dir.join("GPUCache"))) {
+        if depth > 0
+            && (is_plain_dir(&dir.join("Code Cache"))
+                || is_plain_dir(&dir.join("GPUCache"))
+                || is_plain_dir(&dir.join("DawnCache"))
+                || is_plain_dir(&dir.join("DawnGraphiteCache")))
+        {
             let group = if browser { Browsers } else { Apps };
             out.extend(
                 PROFILE_CACHES
@@ -405,7 +481,7 @@ fn profile_caches(home: &Path) -> Vec<(Group, PathBuf)> {
             );
             continue;
         }
-        if depth >= 5 {
+        if depth >= 6 {
             continue;
         }
         let Ok(entries) = std::fs::read_dir(&dir) else { continue };
@@ -546,16 +622,17 @@ fn ignored_by_git(repo: &Path, name: &str) -> bool {
 }
 
 /// A build folder belongs to a repository at its parent that has been left
-/// alone long enough, is generated (see ALWAYS_GENERATED), and is not
-/// itself inside another build folder.
-pub fn stale_build_folder(folder: &Path, now: SystemTime) -> bool {
+/// alone for at least `min_age`, is generated (see ALWAYS_GENERATED) or
+/// ignored by `.gitignore`, and is not itself inside another build folder.
+fn generated_build_folder_older_than(folder: &Path, now: SystemTime, min_age: Duration) -> bool {
     let Some(repo) = folder.parent() else {
         return false;
     };
     let Some(name) = folder.file_name().map(|n| n.to_string_lossy().to_string()) else {
         return false;
     };
-    let generated = ALWAYS_GENERATED.iter().any(|g| name.eq_ignore_ascii_case(g)) || ignored_by_git(repo, &name);
+    let generated =
+        ALWAYS_GENERATED.iter().any(|g| name.eq_ignore_ascii_case(g)) || ignored_by_git(repo, &name);
     if !generated {
         return false;
     }
@@ -565,7 +642,14 @@ pub fn stale_build_folder(folder: &Path, now: SystemTime) -> bool {
     });
     !nested
         && std::fs::symlink_metadata(repo.join(".git")).is_ok()
-        && repo_touched(repo).is_some_and(|t| now.duration_since(t).is_ok_and(|d| d >= STALE_REPO))
+        && repo_touched(repo).is_some_and(|t| now.duration_since(t).is_ok_and(|d| d >= min_age))
+}
+
+/// A build folder belongs to a repository at its parent that has been left
+/// alone long enough (90 days), is generated (see ALWAYS_GENERATED), and is not
+/// itself inside another build folder.
+pub fn stale_build_folder(folder: &Path, now: SystemTime) -> bool {
+    generated_build_folder_older_than(folder, now, STALE_REPO)
 }
 
 /// Bytes under `path` by walking it: links and junctions aren't followed,
@@ -836,9 +920,11 @@ pub fn suggest(
             total: None,
         });
     }
-    // Build folders in repositories left alone for months.
-    progress("Old projects");
+    // Build folders in repositories left alone for months, plus large
+    // generated build caches in repos untouched for at least a week.
+    progress("Project build folders");
     let mut builds = vec![];
+    let mut recent_large_builds = vec![];
     let mut repos: Vec<PathBuf> = repositories.to_vec();
     if let Some(engine) = engine {
         for name in BUILD_FOLDERS {
@@ -864,10 +950,18 @@ pub fn suggest(
         }
         for name in BUILD_FOLDERS {
             let folder = repo.join(name);
-            if is_plain_dir(&folder) && stale_build_folder(&folder, now) {
+            if !is_plain_dir(&folder) {
+                continue;
+            }
+            if stale_build_folder(&folder, now) {
                 let bytes = size(engine, &folder, deadline, cancel);
                 if bytes >= MIN_ITEM {
                     builds.push((folder, bytes));
+                }
+            } else if generated_build_folder_older_than(&folder, now, RECENT_IDLE_REPO) {
+                let bytes = size(engine, &folder, deadline, cancel);
+                if bytes >= LARGE_BUILD_MIN {
+                    recent_large_builds.push((folder, bytes));
                 }
             }
         }
@@ -879,6 +973,16 @@ pub fn suggest(
             note: Some("Rebuilt the next time you build the project".into()),
             action: Action::Delete,
             items: without_nested(builds),
+            total: None,
+        });
+    }
+    if !recent_large_builds.is_empty() {
+        out.push(Suggestion {
+            title: "Large build folders in recent projects".into(),
+            detail: "Generated build folders of 50 MB or more (target, node_modules, .venv, dist and others) in repositories untouched for at least 7 days".into(),
+            note: Some("Rebuilt next time you compile; uncheck any active project you want to keep warm".into()),
+            action: Action::Delete,
+            items: without_nested(recent_large_builds),
             total: None,
         });
     }

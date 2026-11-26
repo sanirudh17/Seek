@@ -598,7 +598,7 @@ impl Plan {
     pub fn at_risk(&self) -> bool {
         !self.changes.is_empty() || !self.commits.is_empty()
     }
-    /// What goes to the Recycle Bin, in one undoable operation.
+    /// Paths removed when permanently deleting this worktree.
     pub fn paths(&self) -> Vec<PathBuf> {
         let mut paths = vec![];
         if self.folder_exists {
@@ -607,6 +607,34 @@ impl Plan {
         paths.push(self.admin.clone());
         paths
     }
+}
+
+/// Permanently deletes the linked worktree folder and its Git admin folder
+/// (`<common>/worktrees/<name>`), then runs `git worktree prune`. Never
+/// follows symlinks or junctions, and clears read-only flags on `.git` files.
+pub fn delete_permanently(git: &Git, common: &Path, plan: &Plan) -> Result<(), String> {
+    let paths = plan.paths();
+    let cancel = std::sync::atomic::AtomicBool::new(false);
+    let progress = crate::cleanup::Progress::default();
+    crate::cleanup::delete(&paths, &cancel, &progress);
+
+    let mut remaining: Vec<String> = Vec::new();
+    if plan.folder_exists && plan.worktree.exists() {
+        remaining.push(plan.worktree.display().to_string());
+    }
+    if plan.admin.exists() {
+        remaining.push(plan.admin.display().to_string());
+    }
+    let git_dir = format!("--git-dir={}", common.display());
+    let _ = git.run(common, &[&git_dir, "worktree", "prune"], None);
+
+    if !remaining.is_empty() {
+        return Err(format!(
+            "Some files could not be deleted (they may be open in another app or terminal): {}",
+            remaining.join(", ")
+        ));
+    }
+    Ok(())
 }
 
 pub fn plan(git: &Git, repo: &Repository, worktree: &Worktree) -> Result<Plan, String> {
@@ -729,6 +757,7 @@ fn unique_commits(
 
 /// The Recycle Bin's size limit on the drive holding `path`, from the
 /// person's own Recycle Bin settings; `None` when Windows doesn't say.
+#[allow(dead_code)]
 pub fn recycle_bin_capacity(path: &Path) -> Option<u64> {
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::Storage::FileSystem::{GetVolumeNameForVolumeMountPointW, GetVolumePathNameW};
@@ -1051,5 +1080,46 @@ mod tests {
         std::fs::create_dir_all(&sub).unwrap();
         std::fs::write(sub.join(".git"), "gitdir: ../.git/modules/sub\n").unwrap();
         assert!(repositories_from([sub.join(".git")]).is_empty());
+    }
+
+    #[test]
+    fn delete_permanently_removes_linked_worktree_and_prunes_admin() {
+        let Some(git) = Git::find() else {
+            return;
+        };
+        let dir = tempfile::tempdir().unwrap();
+        let main = dir.path().join("repo");
+        let linked = dir.path().join("wt-feature");
+        std::fs::create_dir_all(&main).unwrap();
+        git.run(&main, &["init", "-b", "main"], None).unwrap();
+        git.run(&main, &["config", "user.email", "test@seek.local"], None).unwrap();
+        git.run(&main, &["config", "user.name", "Seek Test"], None).unwrap();
+        std::fs::write(main.join("README.md"), "hello").unwrap();
+        git.run(&main, &["add", "."], None).unwrap();
+        git.run(&main, &["commit", "-m", "init"], None).unwrap();
+        git.run(
+            &main,
+            &["worktree", "add", "-b", "feat", &linked.to_string_lossy()],
+            None,
+        )
+        .unwrap();
+
+        let common = normal(&main.join(".git"));
+        let repo = list(&git, &common);
+        let wt = repo
+            .worktrees
+            .iter()
+            .find(|w| key(&w.path) == key(&linked))
+            .cloned()
+            .unwrap();
+        let p = plan(&git, &repo, &wt).unwrap();
+        assert!(p.folder_exists);
+        assert!(p.admin.exists());
+
+        delete_permanently(&git, &common, &p).unwrap();
+        assert!(!linked.exists(), "worktree folder should be permanently deleted");
+        assert!(!p.admin.exists(), "git worktree admin folder should be removed");
+        let after = list(&git, &common);
+        assert_eq!(after.worktrees.len(), 1, "only main checkout should remain");
     }
 }

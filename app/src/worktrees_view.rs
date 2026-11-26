@@ -2,9 +2,9 @@
 //! Storage. Repositories come from the index's `.git` entries plus any the
 //! person added; each worktree shows its branch, Git's notes, whether it is
 //! clean and what rebuildable folders it holds. Removing one shows a plan of
-//! what would be lost, works the plan out again before anything moves, and
-//! moves the folder and Git's record of it to the Recycle Bin in one
-//! undoable operation.
+//! what would be lost, asks for explicit permanent-delete confirmation,
+//! works the plan out again before anything is removed, and permanently
+//! deletes the worktree folder and Git's admin record of it.
 use super::*;
 use crate::worktrees::{Git, Plan, Repository, State, Status};
 use std::collections::HashMap;
@@ -41,8 +41,8 @@ struct Review {
     repo: usize,
     worktree: usize,
     plan: Option<Result<Plan, String>>,
-    /// Shown when the folder may be too large for the Recycle Bin.
-    bin_warning: Option<String>,
+    /// Second-step explicit confirmation before permanent deletion.
+    confirm_permanent: bool,
     busy: bool,
 }
 
@@ -285,28 +285,15 @@ impl Seek {
             repo,
             worktree,
             plan: None,
-            bin_warning: None,
+            confirm_permanent: false,
             busy: true,
         });
-        let cancel = page.cancel.clone();
         let generation = page.generation;
         let job = cx.background_executor().spawn(async move {
-            let plan = found_git().and_then(|git| crate::worktrees::plan(&git, &r, &w));
-            let warning = plan.as_ref().ok().filter(|p| p.folder_exists).and_then(|p| {
-                let size = index_size(&p.worktree, &cancel);
-                let capacity = crate::worktrees::recycle_bin_capacity(&p.worktree)?;
-                (size > capacity).then(|| {
-                    format!(
-                        "This folder ({}) is larger than the Recycle Bin on its drive ({}). Windows will ask before deleting it permanently instead.",
-                        super::storage_view::human(size),
-                        super::storage_view::human(capacity)
-                    )
-                })
-            });
-            (plan, warning)
+            found_git().and_then(|git| crate::worktrees::plan(&git, &r, &w))
         });
         cx.spawn(async move |this, cx| {
-            let (plan, warning) = job.await;
+            let plan = job.await;
             let _ = this.update(cx, |this, cx| {
                 if let Some(page) = &mut this.worktrees_page
                     && page.generation == generation
@@ -314,7 +301,6 @@ impl Seek {
                     && (review.repo, review.worktree) == (repo, worktree)
                 {
                     review.plan = Some(plan);
-                    review.bin_warning = warning;
                     review.busy = false;
                     cx.notify();
                 }
@@ -324,8 +310,8 @@ impl Seek {
         cx.notify();
     }
 
-    /// Works the plan out again and moves the worktree only if nothing
-    /// changed since it was shown.
+    /// Works the plan out again and permanently deletes the worktree only if
+    /// nothing changed since it was reviewed.
     fn remove_worktree(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(page) = &mut self.worktrees_page else {
             return;
@@ -342,6 +328,11 @@ impl Seek {
         let Some(w) = repo.worktrees.get(review.worktree).cloned() else {
             return;
         };
+        let wt_name = w
+            .path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| w.path.to_string_lossy().into_owned());
         review.busy = true;
         let job = cx.background_executor().spawn(async move {
             let git = found_git()?;
@@ -353,37 +344,50 @@ impl Seek {
                 .find(|f| f.path == w.path)
                 .cloned()
                 .unwrap_or(w);
-            crate::worktrees::plan(&git, &fresh, &w)
+            let now = crate::worktrees::plan(&git, &fresh, &w)?;
+            if now != shown {
+                return Ok(Err(now));
+            }
+            crate::worktrees::delete_permanently(&git, &repo.common, &now)?;
+            Ok(Ok(()))
         });
         cx.spawn_in(window, async move |this, cx| {
-            let now = job.await;
+            let result = job.await;
             let _ = this.update_in(cx, |this, window, cx| {
-                match now {
-                    Ok(now) if now == shown => {
-                        this.run_file_op(
-                            crate::file_ops::Operation::Recycle { paths: now.paths() },
+                match result {
+                    Ok(Ok(())) => {
+                        if let Some(page) = &mut this.worktrees_page {
+                            page.review = None;
+                        }
+                        let _ = this.backend.tx.send(Command::Changed);
+                        this.scan_worktrees(cx);
+                        this.show_quiet_toast(
+                            format!("Permanently deleted worktree {wt_name}"),
                             window,
                             cx,
                         );
-                        if this.message.is_none() {
-                            this.scan_worktrees(cx);
-                        } else if let Some(review) =
-                            this.worktrees_page.as_mut().and_then(|p| p.review.as_mut())
-                        {
-                            review.busy = false;
-                        }
                     }
-                    other => {
+                    Ok(Err(changed)) => {
                         if let Some(review) =
                             this.worktrees_page.as_mut().and_then(|p| p.review.as_mut())
                         {
                             review.busy = false;
-                            review.plan = Some(other);
+                            review.confirm_permanent = false;
+                            review.plan = Some(Ok(changed));
                         }
                         this.message = Some(
-                            "The worktree changed since you reviewed it, so nothing moved. Review the new list."
+                            "The worktree changed since you reviewed it, so nothing was deleted. Review the new list."
                                 .into(),
                         );
+                    }
+                    Err(err) => {
+                        if let Some(review) =
+                            this.worktrees_page.as_mut().and_then(|p| p.review.as_mut())
+                        {
+                            review.busy = false;
+                            review.confirm_permanent = false;
+                        }
+                        this.message = Some(err);
                     }
                 }
                 cx.notify();
@@ -800,7 +804,7 @@ impl Seek {
                 panel = panel.child(
                     div()
                         .text_size(TEXT_SMALL)
-                        .child("This worktree's HEAD is detached. Once it is removed, Git may drop these commits at its next cleanup, and Ctrl+Z can't bring them back after that."),
+                        .child("This worktree's HEAD is detached. Once deleted, Git may drop these commits at its next cleanup."),
                 );
             }
         }
@@ -809,41 +813,150 @@ impl Seek {
                 div()
                     .text_size(TEXT_SMALL)
                     .text_color(p.muted)
-                    .child("The folder is gone; only Git's record of it moves."),
+                    .child("The folder is already gone; only Git's admin record will be deleted."),
             );
         }
-        if let Some(warning) = &review.bin_warning {
-            panel = panel.child(div().text_size(TEXT_SMALL).child(warning.clone()));
+
+        let danger_bg = rgba(0xE11D4826);
+        let danger_border = rgba(0xE11D4866);
+        let danger_text = rgb(0xFDA4AF);
+
+        if review.confirm_permanent {
+            let wt_path = plan.worktree.display().to_string();
+            panel.child(
+                div()
+                    .mt_1()
+                    .p_3()
+                    .rounded(RADIUS_CONTROL)
+                    .bg(danger_bg)
+                    .border_1()
+                    .border_color(danger_border)
+                    .flex()
+                    .flex_col()
+                    .gap_2()
+                    .child(
+                        div()
+                            .text_size(TEXT_SMALL)
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_color(p.text)
+                            .child("Permanently delete worktree? This cannot be undone."),
+                    )
+                    .child(
+                        div()
+                            .truncate()
+                            .font_family(FONT_MONO)
+                            .text_size(px(11.))
+                            .text_color(p.muted)
+                            .child(wt_path),
+                    )
+                    .child(
+                        div()
+                            .pt_1()
+                            .flex()
+                            .items_center()
+                            .justify_end()
+                            .gap_2()
+                            .child(
+                                super::settings_view::control("worktree-cancel-perm", "Cancel", p, cx)
+                                    .h(BUTTON_HEIGHT)
+                                    .disabled(review.busy)
+                                    .on_click(cx.listener(|this, _, _, cx| {
+                                        if let Some(review) = this
+                                            .worktrees_page
+                                            .as_mut()
+                                            .and_then(|p| p.review.as_mut())
+                                        {
+                                            review.confirm_permanent = false;
+                                        }
+                                        cx.notify();
+                                    })),
+                            )
+                            .child(
+                                div()
+                                    .id("worktree-confirm-permanent")
+                                    .role(Role::Button)
+                                    .aria_label("Delete permanently")
+                                    .h(BUTTON_HEIGHT)
+                                    .px_3()
+                                    .rounded(RADIUS_CONTROL)
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .cursor_pointer()
+                                    .bg(rgba(0xE11D4838))
+                                    .border_1()
+                                    .border_color(danger_border)
+                                    .text_size(TEXT_SMALL)
+                                    .font_weight(FontWeight::MEDIUM)
+                                    .text_color(danger_text)
+                                    .hover(|s| s.bg(rgba(0xE11D4855)))
+                                    .when(review.busy, |d| d.opacity(0.5).cursor_default())
+                                    .child(super::interface::button_text(if review.busy {
+                                        "Deleting…"
+                                    } else {
+                                        "Delete permanently"
+                                    }))
+                                    .when(!review.busy, |d| {
+                                        d.on_click(cx.listener(|this, _, window, cx| {
+                                            this.remove_worktree(window, cx);
+                                        }))
+                                    }),
+                            ),
+                    ),
+            )
+        } else {
+            panel.child(
+                div()
+                    .pt_1()
+                    .flex()
+                    .items_center()
+                    .gap_3()
+                    .child(
+                        div()
+                            .flex_1()
+                            .text_size(TEXT_SMALL)
+                            .text_color(p.muted)
+                            .child("Permanently deletes the worktree folder and Git's record of it (bypasses the Recycle Bin)"),
+                    )
+                    .child(
+                        div()
+                            .id("worktree-confirm")
+                            .role(Role::Button)
+                            .aria_label("Delete permanently")
+                            .h(BUTTON_HEIGHT)
+                            .px_3()
+                            .rounded(RADIUS_CONTROL)
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .cursor_pointer()
+                            .bg(danger_bg)
+                            .border_1()
+                            .border_color(danger_border)
+                            .text_size(TEXT_SMALL)
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(danger_text)
+                            .hover(|s| s.bg(rgba(0xE11D4840)))
+                            .when(review.busy, |d| d.opacity(0.5).cursor_default())
+                            .child(super::interface::button_text(if plan.at_risk() {
+                                "Delete permanently & lose work…"
+                            } else {
+                                "Delete permanently…"
+                            }))
+                            .when(!review.busy, |d| {
+                                d.on_click(cx.listener(|this, _, _, cx| {
+                                    if let Some(review) = this
+                                        .worktrees_page
+                                        .as_mut()
+                                        .and_then(|p| p.review.as_mut())
+                                    {
+                                        review.confirm_permanent = true;
+                                    }
+                                    cx.notify();
+                                }))
+                            }),
+                    ),
+            )
         }
-        panel.child(
-            div()
-                .pt_1()
-                .flex()
-                .items_center()
-                .gap_3()
-                .child(
-                    div()
-                        .flex_1()
-                        .text_size(TEXT_SMALL)
-                        .text_color(p.muted)
-                        .child("The folder and Git's record of it go to the Recycle Bin · Ctrl+Z puts both back"),
-                )
-                .child(
-                    Button::new("worktree-confirm")
-                        .h(BUTTON_HEIGHT)
-                        .px_3()
-                        .rounded(RADIUS_CONTROL)
-                        .bg(p.text)
-                        .text_color(crate::appearance::modal_surface(p))
-                        .font_weight(FontWeight::MEDIUM)
-                        .disabled(review.busy || self.files_pending != 0)
-                        .child(super::interface::button_text(if plan.at_risk() {
-                            "Remove and lose this work"
-                        } else {
-                            "Move to Recycle Bin"
-                        }))
-                        .on_click(cx.listener(|this, _, window, cx| this.remove_worktree(window, cx))),
-                ),
-        )
     }
 }

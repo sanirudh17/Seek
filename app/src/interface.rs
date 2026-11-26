@@ -718,7 +718,7 @@ impl Seek {
                             } else {
                                 Glyph::ChevronDown
                             })
-                            .size(px(11.))
+                            .size(px(12.))
                             .text_color(p.muted),
                         )
                         .child("Locations")
@@ -729,7 +729,9 @@ impl Seek {
                             this.save_preferences(window, cx);
                         })),
                 )
-                .when(!self.roots.is_empty(), |row| {
+                .when(
+                    self.roots.len() > 1 || !self.preferences.hidden_locations.is_empty(),
+                    |row| {
                     row.child(
                         div()
                             .id("edit-locations-toggle")
@@ -2139,6 +2141,7 @@ impl Seek {
         let width = self.info_width(window);
         let mut panel = div()
             .id("info-panel")
+            .track_scroll(&self.info_scroll)
             .role(Role::Region)
             .aria_label("Information panel")
             .w_full()

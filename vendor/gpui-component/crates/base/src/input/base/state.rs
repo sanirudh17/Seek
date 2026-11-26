@@ -2446,6 +2446,9 @@ impl<M: InputModeKind> InputBaseState<M> {
         }
 
         self.selecting = true;
+        if !self.disabled && !self.focus_handle.is_focused(window) {
+            window.focus(&self.focus_handle, cx);
+        }
         let (offset, line_end_affinity, columns_past_line_end) =
             self.resolve_mouse_position(event.position);
 

@@ -795,8 +795,9 @@ pub struct Seek {
     next_tab_id: usize,
     restoring_input: Option<String>,
     pending_tab_restore: Option<tabs::Tab>,
-    /// File to select and scroll into view once its parent folder loads (11.7).
-    pending_reveal_path: Option<PathBuf>,
+    /// (target_path, expected_parent) to select and scroll into view once its
+    /// parent folder loads (11.7).
+    pending_reveal_path: Option<(PathBuf, PathBuf)>,
     tab_motion: u64,
     closing_tab: Option<tabs::Closing>,
     motion_enabled: bool,
@@ -907,6 +908,11 @@ pub struct Seek {
     info_env_reveal: Option<(PathBuf, bool, std::collections::HashSet<usize>)>,
     /// Read-only selectable code/text preview editor in the info panel (11.4).
     info_editor: Option<text_reader::InfoEditor>,
+    /// Fast cached text preview for the info panel so switching files and clicking
+    /// `.env` Reveal never flickers "Loading text preview...".
+    info_text_cache: Option<(PathBuf, u32, u64, String)>,
+    /// Persistent scroll handle for the info panel so scrolling never bounces.
+    info_scroll: ScrollHandle,
     share: Option<crate::native_share::Session>,
     text_reader: text_reader::State,
     documents: crate::document_preview::Worker,
@@ -1488,6 +1494,8 @@ impl Seek {
             info_pretty: None,
             info_env_reveal: None,
             info_editor: None,
+            info_text_cache: None,
+            info_scroll: ScrollHandle::new(),
             share: None,
             text_reader: text_reader::State::new(),
             documents,
@@ -1788,7 +1796,15 @@ impl Seek {
                     .map(|r| r.file.path.clone())
             })
             .flatten();
-        let pending_reveal = self.pending_reveal_path.clone();
+        let pending_reveal = self
+            .pending_reveal_path
+            .as_ref()
+            .filter(|(_, parent)| {
+                self.scope
+                    .as_deref()
+                    .is_some_and(|s| paths_same_ci(s, parent))
+            })
+            .map(|(target, _)| target.clone());
         let mut revealed_index = None;
         self.table.update(cx, |table, cx| {
             let row_height = gpui_component::Size::Small.table_row_height();
@@ -1885,7 +1901,7 @@ impl Seek {
                 ScrollStrategy::Center,
             );
         } else {
-            if self.pending_reveal_path.is_some()
+            if pending_reveal.is_some()
                 && update.message.is_none()
                 && !self.table.read(cx).delegate().rows.is_empty()
             {
@@ -2081,8 +2097,8 @@ impl Seek {
                 return;
             }
         }
-        self.scope_to(Some(parent), window, cx);
-        self.pending_reveal_path = Some(path);
+        self.scope_to(Some(parent.clone()), window, cx);
+        self.pending_reveal_path = Some((path, parent));
         self.table.read(cx).focus_handle(cx).focus(window, cx);
         cx.notify();
     }
@@ -2093,12 +2109,9 @@ impl Seek {
         };
         match result {
             Ok(path) if path.is_dir() => self.scope_to(Some(path), window, cx),
-            // A file: its folder, showing just that file.
+            // A file: open its parent folder with that exact file selected and scrolled into view.
             Ok(path) if path.is_file() && path.parent().is_some() => {
-                let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-                self.scope_to(path.parent().map(std::path::Path::to_path_buf), window, cx);
-                self.input.update(cx, |input, cx| input.set_value(format!("\"{name}\""), window, cx));
-                self.submit(cx);
+                self.show_in_folder(path, window, cx);
             }
             Ok(path) => {
                 self.message = Some(format!("{} doesn't exist", path.display()));
@@ -2628,6 +2641,17 @@ impl Seek {
         if !(input_focused || list_focused || modifiers.control && key == "l") {
             return;
         }
+        if key == "tab" && input_focused && !modifiers.control && !modifiers.alt {
+            let typed = self.input.read(cx).value().to_string();
+            if let Some(completed) = crate::location::tab_complete(&typed, self.show_hidden) {
+                self.input.update(cx, |input, cx| {
+                    input.set_value(completed, window, cx);
+                    input.focus(window, cx);
+                });
+                cx.stop_propagation();
+                return;
+            }
+        }
         if key == "enter" && input_focused && self.open_address(window, cx) {
             cx.stop_propagation();
             return;
@@ -2728,7 +2752,25 @@ impl Seek {
                 cx.stop_propagation();
             }
             "l" if modifiers.control => {
-                self.input.update(cx, |input, cx| input.focus(window, cx));
+                let current_val = self.input.read(cx).value().to_string();
+                let prefill = if current_val.trim().is_empty() {
+                    self.scope.as_ref().map(|p| {
+                        let mut s = p.to_string_lossy().trim_start_matches(r"\\?\").to_owned();
+                        if !s.ends_with('\\') {
+                            s.push('\\');
+                        }
+                        s
+                    })
+                } else {
+                    None
+                };
+                self.input.update(cx, |input, cx| {
+                    if let Some(path) = prefill {
+                        input.set_value(path, window, cx);
+                    }
+                    input.focus(window, cx);
+                    input.select_all(window, cx);
+                });
                 cx.stop_propagation();
             }
             "a" if modifiers.control && list_focused => {

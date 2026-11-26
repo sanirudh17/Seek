@@ -146,6 +146,88 @@ fn expand(text: &str) -> Result<PathBuf, String> {
     )))
 }
 
+/// Complete a typed Windows path prefix against existing disk entries
+/// (directories first, case-insensitive, bounded to 512 entries). Returns the
+/// single match or longest common prefix if multiple match.
+pub fn tab_complete(typed: &str, show_hidden: bool) -> Option<String> {
+    let trimmed = typed.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let expanded = address(trimmed)?.ok()?;
+    let raw = expanded.to_string_lossy().into_owned();
+    let (dir, prefix) = if raw.ends_with('\\') || raw.ends_with('/') {
+        (PathBuf::from(&raw), String::new())
+    } else {
+        let parent = expanded.parent()?.to_path_buf();
+        let name = expanded
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        (parent, name)
+    };
+    let entries = std::fs::read_dir(&dir).ok()?;
+    let prefix_lower = prefix.to_ascii_lowercase();
+    let mut dirs = Vec::new();
+    let mut files = Vec::new();
+    for entry in entries.flatten().take(512) {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if !show_hidden && name.starts_with('.') {
+            continue;
+        }
+        if !prefix_lower.is_empty() && !name.to_ascii_lowercase().starts_with(&prefix_lower) {
+            continue;
+        }
+        let is_dir = entry.file_type().is_ok_and(|t| t.is_dir());
+        if is_dir {
+            dirs.push(name);
+        } else {
+            files.push(name);
+        }
+    }
+    dirs.sort_by_key(|s| s.to_ascii_lowercase());
+    files.sort_by_key(|s| s.to_ascii_lowercase());
+    let mut matches: Vec<(String, bool)> = dirs
+        .into_iter()
+        .map(|n| (n, true))
+        .chain(files.into_iter().map(|n| (n, false)))
+        .collect();
+    if matches.is_empty() {
+        return None;
+    }
+    let chosen = if matches.len() == 1 {
+        let (name, is_dir) = matches.remove(0);
+        let mut out = dir.join(name).to_string_lossy().into_owned();
+        if is_dir && !out.ends_with('\\') {
+            out.push('\\');
+        }
+        out
+    } else {
+        let first = matches[0].0.clone();
+        let mut lcp_len = first.len();
+        for (other, _) in &matches[1..] {
+            lcp_len = first
+                .chars()
+                .zip(other.chars())
+                .take_while(|(a, b)| a.eq_ignore_ascii_case(b))
+                .map(|(a, _)| a.len_utf8())
+                .sum::<usize>()
+                .min(lcp_len);
+        }
+        if lcp_len > prefix.len() {
+            dir.join(&first[..lcp_len]).to_string_lossy().into_owned()
+        } else {
+            let (name, is_dir) = matches.remove(0);
+            let mut out = dir.join(name).to_string_lossy().into_owned();
+            if is_dir && !out.ends_with('\\') {
+                out.push('\\');
+            }
+            out
+        }
+    };
+    Some(chosen)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -228,5 +310,17 @@ mod tests {
         assert!(address("cd notes").is_none());
         assert!(address("1:2").is_none());
         assert!(address("C:\\a\nC:\\b").is_none());
+    }
+
+    #[test]
+    fn tab_complete_completes_unique_and_common_prefix() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("ProjectsAlpha")).unwrap();
+        std::fs::create_dir(dir.path().join("ProjectsBeta")).unwrap();
+        std::fs::create_dir(dir.path().join("UniqueFolder")).unwrap();
+        let u = tab_complete(&format!("{}\\Uni", dir.path().display()), false).unwrap();
+        assert!(u.ends_with("UniqueFolder\\"), "got {u}");
+        let p = tab_complete(&format!("{}\\Pro", dir.path().display()), false).unwrap();
+        assert!(p.ends_with("Projects"), "got {p}");
     }
 }

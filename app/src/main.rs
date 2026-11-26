@@ -252,11 +252,7 @@ fn main() {
                 shell::CopyPath,
                 Some("DataTable || SeekFiles"),
             ),
-            KeyBinding::new(
-                "ctrl-shift-o",
-                shell::ShowInFolder,
-                Some("DataTable || SeekFiles"),
-            ),
+            KeyBinding::new("ctrl-shift-o", shell::ShowInFolder, None),
             KeyBinding::new("f2", shell::RenameFile, Some("DataTable || SeekFiles")),
             KeyBinding::new("ctrl-shift-n", shell::NewFolder, None),
             KeyBinding::new("ctrl-b", shell::ToggleSidebar, None),

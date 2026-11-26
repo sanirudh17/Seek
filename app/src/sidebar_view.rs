@@ -567,7 +567,7 @@ impl Seek {
                     } else {
                         Glyph::ChevronDown
                     })
-                    .size(px(11.))
+                    .size(px(12.))
                     .text_color(p.muted),
                 )
                 .child("Favorites")

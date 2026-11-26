@@ -715,6 +715,8 @@ pub fn apply(settings: &Settings, window: Option<&mut Window>, cx: &mut App) {
         t.colors.popover = popover;
         t.colors.popover_foreground = p.text;
         t.colors.caret = p.accent;
+        t.colors.selection = p.accent.opacity(0.32);
+        t.tokens.selection = p.accent.opacity(0.32).into();
         let mut highlight = (*t.highlight_theme).clone();
         highlight.style.syntax = SyntaxPalette::from_palette(p).to_syntax_colors();
         // A slightly darker column for line numbers, distinct from the text.

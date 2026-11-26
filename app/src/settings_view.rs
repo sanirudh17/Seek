@@ -594,10 +594,19 @@ impl Seek {
                 this.preferences.hide_env_secrets = *checked;
                 this.save_preferences(window, cx);
             }));
+        let wrap_lines = Switch::new("wrap-lines")
+            .color(p.accent)
+            .checked(self.preferences.wrap_lines)
+            .accessibility_label("Wrap long lines in previews")
+            .on_change(cx.listener(|this, checked, window, cx| {
+                this.preferences.wrap_lines = *checked;
+                this.save_preferences(window, cx);
+            }));
         section("Previews")
             .child(card("Automatic previews", "Show file content in the information panel. Metadata and explicit Quick Look remain available when this is off.", automatic, p))
             .child(card("Image and video thumbnails", "Show thumbnails while browsing. Quick Look and the gallery's enlarged preview remain available when this is off.", thumbnails, p))
             .child(card("Gallery large preview", "Show the selected item large above the gallery's strip. The preview's × hides it; Show preview brings it back.", gallery, p))
+            .child(card("Wrap long lines", "Soft-wrap long lines in text, code and env previews across the info panel, Quick Look and document panes.", wrap_lines, p))
             .child(card("Hide secrets in env previews", "Mask values in .env, .env.* and *.env previews until you reveal them. Hidden values are never copied.", hide_secrets, p))
 
             .into_any_element()
@@ -1090,7 +1099,9 @@ impl Seek {
             )
         });
         let ordered_drives = self.ordered_locations();
-        let mut sidebar_drives = div().w_full().flex().flex_col().gap_1();
+        let show_sidebar_locations =
+            ordered_drives.len() > 1 || !self.preferences.hidden_locations.is_empty();
+        let mut sidebar_drives = div().w_full().flex().flex_col().gap_2();
         for (index, drive) in ordered_drives.iter().enumerate() {
             let shown = !self.preferences.hidden_locations.contains(drive);
             let name = drive
@@ -1100,10 +1111,16 @@ impl Seek {
             let toggle_path = drive.clone();
             sidebar_drives = sidebar_drives.child(
                 div()
+                    .w_full()
                     .flex()
                     .items_center()
                     .justify_between()
-                    .py_1()
+                    .px_4()
+                    .py_3()
+                    .rounded(crate::tokens::RADIUS_CARD)
+                    .border_1()
+                    .border_color(p.text.opacity(0.1))
+                    .bg(p.settings_card)
                     .child(
                         div()
                             .flex()
@@ -1111,7 +1128,7 @@ impl Seek {
                             .gap_2()
                             .text_size(px(13.))
                             .text_color(if shown { p.text } else { p.muted })
-                            .child(Icon::new(Glyph::HardDrive).size(px(14.)).text_color(p.muted))
+                            .child(Icon::new(Glyph::HardDrive).size(px(15.)).text_color(p.muted))
                             .child(name.clone()),
                     )
                     .child(
@@ -1131,13 +1148,22 @@ impl Seek {
                     .when(custom, |d| d.child(Input::new(&self.locations_input).h(px(34.)))), p))
             .child(card("Excluded folders", "Hide these folders from results. Separate multiple folders with semicolons (;).",
                 Input::new(&self.exclusions_input).h(px(34.)), p))
-            .when(!ordered_drives.is_empty(), |sec| {
-                sec.child(card(
-                    "Sidebar locations",
-                    "Hide drives from the sidebar without removing them from search or Storage. Drag or use Edit on Locations in the sidebar to reorder.",
-                    sidebar_drives,
-                    p,
-                ))
+            .when(show_sidebar_locations, |sec| {
+                sec.child(
+                    div()
+                        .pt_2()
+                        .flex()
+                        .flex_col()
+                        .gap_2()
+                        .child(
+                            div()
+                                .text_size(px(13.))
+                                .font_weight(FontWeight::MEDIUM)
+                                .text_color(p.muted)
+                                .child("Sidebar drives"),
+                        )
+                        .child(sidebar_drives),
+                )
             })
             .child(div().flex().gap_2().pt_2()
                 .child(control("save-locations", "Save locations", p, cx)

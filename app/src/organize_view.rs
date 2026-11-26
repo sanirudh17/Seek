@@ -328,9 +328,10 @@ impl Seek {
             .occlude()
             .h(px(36.))
             .pl_4()
-            .pr(px(if undo { 6. } else { 16. }))
+            .pr(px(if undo { 8. } else { 16. }))
             .flex()
             .items_center()
+            .justify_center()
             .gap_3()
             .rounded(px(10.))
             .border_1()
@@ -347,7 +348,11 @@ impl Seek {
                         .text_color(p.tints.green),
                 )
             })
-            .child(toast.text.clone())
+            .child(
+                div()
+                    .whitespace_nowrap()
+                    .child(interface::button_text(toast.text.clone())),
+            )
             .when(undo, |toast| {
                 toast.child(
                     gpui_base::Button::new("toast-undo")

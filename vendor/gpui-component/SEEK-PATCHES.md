@@ -23,3 +23,11 @@ while retaining wheel, trackpad and keyboard scrolling. Defaults for other calle
 are unchanged. Submenu chevrons now follow the existing computed opening anchor,
 including menus opening left near a window edge. These local rendering changes
 avoid replacing GPUI menus with Windows shell menus.
+
+## Seek 1.2 editor preview polish
+
+Slimmer, centered line-number gutter constants in `input/base/element.rs`
+(`LINE_NUMBER_SIDE_PADDING = 6px`, `LINE_NUMBER_RIGHT_MARGIN = 8px`,
+`FOLD_ICON_HITBOX_WIDTH = 12px`), and immediate focus acquisition on
+`on_mouse_down` in `input/base/state.rs` so first-click drag-select,
+double-click word, and triple-click line work in read-only code previews.

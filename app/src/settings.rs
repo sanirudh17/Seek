@@ -114,10 +114,8 @@ pub struct Settings {
     pub hide_env_secrets: bool,
     /// Let coding agents read unmasked `.env` values through MCP (11.3); off by default.
     pub agent_read_secrets: bool,
-    /// Line-wrap preference persisted per preview surface (11.5).
-    pub wrap_info_panel: bool,
-    pub wrap_quick_look: bool,
-    pub wrap_document_pane: bool,
+    /// Global soft-wrap preference for text and code previews (11.5); off by default.
+    pub wrap_lines: bool,
     /// Show brief confirmation toasts for quiet actions (11.6); on by default.
     pub show_confirmations: bool,
     /// Sidebar Favorites and Locations independent fold state (11.8).
@@ -178,9 +176,7 @@ impl Default for Settings {
             agent_tools_all: false,
             hide_env_secrets: true,
             agent_read_secrets: false,
-            wrap_info_panel: true,
-            wrap_quick_look: true,
-            wrap_document_pane: true,
+            wrap_lines: false,
             show_confirmations: true,
             favorites_collapsed: false,
             locations_collapsed: false,
@@ -419,16 +415,11 @@ mod tests {
         };
         retain_search(&mut settings.saved_searches, too_long.clone(), 32);
         assert_eq!(settings.saved_searches.len(), 1);
-        assert!(settings.wrap_info_panel);
-        assert!(settings.wrap_quick_look);
-        assert!(settings.wrap_document_pane);
-        settings.wrap_info_panel = false;
-        settings.wrap_document_pane = false;
+        assert!(!settings.wrap_lines);
+        settings.wrap_lines = true;
         write(temp.path(), &settings).unwrap();
         let restored = read(temp.path());
-        assert!(!restored.wrap_info_panel);
-        assert!(restored.wrap_quick_look);
-        assert!(!restored.wrap_document_pane);
+        assert!(restored.wrap_lines);
         settings
             .saved_searches
             .extend([too_long, settings.saved_searches[0].clone()]);

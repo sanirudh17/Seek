@@ -218,12 +218,48 @@ impl Seek {
             return;
         }
         let revision = self.text_reader.revision.wrapping_add(1);
-        self.text_reader = State::new();
-        self.text_reader.revision = revision;
-        self.text_reader.key = wanted.clone();
-        let Some(key) = wanted else {
+        let Some(key) = wanted.clone() else {
+            self.text_reader = State::new();
+            self.text_reader.revision = revision;
             return;
         };
+        // Fast synchronous load for local non-placeholder files <= 256 KiB so
+        // Quick Look & Up/Down switching appear instantaneously on frame 0 with
+        // zero "Loading text..." flicker (and minified JSON/XML open instantly).
+        let fast_load = !crate::image_tools::placeholder(&key.path)
+            && std::fs::metadata(&key.path).is_ok_and(|m| m.is_file() && m.len() <= 262_144);
+        if fast_load {
+            self.text_reader = State::new();
+            self.text_reader.revision = revision;
+            self.text_reader.key = Some(key.clone());
+            self.text_reader.source = !markdown(&key.path);
+            match crate::text_document::load(&key.path) {
+                Ok(document) => {
+                    let pretty = crate::prettify::analyze(&document.path, &document.text);
+                    let env_masked = crate::env_secrets::is_env_file(&document.path)
+                        .then(|| crate::env_secrets::MaskedEnv::parse(&document.text));
+                    self.text_reader.tasks = crate::markdown_tasks::tasks(&document.text);
+                    self.text_reader.show_formatted = matches!(
+                        &pretty,
+                        Some(crate::prettify::Outcome::Formatted {
+                            was_minified: true,
+                            ..
+                        })
+                    );
+                    self.text_reader.pretty = pretty;
+                    self.text_reader.env_masked = env_masked;
+                    self.text_reader.reset_env_reveal();
+                    self.text_reader.document = Some(document);
+                }
+                Err(error) => self.text_reader.error = Some(error),
+            }
+            return;
+        }
+        // Larger or cloud files: keep the previous document visible while loading
+        // off-thread instead of flashing a blank "Loading text..." screen.
+        self.text_reader.revision = revision;
+        self.text_reader.key = Some(key.clone());
+        self.text_reader.error = None;
         self.start_text_load(key, cx);
     }
     /// Load a text file into the reader that is currently in the slot
@@ -254,6 +290,13 @@ impl Seek {
                     }
                     match result {
                         Ok((document, pretty, env_masked)) => {
+                            this.text_reader.editor = None;
+                            this.text_reader.rendered = None;
+                            this.text_reader.subscription = None;
+                            this.text_reader.applied_wrap = None;
+                            this.text_reader.editing = false;
+                            this.text_reader.dirty = false;
+                            this.text_reader.source = !markdown(&document.path);
                             this.text_reader.tasks = crate::markdown_tasks::tasks(&document.text);
                             this.text_reader.show_formatted = matches!(
                                 &pretty,
@@ -267,7 +310,11 @@ impl Seek {
                             this.text_reader.reset_env_reveal();
                             this.text_reader.document = Some(document);
                         }
-                        Err(error) => this.text_reader.error = Some(error),
+                        Err(error) => {
+                            this.text_reader.document = None;
+                            this.text_reader.editor = None;
+                            this.text_reader.error = Some(error);
+                        }
                     }
                     cx.notify();
                 });
@@ -697,6 +744,47 @@ impl Seek {
         });
         cx.notify();
     }
+    /// Fast local text read for the info panel (up to 64 KiB, cached by
+    /// path/mtime/size) so switching files or clicking `.env` Reveal never
+    /// flashes "Loading text preview...".
+    fn cached_info_text(&mut self, row: &Row) -> Option<String> {
+        if let Some((path, mtime, size, text)) = &self.info_text_cache
+            && *path == row.file.path
+            && *mtime == row.file.mtime
+            && *size == row.file.size
+        {
+            return Some(text.clone());
+        }
+        if !crate::image_tools::placeholder(&row.file.path)
+            && let Ok(mut file) = std::fs::File::open(&row.file.path)
+        {
+            use std::io::Read;
+            let mut buf = Vec::with_capacity(row.file.size.min(65_536) as usize);
+            let mut limited = (&mut file).take(65_536);
+            if limited.read_to_end(&mut buf).is_ok()
+                && !buf.contains(&0)
+                && let Ok(text) = crate::text_decode::decode(&buf, row.file.size > 65_536)
+            {
+                self.info_text_cache = Some((
+                    row.file.path.clone(),
+                    row.file.mtime,
+                    row.file.size,
+                    text.clone(),
+                ));
+                return Some(text);
+            }
+        }
+        match self
+            .cache
+            .lock()
+            .unwrap()
+            .get(&media::Key::new(row, 0, true))
+        {
+            Some(media::Value::Details(details)) => details.text,
+            _ => None,
+        }
+    }
+
     pub(super) fn compact_text_preview(
         &mut self,
         row: &Row,
@@ -704,19 +792,24 @@ impl Seek {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let details = match self
-            .cache
-            .lock()
-            .unwrap()
-            .get(&media::Key::new(row, 0, true))
-        {
-            Some(media::Value::Details(details)) => Some(details),
-            _ => None,
+        let fast_text = self.cached_info_text(row);
+        let details = if fast_text.is_none() {
+            match self
+                .cache
+                .lock()
+                .unwrap()
+                .get(&media::Key::new(row, 0, true))
+            {
+                Some(media::Value::Details(details)) => Some(details),
+                _ => None,
+            }
+        } else {
+            None
         };
         let mut preview = div()
             .id("compact-text-preview")
             .w_full()
-            .h(px(240.))
+            .h(px(280.))
             .flex_shrink_0()
             .overflow_y_scroll()
             .text_size(px(13.))
@@ -727,7 +820,7 @@ impl Seek {
                 .clone()
                 .unwrap_or_else(|| "No readable text preview is available.".into())
         });
-        if let Some(text) = details.and_then(|details| details.text) {
+        if let Some(text) = fast_text.or_else(|| details.and_then(|details| details.text)) {
             if markdown(&row.file.path) {
                 use std::hash::{Hash, Hasher};
                 let mut id = std::collections::hash_map::DefaultHasher::new();
@@ -796,12 +889,14 @@ impl Seek {
                     .flex_shrink_0()
                     .child(
                         div()
+                            .min_w_0()
+                            .truncate()
                             .text_size(px(11.))
                             .text_color(p.muted)
                             .child(if reveal_all {
                                 "Secrets revealed"
                             } else {
-                                "Secrets hidden · click a value to reveal"
+                                "Secrets hidden"
                             }),
                     )
                     .child(
@@ -809,21 +904,18 @@ impl Seek {
                             .flex()
                             .items_center()
                             .gap_1()
+                            .flex_shrink_0()
                             .child(
-                                reader_control(
-                                    "info-env-copy",
-                                    "Copy",
-                                    p,
-                                )
-                                .h(px(22.))
-                                .text_size(px(11.))
-                                .tooltip("Copy visible preview (hidden values stay masked)")
-                                .on_click(cx.listener(move |this, _, window, cx| {
-                                    cx.write_to_clipboard(ClipboardItem::new_string(
-                                        copy_text.clone(),
-                                    ));
-                                    this.show_quiet_toast("Copied", window, cx);
-                                })),
+                                reader_control("info-env-copy", "Copy", p)
+                                    .h(px(22.))
+                                    .text_size(px(11.))
+                                    .tooltip("Copy preview (hidden values stay masked)")
+                                    .on_click(cx.listener(move |this, _, window, cx| {
+                                        cx.write_to_clipboard(ClipboardItem::new_string(
+                                            copy_text.clone(),
+                                        ));
+                                        this.show_quiet_toast("Copied", window, cx);
+                                    })),
                             )
                             .child(
                                 reader_control(
@@ -853,19 +945,24 @@ impl Seek {
                                 })),
                             ),
                     );
-                let wrap = self.preferences.wrap_info_panel;
+                let wrap = self.preferences.wrap_lines;
                 let mut rows = div()
                     .id("compact-env-preview")
                     .w_full()
-                    .h(px(240.))
+                    .h(px(252.))
                     .flex_shrink_0()
                     .overflow_y_scroll()
                     .when(!wrap, |d| d.overflow_x_scroll())
+                    .rounded(crate::tokens::RADIUS_CONTROL)
+                    .bg(p.text.opacity(0.03))
+                    .py_2()
+                    .pr_2()
                     .font_family(crate::tokens::FONT_MONO)
                     .text_size(px(12.))
-                    .line_height(px(20.))
+                    .line_height(px(22.))
                     .flex()
-                    .flex_col();
+                    .flex_col()
+                    .gap(px(2.));
                 for line in &parsed.lines {
                     rows = rows.child(self.env_preview_row(
                         line,
@@ -879,17 +976,6 @@ impl Seek {
                         cx,
                     ));
                 }
-                let bar = bar.child(
-                    reader_control("info-env-wrap", "Wrap", p)
-                        .h(px(22.))
-                        .text_size(px(11.))
-                        .when(wrap, |b| b.bg(p.control_selected))
-                        .tooltip("Wrap long lines")
-                        .on_click(cx.listener(|this, _, window, cx| {
-                            this.preferences.wrap_info_panel = !this.preferences.wrap_info_panel;
-                            this.save_preferences(window, cx);
-                        })),
-                );
                 return div()
                     .w_full()
                     .flex_shrink_0()
@@ -927,7 +1013,7 @@ impl Seek {
                     shown_text.hash(&mut h);
                     h.finish()
                 };
-                let wrap = self.preferences.wrap_info_panel;
+                let wrap = self.preferences.wrap_lines;
                 let reuse = self.info_editor.as_ref().is_some_and(|cached| {
                     cached.path == row.file.path
                         && cached.mtime == row.file.mtime
@@ -970,21 +1056,28 @@ impl Seek {
                     });
                 }
                 let editor = self.info_editor.as_ref().unwrap().editor.clone();
+                let has_top_bar = pretty_toggle.is_some() || pretty_note.is_some();
+                let box_h = if has_top_bar { 250. } else { 280. };
                 let editor_box = div()
                     .id("compact-code-preview")
                     .w_full()
-                    .h(px(240.))
+                    .h(px(box_h))
                     .flex_shrink_0()
                     .overflow_hidden()
+                    .rounded(crate::tokens::RADIUS_CONTROL)
                     .child(
                         Editor::new(&editor)
                             .aria_label("File preview")
                             .readonly(true)
                             .bordered(false)
-                            .h(px(240.))
+                            .p_0()
+                            .h(px(box_h))
                             .font_family(crate::tokens::FONT_MONO)
                             .text_size(px(12.)),
                     );
+                if !has_top_bar {
+                    return editor_box.into_any_element();
+                }
                 let path = row.file.path.clone();
                 let mut bar = div()
                     .flex()
@@ -993,51 +1086,28 @@ impl Seek {
                     .gap_2()
                     .pb_2()
                     .flex_shrink_0();
-                let mut left = div().flex().items_center().gap_2().min_w_0();
                 if let Some(show_fmt) = pretty_toggle {
-                    let mut switch = div()
-                        .id("info-pretty-mode")
-                        .role(Role::RadioGroup)
-                        .aria_label("Preview format")
-                        .flex()
-                        .items_center()
-                        .p(px(2.))
-                        .rounded(px(6.))
-                        .border_1()
-                        .border_color(p.text.opacity(0.08))
-                        .bg(p.text.opacity(0.04));
-                    for (id, label, formatted_mode) in [
-                        ("info-pretty-formatted", "Formatted", true),
-                        ("info-pretty-raw", "Raw", false),
-                    ] {
-                        let active = show_fmt == formatted_mode;
-                        let path = path.clone();
-                        switch = switch.child(
-                            div()
-                                .id(id)
-                                .role(Role::RadioButton)
-                                .aria_label(label)
-                                .aria_selected(active)
-                                .h(px(20.))
-                                .px_2()
-                                .flex()
-                                .items_center()
-                                .rounded(px(4.))
-                                .cursor_pointer()
-                                .text_size(px(11.))
-                                .text_color(if active { p.text } else { p.muted })
-                                .when(active, |d| d.bg(p.hover))
-                                .child(label)
-                                .on_click(cx.listener(move |this, _, _, cx| {
-                                    this.info_pretty = Some((path.clone(), formatted_mode));
-                                    cx.notify();
-                                })),
-                        );
-                    }
-                    left = left.child(switch);
+                    let selected = if show_fmt { 0 } else { 1 };
+                    let motion = self.segment_motion.get("info-pretty-mode").copied();
+                    bar = bar.child(super::settings_view::segmented(
+                        "info-pretty-mode",
+                        &["Formatted", "Raw"],
+                        selected,
+                        motion,
+                        self.motion_enabled,
+                        p,
+                        cx,
+                        move |this, idx, _, cx| {
+                            let next_fmt = idx == 0;
+                            let prev = if show_fmt { 0 } else { 1 };
+                            this.slide_segment("info-pretty-mode", prev, idx);
+                            this.info_pretty = Some((path.clone(), next_fmt));
+                            cx.notify();
+                        },
+                    ));
                 }
                 if let Some(note) = pretty_note {
-                    left = left.child(
+                    bar = bar.child(
                         div()
                             .text_size(px(11.))
                             .text_color(p.muted)
@@ -1045,17 +1115,6 @@ impl Seek {
                             .child(note),
                     );
                 }
-                bar = bar.child(left).child(
-                    reader_control("info-wrap-toggle", "Wrap", p)
-                        .h(px(22.))
-                        .text_size(px(11.))
-                        .when(wrap, |b| b.bg(p.control_selected))
-                        .tooltip("Wrap long lines in information panel")
-                        .on_click(cx.listener(|this, _, window, cx| {
-                            this.preferences.wrap_info_panel = !this.preferences.wrap_info_panel;
-                            this.save_preferences(window, cx);
-                        })),
-                );
                 return div()
                     .w_full()
                     .flex_shrink_0()
@@ -1098,10 +1157,7 @@ impl Seek {
                 .env_masked
                 .as_ref()
                 .is_some_and(|e| e.has_any_secret());
-        let wrap = match target {
-            ReaderTarget::QuickLook => self.preferences.wrap_quick_look,
-            ReaderTarget::Document(_) => self.preferences.wrap_document_pane,
-        };
+        let wrap = self.preferences.wrap_lines;
         if self.text_reader.editor.is_none() {
             let language = crate::code_highlight::language(&document.path);
             let initial_text = if env_hiding
@@ -1123,8 +1179,7 @@ impl Seek {
             let editor = cx.new(|cx| {
                 let mut editor = EditorState::new(window, cx)
                     .language(language)
-                    // Fold arrows only where code has blocks to fold.
-                    .folding(!matches!(language, "text" | "markdown"))
+                    .folding(false)
                     .soft_wrap(wrap)
                     .default_value(initial_text);
                 editor.set_readonly(true, cx);
@@ -1408,61 +1463,31 @@ impl Seek {
             )
         {
             let show_fmt = self.text_reader.show_formatted;
-            let dark = p.text.l > 0.5;
-            let mut switch = div()
-                .id("text-pretty-mode")
-                .role(Role::RadioGroup)
-                .aria_label("Preview format")
-                .flex()
-                .items_center()
-                .p(px(2.))
-                .rounded(px(7.))
-                .border_1()
-                .border_color(p.text.opacity(0.08))
-                .bg(p.text.opacity(if dark { 0.04 } else { 0.05 }));
-            for (id, label, formatted_mode) in [
-                ("text-pretty-formatted", "Formatted", true),
-                ("text-pretty-raw", "Raw", false),
-            ] {
-                let active = show_fmt == formatted_mode;
-                switch = switch.child(
-                    div()
-                        .id(id)
-                        .role(Role::RadioButton)
-                        .aria_label(label)
-                        .aria_selected(active)
-                        .h(px(24.))
-                        .px_2()
-                        .flex()
-                        .items_center()
-                        .rounded(px(5.))
-                        .cursor_pointer()
-                        .text_size(px(12.))
-                        .text_color(if active { p.text } else { p.muted })
-                        .when(active, |d| {
-                            d.bg(if dark {
-                                Hsla::from(rgba(0xffffff1f))
-                            } else {
-                                Hsla::from(rgba(0xffffffff))
-                            })
-                        })
-                        .when(!active, |d| d.hover(move |s| s.text_color(p.text)))
-                        .child(label)
-                        .on_click(Self::reader_listener::<ClickEvent>(
-                            target,
-                            cx,
-                            move |this, _, window, cx| {
-                                if this.text_reader.show_formatted == formatted_mode {
-                                    return;
-                                }
-                                this.text_reader.show_formatted = formatted_mode;
-                                this.sync_reader_display(window, cx);
-                                this.focus_reader(window, cx);
-                                cx.notify();
-                            },
-                        )),
-                );
-            }
+            let selected = if show_fmt { 0 } else { 1 };
+            let motion = self.segment_motion.get("text-pretty-mode").copied();
+            let switch = super::settings_view::segmented(
+                "text-pretty-mode",
+                &["Formatted", "Raw"],
+                selected,
+                motion,
+                self.motion_enabled,
+                p,
+                cx,
+                move |this, idx, window, cx| {
+                    this.with_reader(target, |this| {
+                        let next_fmt = idx == 0;
+                        if this.text_reader.show_formatted == next_fmt {
+                            return;
+                        }
+                        let prev = if this.text_reader.show_formatted { 0 } else { 1 };
+                        this.slide_segment("text-pretty-mode", prev, idx);
+                        this.text_reader.show_formatted = next_fmt;
+                        this.sync_reader_display(window, cx);
+                        this.focus_reader(window, cx);
+                        cx.notify();
+                    });
+                },
+            );
             controls = controls
                 .child(switch)
                 .child(div().w(px(1.)).h(px(16.)).bg(p.line));
@@ -1476,36 +1501,6 @@ impl Seek {
                         target,
                         cx,
                         |this, _, window, cx| this.format_editor_document(window, cx),
-                    )),
-            );
-        }
-        if self.text_reader.source || env_hiding {
-            controls = controls.child(
-                reader_control("text-wrap-toggle", "Wrap", p)
-                    .when(wrap, |b| b.bg(p.control_selected))
-                    .tooltip("Wrap long lines")
-                    .on_click(Self::reader_listener::<ClickEvent>(
-                        target,
-                        cx,
-                        move |this, _, window, cx| {
-                            let next = match target {
-                                ReaderTarget::QuickLook => {
-                                    this.preferences.wrap_quick_look =
-                                        !this.preferences.wrap_quick_look;
-                                    this.preferences.wrap_quick_look
-                                }
-                                ReaderTarget::Document(_) => {
-                                    this.preferences.wrap_document_pane =
-                                        !this.preferences.wrap_document_pane;
-                                    this.preferences.wrap_document_pane
-                                }
-                            };
-                            if let Some(editor) = &this.text_reader.editor {
-                                editor.update(cx, |ed, cx| ed.set_soft_wrap(next, window, cx));
-                            }
-                            this.save_preferences(window, cx);
-                            this.focus_reader(window, cx);
-                        },
                     )),
             );
         }
@@ -2308,10 +2303,12 @@ impl Seek {
     ) -> AnyElement {
         let idx = line.line_index();
         let line_no = div()
-            .w(px(34.))
+            .w(px(28.))
             .flex_shrink_0()
-            .pr_2()
-            .text_right()
+            .flex()
+            .items_center()
+            .justify_center()
+            .text_size(px(11.))
             .text_color(p.muted.opacity(0.6))
             .child(format!("{}", idx + 1));
         match line {
@@ -2319,7 +2316,9 @@ impl Seek {
                 let is_comment = text.trim_start().starts_with('#');
                 div()
                     .flex()
-                    .items_baseline()
+                    .items_center()
+                    .min_h(px(24.))
+                    .gap_2()
                     .w_full()
                     .child(line_no)
                     .child(
@@ -2356,7 +2355,8 @@ impl Seek {
                     .flex()
                     .when(wrap, |d| d.flex_wrap())
                     .when(!wrap, |d| d.whitespace_nowrap())
-                    .items_baseline();
+                    .items_center()
+                    .gap(px(2.));
                 if !prefix.is_empty() {
                     content = content.child(
                         div()
@@ -2396,24 +2396,22 @@ impl Seek {
                             format!("Reveal value for {key}")
                         })
                         .cursor_pointer()
+                        .h(px(20.))
+                        .flex()
+                        .items_center()
                         .rounded(px(4.))
-                        .px(px(4.))
+                        .px(px(6.))
                         .when(!is_revealed, |d| {
                             d.bg(p.text.opacity(0.08))
+                                .border_1()
+                                .border_color(p.text.opacity(0.08))
                                 .text_color(p.muted)
-                                .hover(move |s| s.bg(p.text.opacity(0.14)))
+                                .hover(move |s| s.bg(p.text.opacity(0.14)).text_color(p.text))
                         })
                         .when(is_revealed, |d| {
-                            d.text_color(syntax.string)
+                            d.bg(p.text.opacity(0.04))
+                                .text_color(syntax.string)
                                 .hover(move |s| s.bg(p.hover))
-                        })
-                        .tooltip(move |window, cx| {
-                            gpui_component::tooltip::Tooltip::new(if is_revealed {
-                                "Click to hide"
-                            } else {
-                                "Click to reveal value"
-                            })
-                            .build(window, cx)
                         })
                         .child(display_val);
                     if let Some(target) = reader_target {
@@ -2461,7 +2459,9 @@ impl Seek {
                 }
                 div()
                     .flex()
-                    .items_baseline()
+                    .items_center()
+                    .min_h(px(24.))
+                    .gap_2()
                     .w_full()
                     .child(line_no)
                     .child(content)

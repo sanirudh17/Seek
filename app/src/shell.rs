@@ -56,6 +56,8 @@ mod live_folders;
 mod panes;
 #[path = "picture_edit_view.rs"]
 mod picture_edit_view;
+#[path = "video_edit_view.rs"]
+mod video_edit_view;
 #[path = "permanent_delete.rs"]
 mod permanent_delete;
 #[path = "places_view.rs"]
@@ -823,6 +825,8 @@ pub struct Seek {
     image_job_focus: FocusHandle,
     /// Inline picture editor in Quick Look or a picture Document pane (11.9).
     picture_edit: Option<picture_edit_view::State>,
+    /// Inline video preview & editor in Quick Look or a video Document pane.
+    video_edit: Option<video_edit_view::State>,
     drag_hover: Option<PathBuf>,
     drag_hover_task: Task<()>,
     show_hidden: bool,
@@ -1423,6 +1427,7 @@ impl Seek {
             image_job: None,
             image_job_focus: cx.focus_handle(),
             picture_edit: None,
+            video_edit: None,
             drag_hover: None,
             drag_hover_task: Task::ready(()),
             show_hidden: preferences.show_hidden,
@@ -2552,6 +2557,9 @@ impl Seek {
             return;
         }
         if self.picture_edit.is_some() && self.picture_edit_handle_key(event, window, cx) {
+            return;
+        }
+        if self.video_edit.is_some() && self.video_handle_key(event, window, cx) {
             return;
         }
         let modifiers = event.keystroke.modifiers;

@@ -58,6 +58,7 @@ mod pdf_text;
 mod picture_edit;
 mod prettify;
 mod preview_cache;
+mod video_edit;
 mod preview_diagnostics;
 mod recycle_guard;
 mod rename_steps;

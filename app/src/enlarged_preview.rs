@@ -88,6 +88,7 @@ impl Seek {
         if self.quick_look_closing
             || self.request_text_reader_exit(window, cx)
             || self.request_picture_edit_exit(picture_edit_view::EditHost::QuickLook, window, cx)
+            || self.request_video_edit_exit(video_edit_view::VideoHost::QuickLook, window, cx)
         {
             return;
         }
@@ -128,8 +129,16 @@ impl Seek {
             "up" | "down" => {
                 if self.text_reader_blocks_navigation(cx)
                     || self.picture_edit_for(picture_edit_view::EditHost::QuickLook)
+                    || self.video_edit.as_ref().is_some_and(|v| {
+                        v.host == video_edit_view::VideoHost::QuickLook && v.is_dirty()
+                    })
                 {
                     return;
+                }
+                if self.video_edit.as_ref().is_some_and(|v| {
+                    v.host == video_edit_view::VideoHost::QuickLook
+                }) {
+                    self.close_video_edit_now(window, cx);
                 }
                 let current = self.table.read(cx).selected_row();
                 let count = self.table.read(cx).delegate().rows.len();
@@ -481,6 +490,17 @@ impl Seek {
                 .p_0()
                 .overflow_hidden()
                 .child(self.quick_look_image(&row, p, window, cx));
+        } else if crate::video_edit::is_video(&row.file.path) {
+            content = content
+                .p_0()
+                .overflow_hidden()
+                .child(self.video_edit_view(
+                    video_edit_view::VideoHost::QuickLook,
+                    row.file.path.clone(),
+                    p,
+                    window,
+                    cx,
+                ));
         } else {
             let details = match self
                 .cache

@@ -20,6 +20,7 @@ enum Kind {
     Text,
     Document,
     Image,
+    Video,
     Other,
 }
 
@@ -296,6 +297,8 @@ impl Seek {
                     Kind::Document
                 } else if crate::icons::kind(&row.file.path, false) == crate::icons::Kind::Image {
                     Kind::Image
+                } else if crate::video_edit::is_video(&row.file.path) {
+                    Kind::Video
                 } else {
                     Kind::Other
                 };
@@ -318,7 +321,7 @@ impl Seek {
                             this.documents.request(key);
                         });
                     }
-                    Kind::Image | Kind::Other => self.refresh_preview(cx),
+                    Kind::Image | Kind::Video | Kind::Other => self.refresh_preview(cx),
                 }
             }
             Err(error) => {
@@ -342,6 +345,18 @@ impl Seek {
                 return;
             }
             self.picture_edit = None;
+        }
+        if let Some(v) = self
+            .video_edit
+            .as_mut()
+            .filter(|v| v.host == video_edit_view::VideoHost::DocumentPane(id))
+        {
+            if v.is_dirty() {
+                v.confirm_discard = true;
+                cx.notify();
+                return;
+            }
+            self.video_edit = None;
         }
         let Some(doc) = self.doc_panes.iter_mut().find(|doc| doc.id == id) else {
             return;
@@ -644,6 +659,13 @@ impl Seek {
                     }
                 }
             }
+            (Kind::Video, Some(row)) => self.video_edit_view(
+                video_edit_view::VideoHost::DocumentPane(id),
+                row.file.path.clone(),
+                p,
+                window,
+                cx,
+            ),
             (Kind::Other, Some(row)) => div()
                 .size_full()
                 .flex()

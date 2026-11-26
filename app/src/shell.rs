@@ -892,6 +892,8 @@ pub struct Seek {
     info_pretty: Option<(PathBuf, bool)>,
     /// Per-file `.env` reveal state in the info panel (auto-resets on file change).
     info_env_reveal: Option<(PathBuf, bool, std::collections::HashSet<usize>)>,
+    /// Read-only selectable code/text preview editor in the info panel (11.4).
+    info_editor: Option<text_reader::InfoEditor>,
     share: Option<crate::native_share::Session>,
     text_reader: text_reader::State,
     documents: crate::document_preview::Worker,
@@ -1456,6 +1458,7 @@ impl Seek {
             inspector: inspector_view::State::new(),
             info_pretty: None,
             info_env_reveal: None,
+            info_editor: None,
             share: None,
             text_reader: text_reader::State::new(),
             documents,

@@ -2,9 +2,50 @@ use super::doc_pane::ReaderTarget;
 use super::*;
 use gpui_component::{
     input::{Editor, EditorState},
-    menu::{DropdownMenu, PopupMenuItem},
+    menu::{ContextMenuExt, DropdownMenu, PopupMenuItem},
     text::{MarkdownExtensions, TextViewState},
 };
+
+fn fence_language(raw: &str) -> &'static str {
+    let lower = raw.trim().to_ascii_lowercase();
+    match lower.as_str() {
+        "rust" | "rs" => "rust",
+        "javascript" | "typescript" | "js" | "ts" | "jsx" | "tsx" => "js",
+        "json" | "jsonc" => "json",
+        "python" | "py" => "python",
+        "c" | "cpp" | "c++" | "cc" | "h" | "hpp" => "c",
+        "csharp" | "c#" | "cs" => "csharp",
+        "java" => "java",
+        "go" | "golang" => "go",
+        "kotlin" | "kt" => "kotlin",
+        "swift" => "swift",
+        "ruby" | "rb" => "ruby",
+        "php" => "php",
+        "lua" => "lua",
+        "powershell" | "ps1" | "pwsh" => "powershell",
+        "shell" | "sh" | "bash" | "zsh" | "fish" | "bat" | "cmd" => "shell",
+        "sql" => "sql",
+        "html" | "htm" => "html",
+        "xml" | "svg" | "xaml" => "xml",
+        "css" | "scss" | "sass" | "less" => "css",
+        "dockerfile" | "docker" => "dockerfile",
+        "toml" | "yaml" | "yml" => "config",
+        "ini" | "conf" | "cfg" => "ini",
+        "diff" | "patch" => "diff",
+        "env" | "dotenv" => "env",
+        "markdown" | "md" => "markdown",
+        _ => crate::code_highlight::language(std::path::Path::new(&format!("a.{lower}"))),
+    }
+}
+
+pub(super) struct InfoEditor {
+    path: PathBuf,
+    mtime: u32,
+    size: u64,
+    formatted: bool,
+    text_hash: u64,
+    editor: Entity<EditorState>,
+}
 
 /// A 28 px icon button for the reader toolbar; the name and shortcut are in
 /// the tooltip and the accessible label.
@@ -377,6 +418,15 @@ impl Seek {
             cx.stop_propagation();
             return true;
         }
+        // Let Ctrl+A and Ctrl+C pass through to the focused preview (Editor or
+        // rendered Markdown TextView) without Quick Look swallowing them.
+        if event.keystroke.modifiers.control
+            && !event.keystroke.modifiers.alt
+            && !event.keystroke.modifiers.shift
+            && matches!(key, "a" | "c")
+        {
+            return true;
+        }
         if event.keystroke.modifiers.control && key == "s" {
             self.save_text_reader(false, window, cx);
             cx.stop_propagation();
@@ -409,15 +459,24 @@ impl Seek {
             if key == "space"
                 && self.reader_slot == ReaderTarget::QuickLook
                 && !self.text_reader.editing
-                && (editor
-                    .read(cx)
-                    .focus_handle(cx)
-                    .contains_focused(window, cx)
-                    || self.preview_focus.is_focused(window))
+                && !event.keystroke.modifiers.control
+                && !event.keystroke.modifiers.alt
+                && !event.keystroke.modifiers.shift
             {
                 self.close_reader(window, cx);
                 cx.stop_propagation();
                 return true;
+            }
+            // In Quick Look read mode, plain Up/Down navigate between files
+            // even after the user clicked into the preview to select text.
+            if self.reader_slot == ReaderTarget::QuickLook
+                && !self.text_reader.editing
+                && !event.keystroke.modifiers.shift
+                && !event.keystroke.modifiers.control
+                && !event.keystroke.modifiers.alt
+                && matches!(key, "up" | "down")
+            {
+                return false;
             }
             if key == "escape" {
                 self.close_reader(window, cx);
@@ -435,8 +494,13 @@ impl Seek {
         }
         if key == "space"
             && self.reader_slot == ReaderTarget::QuickLook
-            && !self.preview_focus.is_focused(window)
+            && !self.text_reader.editing
+            && !event.keystroke.modifiers.control
+            && !event.keystroke.modifiers.alt
+            && !event.keystroke.modifiers.shift
         {
+            self.close_reader(window, cx);
+            cx.stop_propagation();
             return true;
         }
         false
@@ -630,9 +694,10 @@ impl Seek {
         cx.notify();
     }
     pub(super) fn compact_text_preview(
-        &self,
+        &mut self,
         row: &Row,
         p: crate::appearance::Palette,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let details = match self
@@ -670,26 +735,41 @@ impl Seek {
                     .unwrap_or(std::path::Path::new("."))
                     .to_path_buf();
                 let images = self.text_reader.image_sources.clone();
+                let syntax = crate::appearance::SyntaxPalette::from_palette(p);
                 let text = crate::markdown_extra::body(&text).to_string();
                 // The preview scrolls inside its own box; it never spills
                 // over the details below.
-                preview = preview.overflow_hidden().child(
-                    gpui_base::TextView::markdown(
-                        ("inspector-markdown", id.finish() as usize),
-                        text,
-                    )
-                    .selectable(true)
-                    .scrollable(true)
-                    .size_full()
-                    .image_source(move |uri| {
-                        crate::markdown_images::cached_source(&folder, false, uri, &images)
+                return preview
+                    .overflow_hidden()
+                    .context_menu(|menu, window, _| {
+                        super::daily::menu_style(menu, window).item(
+                            PopupMenuItem::new("Copy").on_click(|_, window, cx| {
+                                window.dispatch_action(Box::new(gpui_base::input::Copy), cx);
+                            }),
+                        )
                     })
-                    .on_link_click(|url, _, _, cx| {
-                        if url.starts_with("https://") || url.starts_with("http://") {
-                            cx.open_url(url);
-                        }
-                    }),
-                );
+                    .child(
+                        gpui_base::TextView::markdown(
+                            ("inspector-markdown", id.finish() as usize),
+                            text,
+                        )
+                        .selectable(true)
+                        .scrollable(true)
+                        .size_full()
+                        .code_block_highlighter(move |block| {
+                            let lang = block.lang().map(|l| fence_language(&l)).unwrap_or("text");
+                            crate::code_highlight::highlight_text(lang, &block.code(), &syntax)
+                        })
+                        .image_source(move |uri| {
+                            crate::markdown_images::cached_source(&folder, false, uri, &images)
+                        })
+                        .on_link_click(|url, _, _, cx| {
+                            if url.starts_with("https://") || url.starts_with("http://") {
+                                cx.open_url(url);
+                            }
+                        }),
+                    )
+                    .into_any_element();
             } else if self.preferences.hide_env_secrets
                 && crate::env_secrets::is_env_file(&row.file.path)
             {
@@ -802,7 +882,6 @@ impl Seek {
                     .into_any_element();
             } else {
                 let lang = crate::code_highlight::language(&row.file.path);
-                let syntax = crate::appearance::SyntaxPalette::from_palette(p);
                 let pretty = crate::prettify::analyze(&row.file.path, &text);
                 let (shown_text, pretty_toggle, pretty_note) = match pretty {
                     Some(crate::prettify::Outcome::Formatted {
@@ -823,8 +902,61 @@ impl Seek {
                     Some(crate::prettify::Outcome::Raw { note }) => (text, None, note),
                     None => (text, None, None),
                 };
-                let highlights = crate::code_highlight::highlight_text(lang, &shown_text, &syntax);
-                let styled = StyledText::new(shown_text).with_highlights(highlights);
+                let formatted_flag = pretty_toggle.unwrap_or(false);
+                let text_hash = {
+                    use std::hash::{Hash, Hasher};
+                    let mut h = std::collections::hash_map::DefaultHasher::new();
+                    shown_text.hash(&mut h);
+                    h.finish()
+                };
+                let reuse = self.info_editor.as_ref().is_some_and(|cached| {
+                    cached.path == row.file.path
+                        && cached.mtime == row.file.mtime
+                        && cached.size == row.file.size
+                        && cached.formatted == formatted_flag
+                        && cached.text_hash == text_hash
+                });
+                if !reuse {
+                    let value = shown_text.clone();
+                    let editor = cx.new(|cx| {
+                        let mut ed = EditorState::new(window, cx)
+                            .language(lang)
+                            .folding(false)
+                            .default_value(value);
+                        ed.set_readonly(true, cx);
+                        ed.set_highlighter_factory(
+                            std::rc::Rc::new(|language| {
+                                Some(Box::new(crate::code_highlight::Highlighter::new(language)))
+                            }),
+                            cx,
+                        );
+                        ed
+                    });
+                    self.info_editor = Some(InfoEditor {
+                        path: row.file.path.clone(),
+                        mtime: row.file.mtime,
+                        size: row.file.size,
+                        formatted: formatted_flag,
+                        text_hash,
+                        editor,
+                    });
+                }
+                let editor = self.info_editor.as_ref().unwrap().editor.clone();
+                let editor_box = div()
+                    .id("compact-code-preview")
+                    .w_full()
+                    .h(px(240.))
+                    .flex_shrink_0()
+                    .overflow_hidden()
+                    .child(
+                        Editor::new(&editor)
+                            .aria_label("File preview")
+                            .readonly(true)
+                            .bordered(false)
+                            .h(px(240.))
+                            .font_family(crate::tokens::FONT_MONO)
+                            .text_size(px(12.)),
+                    );
                 if pretty_toggle.is_some() || pretty_note.is_some() {
                     let path = row.file.path.clone();
                     let mut bar = div()
@@ -890,12 +1022,10 @@ impl Seek {
                         .flex()
                         .flex_col()
                         .child(bar)
-                        .child(preview.font_family(crate::tokens::FONT_MONO).child(styled))
+                        .child(editor_box)
                         .into_any_element();
                 }
-                preview = preview
-                    .font_family(crate::tokens::FONT_MONO)
-                    .child(styled);
+                return editor_box.into_any_element();
             }
         } else {
             preview = preview
@@ -1646,6 +1776,7 @@ impl Seek {
                 )
                 .into_any_element()
         } else {
+            let syntax = crate::appearance::SyntaxPalette::from_palette(p);
             div()
                 .id("markdown-reader")
                 .size_full()
@@ -1654,6 +1785,13 @@ impl Seek {
                 .flex_col()
                 .items_center()
                 .p_6()
+                .context_menu(|menu, window, _| {
+                    super::daily::menu_style(menu, window).item(
+                        PopupMenuItem::new("Copy").on_click(|_, window, cx| {
+                            window.dispatch_action(Box::new(gpui_base::input::Copy), cx);
+                        }),
+                    )
+                })
                 .child(
                     div()
                         .w_full()
@@ -1664,6 +1802,15 @@ impl Seek {
                         .child(
                             gpui_base::TextView::new(self.text_reader.rendered.as_ref().unwrap())
                                 .selectable(true)
+                                .code_block_highlighter(move |block| {
+                                    let lang =
+                                        block.lang().map(|l| fence_language(&l)).unwrap_or("text");
+                                    crate::code_highlight::highlight_text(
+                                        lang,
+                                        &block.code(),
+                                        &syntax,
+                                    )
+                                })
                                 .markdown_extensions(self.text_reader.extensions.clone())
                                 .code_block_actions({
                                     let owner = cx.entity().downgrade();

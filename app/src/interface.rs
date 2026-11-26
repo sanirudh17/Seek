@@ -1889,9 +1889,9 @@ impl Seek {
         cx.notify();
     }
     fn info_panel(
-        &self,
+        &mut self,
         p: crate::appearance::Palette,
-        window: &Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let width = self.info_width(window);
@@ -1931,7 +1931,7 @@ impl Seek {
                             || crate::document_preview::Key::new(&row, 0).is_some()),
                     |panel| {
                         if super::text_reader::text_file(&row) {
-                            panel.child(self.compact_text_preview(&row, p, cx))
+                            panel.child(self.compact_text_preview(&row, p, window, cx))
                         } else if crate::document_preview::Key::new(&row, 0).is_some() {
                             panel.child(self.document_view(p, window, cx))
                         } else {

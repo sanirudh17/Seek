@@ -911,7 +911,7 @@ impl Seek {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let preview = if super::text_reader::text_file(row) {
-            self.compact_text_preview(row, p, cx).into_any_element()
+            self.compact_text_preview(row, p, window, cx).into_any_element()
         } else if crate::document_preview::Key::new(row, 0).is_some() {
             self.document_view(p, window, cx).into_any_element()
         } else {

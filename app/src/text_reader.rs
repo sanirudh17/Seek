@@ -68,6 +68,12 @@ pub(super) struct State {
     /// The code block whose Copy shows "Copied", and a generation that
     /// restarts its fade.
     copied: Option<(u64, u64)>,
+    /// Prettify analysis for JSON/XML files (11.2), computed off the UI thread.
+    pretty: Option<crate::prettify::Outcome>,
+    /// Whether the read view currently displays the prettified copy (never touches disk).
+    show_formatted: bool,
+    /// Guard so programmatic view switches (Formatted/Raw) never mark the draft dirty.
+    syncing_display: bool,
 }
 impl State {
     /// Editing text: Space types a space instead of opening Quick Look.
@@ -101,6 +107,9 @@ impl State {
             shown_dirty: false,
             save_motion: 0,
             copied: None,
+            pretty: None,
+            show_formatted: false,
+            syncing_display: false,
         }
     }
     pub fn blocked(&self) -> bool {
@@ -166,7 +175,11 @@ impl Seek {
             let path = key.path.clone();
             let result = cx
                 .background_executor()
-                .spawn(async move { crate::text_document::load(&path) })
+                .spawn(async move {
+                    let doc = crate::text_document::load(&path)?;
+                    let pretty = crate::prettify::analyze(&doc.path, &doc.text);
+                    Ok::<_, String>((doc, pretty))
+                })
                 .await;
             let _ = this.update(cx, |this, cx| {
                 this.with_reader(target, |this| {
@@ -176,8 +189,16 @@ impl Seek {
                         return;
                     }
                     match result {
-                        Ok(document) => {
+                        Ok((document, pretty)) => {
                             this.text_reader.tasks = crate::markdown_tasks::tasks(&document.text);
+                            this.text_reader.show_formatted = matches!(
+                                &pretty,
+                                Some(crate::prettify::Outcome::Formatted {
+                                    was_minified: true,
+                                    ..
+                                })
+                            );
+                            this.text_reader.pretty = pretty;
                             this.text_reader.document = Some(document);
                         }
                         Err(error) => this.text_reader.error = Some(error),
@@ -578,7 +599,7 @@ impl Seek {
         &self,
         row: &Row,
         p: crate::appearance::Palette,
-        _: &mut Context<Self>,
+        cx: &mut Context<Self>,
     ) -> AnyElement {
         let details = match self
             .cache
@@ -638,8 +659,96 @@ impl Seek {
             } else {
                 let lang = crate::code_highlight::language(&row.file.path);
                 let syntax = crate::appearance::SyntaxPalette::from_palette(p);
-                let highlights = crate::code_highlight::highlight_text(lang, &text, &syntax);
-                let styled = StyledText::new(text).with_highlights(highlights);
+                let pretty = crate::prettify::analyze(&row.file.path, &text);
+                let (shown_text, pretty_toggle, pretty_note) = match pretty {
+                    Some(crate::prettify::Outcome::Formatted {
+                        text: formatted,
+                        was_minified,
+                    }) => {
+                        let show_fmt = self
+                            .info_pretty
+                            .as_ref()
+                            .filter(|(path, _)| *path == row.file.path)
+                            .map_or(was_minified, |(_, on)| *on);
+                        (
+                            if show_fmt { formatted } else { text },
+                            Some(show_fmt),
+                            None,
+                        )
+                    }
+                    Some(crate::prettify::Outcome::Raw { note }) => (text, None, note),
+                    None => (text, None, None),
+                };
+                let highlights = crate::code_highlight::highlight_text(lang, &shown_text, &syntax);
+                let styled = StyledText::new(shown_text).with_highlights(highlights);
+                if pretty_toggle.is_some() || pretty_note.is_some() {
+                    let path = row.file.path.clone();
+                    let mut bar = div()
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .gap_2()
+                        .pb_2()
+                        .flex_shrink_0();
+                    if let Some(show_fmt) = pretty_toggle {
+                        let mut switch = div()
+                            .id("info-pretty-mode")
+                            .role(Role::RadioGroup)
+                            .aria_label("Preview format")
+                            .flex()
+                            .items_center()
+                            .p(px(2.))
+                            .rounded(px(6.))
+                            .border_1()
+                            .border_color(p.text.opacity(0.08))
+                            .bg(p.text.opacity(0.04));
+                        for (id, label, formatted_mode) in [
+                            ("info-pretty-formatted", "Formatted", true),
+                            ("info-pretty-raw", "Raw", false),
+                        ] {
+                            let active = show_fmt == formatted_mode;
+                            let path = path.clone();
+                            switch = switch.child(
+                                div()
+                                    .id(id)
+                                    .role(Role::RadioButton)
+                                    .aria_label(label)
+                                    .aria_selected(active)
+                                    .h(px(20.))
+                                    .px_2()
+                                    .flex()
+                                    .items_center()
+                                    .rounded(px(4.))
+                                    .cursor_pointer()
+                                    .text_size(px(11.))
+                                    .text_color(if active { p.text } else { p.muted })
+                                    .when(active, |d| d.bg(p.hover))
+                                    .child(label)
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        this.info_pretty = Some((path.clone(), formatted_mode));
+                                        cx.notify();
+                                    })),
+                            );
+                        }
+                        bar = bar.child(switch);
+                    }
+                    if let Some(note) = pretty_note {
+                        bar = bar.child(
+                            div()
+                                .text_size(px(11.))
+                                .text_color(p.muted)
+                                .child(note),
+                        );
+                    }
+                    return div()
+                        .w_full()
+                        .flex_shrink_0()
+                        .flex()
+                        .flex_col()
+                        .child(bar)
+                        .child(preview.font_family(crate::tokens::FONT_MONO).child(styled))
+                        .into_any_element();
+                }
                 preview = preview
                     .font_family(crate::tokens::FONT_MONO)
                     .child(styled);
@@ -672,12 +781,21 @@ impl Seek {
         };
         if self.text_reader.editor.is_none() {
             let language = crate::code_highlight::language(&document.path);
+            let initial_text = if !self.text_reader.editing
+                && self.text_reader.show_formatted
+                && let Some(crate::prettify::Outcome::Formatted { text, .. }) =
+                    &self.text_reader.pretty
+            {
+                text.clone()
+            } else {
+                document.text.as_str().to_owned()
+            };
             let editor = cx.new(|cx| {
                 let mut editor = EditorState::new(window, cx)
                     .language(language)
                     // Fold arrows only where code has blocks to fold.
                     .folding(!matches!(language, "text" | "markdown"))
-                    .default_value(document.text.as_str().to_owned());
+                    .default_value(initial_text);
                 editor.set_readonly(true, cx);
                 editor.set_highlighter_factory(
                     std::rc::Rc::new(|language| {
@@ -696,7 +814,7 @@ impl Seek {
                 window,
                 move |this, editor, event, window, cx| {
                     this.with_reader(target, |this| {
-                        if matches!(event, InputEvent::Change) {
+                        if matches!(event, InputEvent::Change) && !this.text_reader.syncing_display {
                             this.text_reader.draft_revision =
                                 this.text_reader.draft_revision.wrapping_add(1);
                             let text = editor.read(cx).value();
@@ -916,6 +1034,84 @@ impl Seek {
                 .child(bar)
                 .child(div().w(px(1.)).h(px(16.)).bg(p.line));
         }
+        if !self.text_reader.editing
+            && matches!(
+                self.text_reader.pretty,
+                Some(crate::prettify::Outcome::Formatted { .. })
+            )
+        {
+            let show_fmt = self.text_reader.show_formatted;
+            let dark = p.text.l > 0.5;
+            let mut switch = div()
+                .id("text-pretty-mode")
+                .role(Role::RadioGroup)
+                .aria_label("Preview format")
+                .flex()
+                .items_center()
+                .p(px(2.))
+                .rounded(px(7.))
+                .border_1()
+                .border_color(p.text.opacity(0.08))
+                .bg(p.text.opacity(if dark { 0.04 } else { 0.05 }));
+            for (id, label, formatted_mode) in [
+                ("text-pretty-formatted", "Formatted", true),
+                ("text-pretty-raw", "Raw", false),
+            ] {
+                let active = show_fmt == formatted_mode;
+                switch = switch.child(
+                    div()
+                        .id(id)
+                        .role(Role::RadioButton)
+                        .aria_label(label)
+                        .aria_selected(active)
+                        .h(px(24.))
+                        .px_2()
+                        .flex()
+                        .items_center()
+                        .rounded(px(5.))
+                        .cursor_pointer()
+                        .text_size(px(12.))
+                        .text_color(if active { p.text } else { p.muted })
+                        .when(active, |d| {
+                            d.bg(if dark {
+                                Hsla::from(rgba(0xffffff1f))
+                            } else {
+                                Hsla::from(rgba(0xffffffff))
+                            })
+                        })
+                        .when(!active, |d| d.hover(move |s| s.text_color(p.text)))
+                        .child(label)
+                        .on_click(Self::reader_listener::<ClickEvent>(
+                            target,
+                            cx,
+                            move |this, _, window, cx| {
+                                if this.text_reader.show_formatted == formatted_mode {
+                                    return;
+                                }
+                                this.text_reader.show_formatted = formatted_mode;
+                                this.sync_reader_display(window, cx);
+                                this.focus_reader(window, cx);
+                                cx.notify();
+                            },
+                        )),
+                );
+            }
+            controls = controls
+                .child(switch)
+                .child(div().w(px(1.)).h(px(16.)).bg(p.line));
+        }
+        if self.text_reader.editing && crate::prettify::kind(&document.path).is_some() {
+            controls = controls.child(
+                reader_control("text-format-document", "Format document", p)
+                    .tooltip("Format JSON or XML in this draft (undoable with Ctrl+Z)")
+                    .disabled(self.text_reader.saving)
+                    .on_click(Self::reader_listener::<ClickEvent>(
+                        target,
+                        cx,
+                        |this, _, window, cx| this.format_editor_document(window, cx),
+                    )),
+            );
+        }
         controls = controls.child(
             reader_icon("text-find", "icons/search.svg", "Find (Ctrl+F)", p).on_click(
                 Self::reader_listener::<ClickEvent>(target, cx, |this, _, window, cx| {
@@ -938,7 +1134,12 @@ impl Seek {
                         Self::reader_listener::<ClickEvent>(target, cx, |this, _, window, cx| {
                             this.text_reader.editing = true;
                             this.slide_segment("text-view-mode", this.text_reader.source as usize, 1);
-                    this.text_reader.source = true;
+                            this.text_reader.source = true;
+                            // Entering the editor always edits the real raw text, never the
+                            // preview-only prettified representation.
+                            if this.text_reader.show_formatted {
+                                this.sync_reader_display(window, cx);
+                            }
                             if let Some(editor) = &this.text_reader.editor {
                                 editor.update(cx, |editor, cx| {
                                     editor.set_readonly(false, cx);
@@ -1097,12 +1298,17 @@ impl Seek {
                                         }
                                         _ => {
                                             this.text_reader.editing = false;
+                                            if let Some(doc) = &this.text_reader.document {
+                                                this.text_reader.pretty =
+                                                    crate::prettify::analyze(&doc.path, &doc.text);
+                                            }
                                             if let Some(editor) = &this.text_reader.editor {
                                                 editor.update(cx, |editor, cx| {
                                                     editor.close_search(cx);
                                                     editor.set_readonly(true, cx);
                                                 });
                                             }
+                                            this.sync_reader_display(window, cx);
                                             this.preview_focus.focus(window, cx);
                                             cx.notify();
                                         }
@@ -1400,6 +1606,19 @@ impl Seek {
         if let Some(reason) = document.read_only {
             view = view.child(div().px_4().py_2().text_color(p.muted).child(reason));
         }
+        if !self.text_reader.editing
+            && let Some(crate::prettify::Outcome::Raw { note: Some(note) }) =
+                &self.text_reader.pretty
+        {
+            view = view.child(
+                div()
+                    .px_4()
+                    .py_1()
+                    .text_size(px(12.))
+                    .text_color(p.muted)
+                    .child(*note),
+            );
+        }
         if let Some(error) = &self.text_reader.error {
             view = view.child(div().px_4().py_2().text_size(px(12.)).child(error.clone()));
         }
@@ -1521,6 +1740,63 @@ impl Seek {
             editor.update(cx, |editor, cx| editor.set_readonly(false, cx));
         }
         editor.update(cx, |editor, cx| editor.replace_all(draft, window, cx));
+        cx.notify();
+    }
+
+    /// Synchronises the read-only editor's visible text with Formatted / Raw
+    /// preview mode (or raw text when entering Edit), never marking dirty or
+    /// modifying disk.
+    pub(super) fn sync_reader_display(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let (Some(editor), Some(document)) = (
+            self.text_reader.editor.clone(),
+            self.text_reader.document.clone(),
+        ) else {
+            return;
+        };
+        let wanted = if !self.text_reader.editing
+            && self.text_reader.show_formatted
+            && let Some(crate::prettify::Outcome::Formatted { text, .. }) =
+                &self.text_reader.pretty
+        {
+            text.clone()
+        } else {
+            document.text.as_str().to_owned()
+        };
+        self.text_reader.syncing_display = true;
+        editor.update(cx, |editor, cx| {
+            editor.set_value(wanted, window, cx);
+        });
+        self.text_reader.syncing_display = false;
+    }
+
+    /// Explicit "Format document" command inside the editor. Never runs
+    /// automatically; applies through `replace_all` so Ctrl+Z restores the
+    /// exact previous text, and leaves draft/file untouched on error.
+    pub(super) fn format_editor_document(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.text_reader.editing || self.text_reader.saving {
+            return;
+        }
+        let (Some(editor), Some(document)) = (
+            self.text_reader.editor.clone(),
+            self.text_reader.document.clone(),
+        ) else {
+            return;
+        };
+        let current = editor.read(cx).value().to_string();
+        match crate::prettify::format_for_editor(&document.path, &current) {
+            Ok(formatted) => {
+                self.text_reader.error = None;
+                if formatted != current {
+                    editor.update(cx, |editor, cx| {
+                        editor.replace_all(formatted, window, cx);
+                        editor.focus(window, cx);
+                    });
+                }
+            }
+            Err(error) => {
+                self.text_reader.error = Some(error.into());
+            }
+        }
         cx.notify();
     }
 }

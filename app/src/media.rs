@@ -507,13 +507,23 @@ pub fn record_open(data: &std::path::Path, path: &std::path::Path) {
     }
 }
 pub fn read_text(path: &std::path::Path) -> std::io::Result<String> {
+    let structured = crate::prettify::kind(path).is_some();
+    let limit = if structured { 65_536 } else { 8192 };
     let mut bytes = vec![];
     std::fs::File::open(path)?
-        .take(8192)
+        .take(limit)
         .read_to_end(&mut bytes)?;
-    let text = crate::text_decode::decode(&bytes, bytes.len() == 8192)
+    let truncated = bytes.len() as u64 == limit;
+    let text = crate::text_decode::decode(&bytes, truncated)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-    Ok(text.lines().take(80).collect::<Vec<_>>().join("\n"))
+    if structured {
+        // Keep complete minified JSON/XML up to 64 KiB so the info panel can
+        // prettify it without cutting off the closing brace/tag.
+        let lines: Vec<&str> = text.lines().take(200).collect();
+        Ok(lines.join("\n"))
+    } else {
+        Ok(text.lines().take(80).collect::<Vec<_>>().join("\n"))
+    }
 }
 pub(crate) fn thumbnail(key: &Key) -> windows::core::Result<Arc<RenderImage>> {
     use std::os::windows::ffi::OsStrExt;

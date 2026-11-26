@@ -888,6 +888,8 @@ pub struct Seek {
     background_task: Task<()>,
     info_resizing: bool,
     inspector: inspector_view::State,
+    /// Per-file Formatted/Raw override for JSON & XML in the info panel.
+    info_pretty: Option<(PathBuf, bool)>,
     share: Option<crate::native_share::Session>,
     text_reader: text_reader::State,
     documents: crate::document_preview::Worker,
@@ -1450,6 +1452,7 @@ impl Seek {
             background_task: Task::ready(()),
             info_resizing: false,
             inspector: inspector_view::State::new(),
+            info_pretty: None,
             share: None,
             text_reader: text_reader::State::new(),
             documents,

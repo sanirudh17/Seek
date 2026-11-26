@@ -25,6 +25,7 @@ pub(super) enum Action {
     QuickLook,
     DocumentPane,
     OpenWith,
+    ShowInFolder,
     Reveal,
     Share,
     Copy,
@@ -185,6 +186,14 @@ pub(super) fn actions_menu_selection(
             selected && !target_is_folder,
         ),
         ("Open with...", Action::OpenWith, selected),
+        (
+            "Show in folder",
+            Action::ShowInFolder,
+            selected
+                && target
+                    .as_ref()
+                    .is_none_or(|p| p.parent().is_some()),
+        ),
         ("Reveal in Explorer", Action::Reveal, selected),
         ("Copy", Action::Copy, selected),
         ("Cut", Action::Cut, selected),
@@ -657,6 +666,13 @@ impl Seek {
         }
         if matches!(action, Action::QuickLook) {
             self.open_quick_look(target, window, cx);
+            return;
+        }
+        if matches!(action, Action::ShowInFolder) {
+            let path = target.or_else(|| self.selected(cx).map(|row| row.file.path));
+            if let Some(path) = path {
+                self.show_in_folder(path, window, cx);
+            }
             return;
         }
         if matches!(action, Action::DocumentPane) {

@@ -116,6 +116,11 @@ pub const ALL: &[Shortcut] = &[
     },
     Shortcut {
         group: "Files",
+        keys: "Ctrl+Shift+O",
+        action: "Show in folder",
+    },
+    Shortcut {
+        group: "Files",
         keys: "Ctrl+Shift+C",
         action: "Copy path",
     },

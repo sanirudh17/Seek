@@ -424,6 +424,7 @@ impl Seek {
                 daily::Action::DocumentPane,
                 previewable,
             ),
+            ("Show in folder", daily::Action::ShowInFolder, selected),
             ("Reveal in Explorer", daily::Action::Reveal, selected),
             ("Copy path", daily::Action::Path, selected),
             ("Copy name", daily::Action::Name, selected),
@@ -607,10 +608,7 @@ impl Seek {
                             this.store.save(&this.preferences);
                         }
                         Destination::RecentFile(path) => {
-                            if let Some(parent) = path.parent() {
-                                this.settings = false;
-                                this.scope_to(Some(parent.into()), window, cx);
-                            }
+                            this.show_in_folder(path, window, cx);
                         }
                         Destination::SavedCommand(command) => {
                             let paths = this.command_selection(None, cx);

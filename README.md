@@ -138,6 +138,7 @@ Shortcuts work inside Seek's window, not system-wide. Press **F1** in Seek for t
 | Alt+F5 / Alt+F6 | Copy / move to the other pane |
 | Ctrl+A | Select all |
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste |
+| Ctrl+Shift+O | Show in folder |
 | Ctrl+Shift+C | Copy path |
 | Ctrl+Shift+N | New folder |
 | F2 | Rename |

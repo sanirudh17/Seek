@@ -2862,6 +2862,10 @@ impl Render for Seek {
                     this.file_action(super::daily::Action::Path, None, window, cx);
                     cx.stop_propagation();
                 }))
+                .capture_action(cx.listener(|this, _: &ShowInFolder, window, cx| {
+                    this.file_action(super::daily::Action::ShowInFolder, None, window, cx);
+                    cx.stop_propagation();
+                }))
                 .capture_action(cx.listener(|this, _: &UndoFile, window, cx| {
                     this.file_action(super::daily::Action::UndoRename,None,window,cx);cx.stop_propagation();
                 }))

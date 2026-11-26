@@ -173,7 +173,8 @@ gpui::actions!(
         CopyToOtherPane,
         MoveToOtherPane,
         NewFolder,
-        ToggleSidebar
+        ToggleSidebar,
+        ShowInFolder
     ]
 );
 
@@ -792,6 +793,8 @@ pub struct Seek {
     next_tab_id: usize,
     restoring_input: Option<String>,
     pending_tab_restore: Option<tabs::Tab>,
+    /// File to select and scroll into view once its parent folder loads (11.7).
+    pending_reveal_path: Option<PathBuf>,
     tab_motion: u64,
     closing_tab: Option<tabs::Closing>,
     motion_enabled: bool,
@@ -1378,6 +1381,7 @@ impl Seek {
             next_tab_id: 3,
             restoring_input: None,
             pending_tab_restore: None,
+            pending_reveal_path: None,
             tab_motion: 0,
             closing_tab: None,
             motion_enabled: crate::instance::motion_enabled(),
@@ -1769,6 +1773,8 @@ impl Seek {
                     .map(|r| r.file.path.clone())
             })
             .flatten();
+        let pending_reveal = self.pending_reveal_path.clone();
+        let mut revealed_index = None;
         self.table.update(cx, |table, cx| {
             let row_height = gpui_component::Size::Small.table_row_height();
             let top = scroll_top(&table.vertical_scroll_handle, row_height);
@@ -1805,6 +1811,23 @@ impl Seek {
                 }
             }
             table.delegate().refresh_media();
+            if let Some(target) = pending_reveal.as_deref()
+                && let Some(index) = reveal_match_index(&table.delegate().rows, target)
+            {
+                revealed_index = Some(index);
+                let matched_path = table.delegate().rows[index].file.path.clone();
+                {
+                    let data = table.delegate_mut();
+                    data.selected_many.clear();
+                    data.selected_many.insert(matched_path.clone());
+                    data.selection_anchor = Some(matched_path.clone());
+                    data.drag_paths = Arc::new(vec![matched_path]);
+                }
+                table.set_selected_row(index, cx);
+                table.scroll_to_row(index, cx);
+                table.refresh(cx);
+                return;
+            }
             let selected = selected.and_then(|path| {
                 table
                     .delegate()
@@ -1840,24 +1863,38 @@ impl Seek {
             }
             table.refresh(cx);
         });
-        if let Some(path) = grid_anchor
-            && let Some(index) = self
-                .table
-                .read(cx)
-                .delegate()
-                .rows
-                .iter()
-                .position(|r| r.file.path == path)
-        {
-            keep_scroll_anchor(
-                &self.grid_scroll,
-                grid_top,
-                index / self.grid_columns,
-                grid_height,
+        if let Some(index) = revealed_index {
+            self.pending_reveal_path = None;
+            self.grid_scroll.scroll_to_item(
+                index / self.grid_columns.max(1),
+                ScrollStrategy::Center,
             );
-        }
-        if !same_view {
-            self.grid_scroll.scroll_to_item(0, ScrollStrategy::Top);
+        } else {
+            if self.pending_reveal_path.is_some()
+                && update.message.is_none()
+                && !self.table.read(cx).delegate().rows.is_empty()
+            {
+                self.pending_reveal_path = None;
+            }
+            if let Some(path) = grid_anchor
+                && let Some(index) = self
+                    .table
+                    .read(cx)
+                    .delegate()
+                    .rows
+                    .iter()
+                    .position(|r| r.file.path == path)
+            {
+                keep_scroll_anchor(
+                    &self.grid_scroll,
+                    grid_top,
+                    index / self.grid_columns,
+                    grid_height,
+                );
+            }
+            if !same_view {
+                self.grid_scroll.scroll_to_item(0, ScrollStrategy::Top);
+            }
         }
         self.restore_tab_viewport(cx);
         self.refresh_preview(cx);
@@ -1949,6 +1986,7 @@ impl Seek {
         self.all_offset = 0;
         self.all_total = None;
         self.pending_tab_restore = None;
+        self.pending_reveal_path = None;
         self.content_mode = false;
         self.largest = None;
         self.suggestions = None;
@@ -1970,6 +2008,67 @@ impl Seek {
             .update(cx, |input, cx| input.set_value("", window, cx));
         self.submit(cx);
         self.remember(cx);
+        cx.notify();
+    }
+
+    /// Jump to `path`'s parent folder inside Seek, select `path`, and scroll
+    /// it into view (Phase 11.7).
+    pub(super) fn show_in_folder(
+        &mut self,
+        path: PathBuf,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(parent) = path
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .map(std::path::Path::to_path_buf)
+        else {
+            return;
+        };
+        self.settings = false;
+        if self.preview_enlarged {
+            self.close_quick_look(window, cx);
+        }
+        let already_in_parent = self.scope.as_deref().is_some_and(|s| paths_same_ci(s, &parent))
+            && self.input.read(cx).value().trim().is_empty()
+            && !self.content_mode
+            && self.largest.is_none()
+            && self.storage_page.is_none()
+            && self.worktrees_page.is_none();
+        if already_in_parent {
+            let mut found = None;
+            self.table.update(cx, |table, cx| {
+                if let Some(index) = reveal_match_index(&table.delegate().rows, &path) {
+                    found = Some(index);
+                    let matched_path = table.delegate().rows[index].file.path.clone();
+                    {
+                        let data = table.delegate_mut();
+                        data.selected_many.clear();
+                        data.selected_many.insert(matched_path.clone());
+                        data.selection_anchor = Some(matched_path.clone());
+                        data.drag_paths = Arc::new(vec![matched_path]);
+                    }
+                    table.set_selected_row(index, cx);
+                    table.scroll_to_row(index, cx);
+                    table.refresh(cx);
+                }
+            });
+            if let Some(index) = found {
+                self.pending_reveal_path = None;
+                self.grid_scroll.scroll_to_item(
+                    index / self.grid_columns.max(1),
+                    ScrollStrategy::Center,
+                );
+                self.table.read(cx).focus_handle(cx).focus(window, cx);
+                self.refresh_preview(cx);
+                cx.notify();
+                return;
+            }
+        }
+        self.scope_to(Some(parent), window, cx);
+        self.pending_reveal_path = Some(path);
+        self.table.read(cx).focus_handle(cx).focus(window, cx);
         cx.notify();
     }
     fn open_address(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
@@ -2717,10 +2816,27 @@ pub fn root(startup: Startup, window: &mut Window, cx: &mut App) -> Entity<Root>
     cx.new(|cx| Root::new(view, window, cx))
 }
 
+fn strip_verbatim(path: &std::path::Path) -> String {
+    let text = path.to_string_lossy();
+    let trimmed = text.strip_prefix(r"\\?\").unwrap_or(&text);
+    trimmed.trim_end_matches(['\\', '/']).to_string()
+}
+
+fn paths_same_ci(a: &std::path::Path, b: &std::path::Path) -> bool {
+    strip_verbatim(a).eq_ignore_ascii_case(&strip_verbatim(b))
+}
+
+fn reveal_match_index(rows: &[Row], target: &std::path::Path) -> Option<usize> {
+    let needle = strip_verbatim(target);
+    rows.iter()
+        .position(|row| strip_verbatim(&row.file.path).eq_ignore_ascii_case(&needle))
+}
+
 #[cfg(test)]
 mod viewport_tests {
-    use super::{keep_scroll_anchor, scroll_top};
+    use super::{keep_scroll_anchor, reveal_match_index, scroll_top, Row};
     use gpui::{ScrollStrategy, UniformListScrollHandle, point, px};
+    use std::path::{Path, PathBuf};
     #[test]
     fn deleting_above_a_scrolled_view_keeps_the_same_row_and_pixel_remainder() {
         let handle = UniformListScrollHandle::new();
@@ -2745,6 +2861,36 @@ mod viewport_tests {
                 .unwrap()
                 .item_index,
             5
+        );
+    }
+
+    #[test]
+    fn reveal_match_index_is_case_insensitive_and_handles_verbatim_prefix() {
+        let make = |p: &str| {
+            Row::new(seek_engine::Found {
+                path: PathBuf::from(p),
+                kind: 0,
+                mtime: 0,
+                size: 0,
+                score: 0,
+            })
+        };
+        let rows = vec![
+            make(r"C:\Users\Demo\Alpha.txt"),
+            make(r"C:\Users\Demo\Report.PDF"),
+            make(r"C:\Users\Demo\Zeta.md"),
+        ];
+        assert_eq!(
+            reveal_match_index(&rows, Path::new(r"c:\users\demo\report.pdf")),
+            Some(1)
+        );
+        assert_eq!(
+            reveal_match_index(&rows, Path::new(r"\\?\C:\Users\Demo\Zeta.md")),
+            Some(2)
+        );
+        assert_eq!(
+            reveal_match_index(&rows, Path::new(r"C:\Users\Demo\Missing.txt")),
+            None
         );
     }
 }

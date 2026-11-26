@@ -200,8 +200,38 @@ impl Seek {
         true
     }
 
+    /// Pin a folder to sidebar Favorites from a context menu, with a quiet toast.
+    pub(super) fn pin_folder_to_sidebar(
+        &mut self,
+        folder: PathBuf,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let name = folder
+            .file_name()
+            .unwrap_or(folder.as_os_str())
+            .to_string_lossy()
+            .into_owned();
+        let mut added = false;
+        self.change_sidebar(cx, |layout| {
+            layout.place_item(Item::folder(folder, None), Place::Favorites, None)?;
+            added = true;
+            Ok(())
+        });
+        if added {
+            self.sidebar = true;
+            self.show_quiet_toast(format!("Added {name} to sidebar"), window, cx);
+        }
+    }
+
     /// Folders dragged from the file list become sidebar shortcuts here.
-    fn add_dragged_folders(&mut self, paths: &[PathBuf], place: Place, cx: &mut Context<Self>) {
+    fn add_dragged_folders(
+        &mut self,
+        paths: &[PathBuf],
+        place: Place,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let slot = self
             .sidebar_state
             .drop
@@ -220,12 +250,28 @@ impl Seek {
             cx.notify();
             return;
         }
+        let count = folders.len();
+        let first_name = folders[0]
+            .file_name()
+            .unwrap_or(folders[0].as_os_str())
+            .to_string_lossy()
+            .into_owned();
+        let mut ok = false;
         self.change_sidebar(cx, |layout| {
             for (offset, folder) in folders.into_iter().enumerate() {
                 layout.place_item(Item::folder(folder, None), place, slot.map(|s| s + offset))?;
             }
+            ok = true;
             Ok(())
         });
+        if ok {
+            let text = if count == 1 {
+                format!("Added {first_name} to sidebar")
+            } else {
+                format!("Added {count} folders to sidebar")
+            };
+            self.show_quiet_toast(text, window, cx);
+        }
     }
 
     fn drop_on_place(&mut self, drag: &PlaceDrag, place: Place, cx: &mut Context<Self>) {
@@ -439,7 +485,7 @@ impl Seek {
                             this.sidebar_state.file_into = None;
                             this.drop_files(drag, path, window, cx)
                         }
-                        _ => this.add_dragged_folders(&drag.paths, place, cx),
+                        _ => this.add_dragged_folders(&drag.paths, place, window, cx),
                     }
                 }),
             )
@@ -499,8 +545,8 @@ impl Seek {
                     this.sidebar_state.drop = None;
                     this.drop_on_place(drag, Place::Favorites, cx)
                 }))
-                .on_drop(cx.listener(|this, drag: &super::daily::FilesDrag, _, cx| {
-                    this.add_dragged_folders(&drag.paths, Place::Favorites, cx)
+                .on_drop(cx.listener(|this, drag: &super::daily::FilesDrag, window, cx| {
+                    this.add_dragged_folders(&drag.paths, Place::Favorites, window, cx)
                 }))
                 .context_menu(move |menu, window, _| {
                     let owner = owner.clone();
@@ -569,8 +615,8 @@ impl Seek {
                         this.drop_on_place(drag, place, cx)
                     }))
                     .on_drop(
-                        cx.listener(move |this, drag: &super::daily::FilesDrag, _, cx| {
-                            this.add_dragged_folders(&drag.paths, place, cx)
+                        cx.listener(move |this, drag: &super::daily::FilesDrag, window, cx| {
+                            this.add_dragged_folders(&drag.paths, place, window, cx)
                         }),
                     )
                     .child(header)
@@ -777,8 +823,8 @@ impl Seek {
                 style.bg(p.accent.opacity(0.12))
             })
             .on_drop(
-                cx.listener(move |this, drag: &super::daily::FilesDrag, _, cx| {
-                    this.add_dragged_folders(&drag.paths, place, cx)
+                cx.listener(move |this, drag: &super::daily::FilesDrag, window, cx| {
+                    this.add_dragged_folders(&drag.paths, place, window, cx)
                 }),
             )
             .context_menu(move |menu, window, cx| {

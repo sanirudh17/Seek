@@ -2,6 +2,12 @@ use super::*;
 use crate::file_ops::Operation;
 use gpui_component::menu::{DropdownMenu, PopupMenu, PopupMenuItem};
 
+#[derive(Clone, Debug)]
+pub(super) enum OpToast {
+    Text(String),
+    Paste,
+}
+
 #[derive(Clone, Copy)]
 pub(super) enum Action {
     CancelOperations,
@@ -37,6 +43,7 @@ pub(super) enum Action {
     Organize,
     NewFile,
     SuggestNames,
+    AddToSidebar,
 }
 pub(super) struct Edit {
     pub(super) batch: Option<super::batch_rename_view::State>,
@@ -204,6 +211,11 @@ pub(super) fn actions_menu_selection(
         (
             "Organize folder...",
             Action::Organize,
+            selected && target_is_folder && !multiple,
+        ),
+        (
+            "Add to sidebar",
+            Action::AddToSidebar,
             selected && target_is_folder && !multiple,
         ),
         (
@@ -549,6 +561,15 @@ impl Seek {
         {
             return;
         }
+        if matches!(action, Action::AddToSidebar) {
+            let folder = target
+                .or_else(|| self.selected(cx).map(|r| r.file.path))
+                .filter(|path| path.is_dir());
+            if let Some(folder) = folder {
+                self.pin_folder_to_sidebar(folder, window, cx);
+            }
+            return;
+        }
         if matches!(action, Action::Organize) {
             let folder = target.filter(|path| path.is_dir());
             self.open_organize(folder, window, cx);
@@ -890,6 +911,7 @@ impl Seek {
                         } else {
                             selected_paths
                         };
+                        let count = paths.len();
                         let value = paths
                             .into_iter()
                             .map(|path| match action {
@@ -904,6 +926,23 @@ impl Seek {
                             .collect::<Vec<_>>()
                             .join("\r\n");
                         cx.write_to_clipboard(ClipboardItem::new_string(value));
+                        let label = match action {
+                            Action::Name => {
+                                if count == 1 {
+                                    "Copied name".into()
+                                } else {
+                                    format!("Copied {count} names")
+                                }
+                            }
+                            _ => {
+                                if count == 1 {
+                                    "Copied path".into()
+                                } else {
+                                    format!("Copied {count} paths")
+                                }
+                            }
+                        };
+                        self.show_quiet_toast(label, window, cx);
                         return;
                     }
                     _ => return,
@@ -914,6 +953,11 @@ impl Seek {
     }
     pub(super) fn run_file_op(&mut self, op: Operation, window: &Window, cx: &mut Context<Self>) {
         let owner = self.next_op_owner.take();
+        let pending_toast = if owner.is_none() {
+            self.toast_for_op(&op)
+        } else {
+            None
+        };
         match self.files.send(
             op,
             crate::instance::hwnd(window).unwrap_or(std::ptr::null_mut()) as usize,
@@ -925,6 +969,7 @@ impl Seek {
                     crate::mcp::owner::started(job, None);
                 }
                 self.op_owners.push_back(owner);
+                self.op_toasts.push_back(pending_toast);
             }
             Err(error) => {
                 if let Some(job) = &owner {
@@ -935,6 +980,92 @@ impl Seek {
             }
         }
         cx.notify();
+    }
+
+    fn toast_for_op(&self, op: &Operation) -> Option<OpToast> {
+        let count_word = |n: usize| format!("{n} {}", if n == 1 { "item" } else { "items" });
+        match op {
+            Operation::Clipboard { paths, cut } => Some(OpToast::Text(format!(
+                "{} {}",
+                if *cut { "Cut" } else { "Copied" },
+                count_word(paths.len())
+            ))),
+            Operation::Paste { .. } => Some(OpToast::Paste),
+            Operation::UndoRename { redo } => Some(OpToast::Text(if *redo {
+                "Redid rename".into()
+            } else {
+                "Undid rename".into()
+            })),
+            Operation::UndoBatchRename { redo } => Some(OpToast::Text(if *redo {
+                "Redid batch rename".into()
+            } else {
+                "Undid batch rename".into()
+            })),
+            Operation::UndoCopy { redo } => Some(OpToast::Text(if *redo {
+                "Redid copy".into()
+            } else {
+                "Undid copy".into()
+            })),
+            Operation::UndoMove { redo } => {
+                let organized = !redo
+                    && self
+                        .operation_history
+                        .as_ref()
+                        .ok()
+                        .and_then(|h| h.latest_action(None))
+                        .is_some_and(|job| job.label == crate::file_ops::ORGANIZE_LABEL);
+                Some(OpToast::Text(if *redo {
+                    "Redid move".into()
+                } else if organized {
+                    "Undid organize".into()
+                } else {
+                    "Undid move".into()
+                }))
+            }
+            Operation::RedoRecycle => Some(OpToast::Text("Redid recycle".into())),
+            Operation::PutBack { .. } => {
+                Some(OpToast::Text("Restored from Recycle Bin".into()))
+            }
+            _ => None,
+        }
+    }
+
+    pub(super) fn finish_op_toast(
+        &mut self,
+        toast: OpToast,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let text = match toast {
+            OpToast::Text(text) => text,
+            OpToast::Paste => {
+                let pasted = self
+                    .operation_history
+                    .as_ref()
+                    .ok()
+                    .and_then(|h| h.jobs.last())
+                    .filter(|j| j.label == "Paste files")
+                    .map(|j| {
+                        j.outcomes
+                            .iter()
+                            .filter(|e| {
+                                matches!(
+                                    e,
+                                    crate::operation_journal::Event::After { hresult, .. }
+                                        if crate::operation_journal::item_completed(*hresult)
+                                )
+                            })
+                            .count()
+                    })
+                    .unwrap_or(0);
+                if pasted > 0 {
+                    format!("Pasted {pasted} {}", if pasted == 1 { "item" } else { "items" })
+                } else {
+                    "Pasted".into()
+                }
+            }
+        };
+        self.show_quiet_toast(text, window, cx);
     }
 
     /// Runs a waiting agent undo once the file worker is idle, reloading the

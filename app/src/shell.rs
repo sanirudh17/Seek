@@ -913,6 +913,8 @@ pub struct Seek {
     /// Who sent each operation still in the file worker, oldest first: an
     /// agent's job id, or `None` for the person's own (Phase 10).
     op_owners: std::collections::VecDeque<Option<String>>,
+    /// Pending quiet confirmation toast paired with each queued file op (11.6).
+    op_toasts: std::collections::VecDeque<Option<daily::OpToast>>,
     /// The agent job the next `run_file_op` belongs to.
     next_op_owner: Option<String>,
     /// An agent's undo waiting for the worker to be idle and the undo
@@ -930,6 +932,7 @@ pub struct Seek {
     organize: Option<organize_view::Review>,
     organizing: bool,
     toast: Option<organize_view::Toast>,
+    toast_generation: u64,
     largest: Option<bool>,
     normal_results: Option<NormalResults>,
     suggestions: Option<Entity<gpui_component::menu::PopupMenu>>,
@@ -1310,10 +1313,18 @@ impl Seek {
                                 }else{this.table.read(cx).focus_handle(cx).focus(window,cx);this.edit=None;}
                             }
                             this.files_pending=this.files_pending.saturating_sub(1);
-                            if let Some(Some(job))=this.op_owners.pop_front(){crate::mcp::owner::finish(&job,reply.result.clone());}
+                            let owner = this.op_owners.pop_front().flatten();
+                            let pending_toast = this.op_toasts.pop_front().flatten();
+                            if let Some(job) = owner.as_ref() {
+                                crate::mcp::owner::finish(job, reply.result.clone());
+                            }
                             if this.files_pending==0 {this.try_agent_undo(window,cx);}
+                            let op_ok = reply.result.is_ok();
                             this.message=reply.result.err();
                             this.finish_organize(window,cx);
+                            if op_ok && owner.is_none() && let Some(toast) = pending_toast {
+                                this.finish_op_toast(toast, window, cx);
+                            }
                             this.columns.invalidate(&reply.refresh);
                             this.refresh_inactive_panes(&reply.refresh,&[],cx);
                             this.refresh_capacity(cx);
@@ -1480,6 +1491,7 @@ impl Seek {
             history_loading: false,
             files_pending: 0,
             op_owners: Default::default(),
+            op_toasts: Default::default(),
             next_op_owner: None,
             pending_agent_undo: None,
             agent_undo_refreshed: false,
@@ -1490,6 +1502,7 @@ impl Seek {
             organize: None,
             organizing: false,
             toast: None,
+            toast_generation: 0,
             largest: None,
             normal_results: None,
             suggestions: None,

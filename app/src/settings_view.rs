@@ -24,7 +24,7 @@ pub(super) const SETTINGS_PAGES: [(usize, &str, Glyph, &str); 11] = [
         1,
         "Files and search",
         Glyph::Search,
-        "hidden default view content document cache text explorer context menu open in seek show in seek default file manager win+e drag",
+        "hidden default view content document cache text explorer context menu open in seek show in seek default file manager win+e drag confirmations toast",
     ),
     (
         7,
@@ -984,6 +984,14 @@ impl Seek {
                 this.preferences.restore_layout = *on;
                 this.save_preferences(window, cx);
             }));
+        let show_confirmations = Switch::new("show-confirmations")
+            .color(p.accent)
+            .checked(self.preferences.show_confirmations)
+            .accessibility_label("Show confirmations")
+            .on_change(cx.listener(|this, on: &bool, window, cx| {
+                this.preferences.show_confirmations = *on;
+                this.save_preferences(window, cx);
+            }));
         let files = section("Files and search")
             .child(card(
                 "Hidden and system files",
@@ -1001,6 +1009,12 @@ impl Seek {
                 "Reopen panes and tabs",
                 "Open Seek with the panes, tabs and folders you had when you closed it. When off, Seek opens with one pane.",
                 restore_layout,
+                p,
+            ))
+            .child(card(
+                "Show confirmations",
+                "Show a brief toast when copying, cutting, pasting, copying a path, undoing, redoing or pinning a folder to the sidebar.",
+                show_confirmations,
                 p,
             ))
             .child(card(

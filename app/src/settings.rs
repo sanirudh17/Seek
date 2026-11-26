@@ -118,6 +118,8 @@ pub struct Settings {
     pub wrap_info_panel: bool,
     pub wrap_quick_look: bool,
     pub wrap_document_pane: bool,
+    /// Show brief confirmation toasts for quiet actions (11.6); on by default.
+    pub show_confirmations: bool,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -176,6 +178,7 @@ impl Default for Settings {
             wrap_info_panel: true,
             wrap_quick_look: true,
             wrap_document_pane: true,
+            show_confirmations: true,
         }
     }
 }

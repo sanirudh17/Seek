@@ -822,7 +822,7 @@ impl Seek {
                                     cx.write_to_clipboard(ClipboardItem::new_string(
                                         copy_text.clone(),
                                     ));
-                                    this.show_toast("Copied".into(), false, window, cx);
+                                    this.show_quiet_toast("Copied", window, cx);
                                 })),
                             )
                             .child(

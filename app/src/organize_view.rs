@@ -23,6 +23,7 @@ pub(super) struct Review {
 pub(super) struct Toast {
     pub text: String,
     pub undo: bool,
+    pub generation: u64,
     _timer: Task<()>,
 }
 
@@ -267,18 +268,51 @@ impl Seek {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.show_toast_for(
+            text,
+            undo,
+            std::time::Duration::from_secs(TOAST_SECONDS),
+            window,
+            cx,
+        );
+    }
+    /// Brief non-stacking confirmation toast for quiet actions (11.6),
+    /// respecting the "Show confirmations" preference and auto-dismissing
+    /// after `motion::TOAST_QUIET` (~2.5 s).
+    pub(super) fn show_quiet_toast(
+        &mut self,
+        text: impl Into<String>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.preferences.show_confirmations {
+            return;
+        }
+        self.show_toast_for(text.into(), false, crate::motion::TOAST_QUIET, window, cx);
+    }
+    fn show_toast_for(
+        &mut self,
+        text: String,
+        undo: bool,
+        duration: std::time::Duration,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.toast_generation = self.toast_generation.wrapping_add(1);
+        let generation = self.toast_generation;
         let timer = cx.spawn_in(window, async move |this, cx| {
-            cx.background_executor()
-                .timer(std::time::Duration::from_secs(TOAST_SECONDS))
-                .await;
+            cx.background_executor().timer(duration).await;
             let _ = this.update(cx, |this, cx| {
-                this.toast = None;
-                cx.notify();
+                if this.toast.as_ref().is_some_and(|t| t.generation == generation) {
+                    this.toast = None;
+                    cx.notify();
+                }
             });
         });
         self.toast = Some(Toast {
             text,
             undo,
+            generation,
             _timer: timer,
         });
         cx.notify();
@@ -287,6 +321,61 @@ impl Seek {
         let toast = self.toast.as_ref()?;
         let p = crate::appearance::palette(&self.preferences, cx);
         let undo = toast.undo && self.can_reverse_rename(false);
+        let pill = div()
+            .id("toast")
+            .role(Role::Status)
+            .aria_label(toast.text.clone())
+            .occlude()
+            .h(px(36.))
+            .pl_4()
+            .pr(px(if undo { 6. } else { 16. }))
+            .flex()
+            .items_center()
+            .gap_3()
+            .rounded(px(10.))
+            .border_1()
+            .border_color(crate::appearance::modal_border(p))
+            .bg(crate::appearance::modal_surface(p))
+            .shadow_lg()
+            .text_size(px(13.))
+            .text_color(p.text)
+            .when(toast.undo, |d| {
+                // A finished operation: a green check beside the words.
+                d.child(
+                    Icon::new(gpui_component_assets::IconName::Check)
+                        .size(px(14.))
+                        .text_color(p.tints.green),
+                )
+            })
+            .child(toast.text.clone())
+            .when(undo, |toast| {
+                toast.child(
+                    gpui_base::Button::new("toast-undo")
+                        .accessibility_label("Undo")
+                        .h(px(26.))
+                        .px_2()
+                        .rounded(px(6.))
+                        .text_size(px(13.))
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_color(p.text)
+                        .hover(|s| s.bg(p.hover))
+                        .child(interface::button_text("Undo"))
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.toast = None;
+                            this.reverse_file_operation(false, window, cx);
+                        })),
+                )
+            });
+        let pill: AnyElement = if self.motion_enabled {
+            pill.with_animation(
+                ("toast-enter", toast.generation as usize),
+                crate::motion::enter(),
+                |toast, t| toast.opacity(t).mt(px(8. * (1. - t))),
+            )
+            .into_any_element()
+        } else {
+            pill.into_any_element()
+        };
         Some(
             div()
                 .absolute()
@@ -295,56 +384,7 @@ impl Seek {
                 .right_0()
                 .flex()
                 .justify_center()
-                .child(
-                    div()
-                        .id("toast")
-                        .role(Role::Status)
-                        .aria_label(toast.text.clone())
-                        .occlude()
-                        .h(px(36.))
-                        .pl_4()
-                        .pr(px(if undo { 6. } else { 16. }))
-                        .flex()
-                        .items_center()
-                        .gap_3()
-                        .rounded(px(10.))
-                        .border_1()
-                        .border_color(crate::appearance::modal_border(p))
-                        .bg(crate::appearance::modal_surface(p))
-                        .shadow_lg()
-                        .text_size(px(13.))
-                        .text_color(p.text)
-                        .when(toast.undo, |d| {
-                            // A finished operation: a green check beside the words.
-                            d.child(
-                                Icon::new(gpui_component_assets::IconName::Check)
-                                    .size(px(14.))
-                                    .text_color(p.tints.green),
-                            )
-                        })
-                        .child(toast.text.clone())
-                        .when(undo, |toast| {
-                            toast.child(
-                                gpui_base::Button::new("toast-undo")
-                                    .accessibility_label("Undo")
-                                    .h(px(26.))
-                                    .px_2()
-                                    .rounded(px(6.))
-                                    .text_size(px(13.))
-                                    .font_weight(FontWeight::MEDIUM)
-                                    .text_color(p.text)
-                                    .hover(|s| s.bg(p.hover))
-                                    .child(interface::button_text("Undo"))
-                                    .on_click(cx.listener(|this, _, window, cx| {
-                                        this.toast = None;
-                                        this.reverse_file_operation(false, window, cx);
-                                    })),
-                            )
-                        })
-                        .with_animation("toast-enter", crate::motion::enter(), |toast, t| {
-                            toast.opacity(t).mt(px(8. * (1. - t)))
-                        }),
-                )
+                .child(pill)
                 .into_any_element(),
         )
     }

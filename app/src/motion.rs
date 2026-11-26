@@ -26,6 +26,8 @@ pub const SETTLE: Duration = Duration::from_millis(180);
 /// Spring-driven reversible movement (sidebar, drop zones, column scroll).
 /// Scrollbars stay this long after the last scroll, drag or hover, then fade.
 pub const SCROLLBAR_IDLE: Duration = Duration::from_secs(3);
+/// Brief quiet confirmation toasts (Copy, Cut, Paste, Copy path, Undo, Redo, Add to sidebar).
+pub const TOAST_QUIET: Duration = Duration::from_millis(2500);
 pub const SPRING: Duration = Duration::from_millis(260);
 
 /// Whether Windows allows client-area animation. Read on demand; callers

@@ -1,13 +1,14 @@
 //! Picture editing UI (Phase 11.9), shared between Quick Look and picture
 //! Document panes. Uses `crate::picture_edit` for non-destructive recipes,
-//! editable vector marks, permanent pixel-level redaction, and cancellable
-//! full-resolution export.
+//! 60 FPS GPU-accelerated live vector marks, 8-handle crop, permanent
+//! pixel-level redaction, and cancellable full-resolution export.
 use super::*;
 use crate::picture_edit::{
-    AspectPreset, ExportRequest, Handle, Ink, LoadedPicture, MarkFrame, PointF, RectF, SaveMode,
-    Step, Tool, apply_aspect_preset, apply_recipe, current_dimensions, export_full,
-    first_live_mark, has_redaction, hit_test_handle, hit_test_mark, load_for_editing, mark_frame,
-    resize_mark_handle, to_render_image, translate_mark,
+    AspectPreset, CropEdge, ExportRequest, Handle, Ink, LoadedPicture, MarkFrame, PointF, RectF,
+    SaveMode, Step, StrokeSize, Tool, apply_aspect_preset, apply_recipe, current_dimensions,
+    export_full, first_live_mark, has_redaction, hit_test_handle, hit_test_mark, load_for_editing,
+    mark_frame, resize_crop_edge, resize_mark_handle, rotate_point, to_render_image,
+    translate_mark,
 };
 use gpui_component::menu::{DropdownMenu, PopupMenuItem};
 use gpui_component_assets::IconName as Glyph;
@@ -30,6 +31,7 @@ pub(super) enum EditHost {
 enum CropDrag {
     Move { offset_x: f32, offset_y: f32 },
     Corner(usize),
+    Edge(CropEdge),
     New(PointF),
 }
 
@@ -120,18 +122,246 @@ impl ImageBox {
             (self.y - self.canvas_y) + pt.y * self.scale,
         )
     }
+
+    fn image_to_window(self, pt: PointF) -> Point<Pixels> {
+        point(
+            px(self.x + pt.x * self.scale),
+            px(self.y + pt.y * self.scale),
+        )
+    }
+}
+
+fn ink_hsla(ink: Ink, alpha: f32) -> Hsla {
+    let [r, g, b, _] = ink.rgba();
+    let a = (alpha.clamp(0.0, 1.0) * 255.0).round() as u32;
+    rgba(((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | a).into()
+}
+
+/// Paint all live marks (after the last Crop/Rotate/Flip) directly on the GPU
+/// via GPUI `PathBuilder` + shaped text so drawing runs at full 60+ FPS with
+/// zero CPU bitmap re-rasterization or texture re-upload.
+fn paint_live_marks(marks: &[Step], ibox: ImageBox, window: &mut Window, cx: &mut App) {
+    if marks.is_empty() {
+        return;
+    }
+    let clip = Bounds::new(
+        point(px(ibox.x), px(ibox.y)),
+        size(px(ibox.w), px(ibox.h)),
+    );
+    window.with_content_mask(Some(ContentMask { bounds: clip }), |window| {
+        for step in marks {
+            match step {
+                Step::Pen {
+                    points,
+                    ink,
+                    width,
+                    rotation,
+                }
+                | Step::Highlighter {
+                    points,
+                    ink,
+                    width,
+                    rotation,
+                } => {
+                    if points.is_empty() {
+                        continue;
+                    }
+                    let is_hl = matches!(step, Step::Highlighter { .. });
+                    let color = ink_hsla(*ink, if is_hl { 0.36 } else { 1.0 });
+                    let stroke_w = (*width * ibox.scale).max(if is_hl { 4.0 } else { 1.5 });
+                    if points.len() == 1 {
+                        let c = ibox.image_to_window(points[0]);
+                        let r = stroke_w * 0.5;
+                        let mut pb = PathBuilder::fill();
+                        for i in 0..16 {
+                            let a = (i as f32 / 16.0) * std::f32::consts::TAU;
+                            let p = point(c.x + px(r * a.cos()), c.y + px(r * a.sin()));
+                            if i == 0 {
+                                pb.move_to(p);
+                            } else {
+                                pb.line_to(p);
+                            }
+                        }
+                        pb.close();
+                        if let Ok(path) = pb.build() {
+                            window.paint_path(path, color);
+                        }
+                    } else {
+                        let center = mark_frame(step)
+                            .map(|f| f.center())
+                            .unwrap_or(points[0]);
+                        let mut pb = PathBuilder::stroke(px(stroke_w));
+                        for (i, &pt) in points.iter().enumerate() {
+                            let wpt = ibox.image_to_window(rotate_point(pt, center, *rotation));
+                            if i == 0 {
+                                pb.move_to(wpt);
+                            } else {
+                                pb.line_to(wpt);
+                            }
+                        }
+                        if let Ok(path) = pb.build() {
+                            window.paint_path(path, color);
+                        }
+                    }
+                }
+                Step::Arrow {
+                    from,
+                    to,
+                    ink,
+                    width,
+                } => {
+                    let dx = to.x - from.x;
+                    let dy = to.y - from.y;
+                    let len = dx.hypot(dy);
+                    if len < 1.0 {
+                        continue;
+                    }
+                    let color = ink_hsla(*ink, 1.0);
+                    let stroke_w = (*width * ibox.scale).max(1.5);
+                    let ux = dx / len;
+                    let uy = dy / len;
+                    let px_u = -uy;
+                    let py_u = ux;
+                    let head_len = (*width * 4.2).max(14.0).min(len * 0.45);
+                    let head_half_w = head_len * 0.55;
+                    let shaft_end = PointF::new(
+                        to.x - ux * head_len * 0.72,
+                        to.y - uy * head_len * 0.72,
+                    );
+                    let mut shaft = PathBuilder::stroke(px(stroke_w));
+                    shaft.move_to(ibox.image_to_window(*from));
+                    shaft.line_to(ibox.image_to_window(shaft_end));
+                    if let Ok(path) = shaft.build() {
+                        window.paint_path(path, color);
+                    }
+                    let base = PointF::new(to.x - ux * head_len, to.y - uy * head_len);
+                    let left = PointF::new(base.x + px_u * head_half_w, base.y + py_u * head_half_w);
+                    let right =
+                        PointF::new(base.x - px_u * head_half_w, base.y - py_u * head_half_w);
+                    let mut head = PathBuilder::fill();
+                    head.move_to(ibox.image_to_window(*to));
+                    head.line_to(ibox.image_to_window(left));
+                    head.line_to(ibox.image_to_window(right));
+                    head.close();
+                    if let Ok(path) = head.build() {
+                        window.paint_path(path, color);
+                    }
+                }
+                Step::Rectangle {
+                    rect,
+                    ink,
+                    width,
+                    rotation,
+                } => {
+                    let color = ink_hsla(*ink, 1.0);
+                    let stroke_w = (*width * ibox.scale).max(1.5);
+                    let c = rect.center();
+                    let corners = rect.corners().map(|pt| rotate_point(pt, c, *rotation));
+                    let mut pb = PathBuilder::stroke(px(stroke_w));
+                    pb.move_to(ibox.image_to_window(corners[0]));
+                    pb.line_to(ibox.image_to_window(corners[1]));
+                    pb.line_to(ibox.image_to_window(corners[2]));
+                    pb.line_to(ibox.image_to_window(corners[3]));
+                    pb.close();
+                    if let Ok(path) = pb.build() {
+                        window.paint_path(path, color);
+                    }
+                }
+                Step::Ellipse {
+                    rect,
+                    ink,
+                    width,
+                    rotation,
+                } => {
+                    let color = ink_hsla(*ink, 1.0);
+                    let stroke_w = (*width * ibox.scale).max(1.5);
+                    let c = rect.center();
+                    let rx = (rect.w * 0.5).max(1.0);
+                    let ry = (rect.h * 0.5).max(1.0);
+                    let mut pb = PathBuilder::stroke(px(stroke_w));
+                    const SEGS: usize = 48;
+                    for i in 0..SEGS {
+                        let a = (i as f32 / SEGS as f32) * std::f32::consts::TAU;
+                        let pt = PointF::new(c.x + rx * a.cos(), c.y + ry * a.sin());
+                        let wpt = ibox.image_to_window(rotate_point(pt, c, *rotation));
+                        if i == 0 {
+                            pb.move_to(wpt);
+                        } else {
+                            pb.line_to(wpt);
+                        }
+                    }
+                    pb.close();
+                    if let Ok(path) = pb.build() {
+                        window.paint_path(path, color);
+                    }
+                }
+                Step::Redact { rect, rotation } => {
+                    let c = rect.center();
+                    let corners = rect.corners().map(|pt| rotate_point(pt, c, *rotation));
+                    let mut pb = PathBuilder::fill();
+                    pb.move_to(ibox.image_to_window(corners[0]));
+                    pb.line_to(ibox.image_to_window(corners[1]));
+                    pb.line_to(ibox.image_to_window(corners[2]));
+                    pb.line_to(ibox.image_to_window(corners[3]));
+                    pb.close();
+                    if let Ok(path) = pb.build() {
+                        window.paint_path(path, rgba(0x000000FF));
+                    }
+                }
+                Step::Text {
+                    at,
+                    text,
+                    size,
+                    ink,
+                    ..
+                } => {
+                    let color = ink_hsla(*ink, 1.0);
+                    let font_size = px((*size * ibox.scale).max(9.0));
+                    let line_height = px((*size * 1.25 * ibox.scale).max(11.0));
+                    let font = window.text_style().font();
+                    for (idx, raw_line) in text.lines().enumerate() {
+                        if raw_line.is_empty() {
+                            continue;
+                        }
+                        let shared: SharedString = raw_line.to_owned().into();
+                        let run = TextRun {
+                            len: shared.len(),
+                            font: font.clone(),
+                            color,
+                            background_color: None,
+                            underline: None,
+                            strikethrough: None,
+                        };
+                        let shaped = window
+                            .text_system()
+                            .shape_line(shared, font_size, &[run], None);
+                        let origin = ibox.image_to_window(PointF::new(
+                            at.x,
+                            at.y + idx as f32 * *size * 1.25,
+                        ));
+                        let _ = shaped.paint(origin, line_height, TextAlign::Left, None, window, cx);
+                    }
+                }
+                _ => {}
+            }
+        }
+    });
 }
 
 pub(super) struct State {
     pub(super) host: EditHost,
     loaded: LoadedPicture,
     steps: Vec<Step>,
+    /// The baked prefix (`steps[..first_live_mark]`) currently reflected in `baked_preview`.
+    baked_prefix: Vec<Step>,
     undo_stack: Vec<Vec<Step>>,
+    redo_stack: Vec<Vec<Step>>,
     dirty: bool,
     tool: Tool,
     ink: Ink,
+    stroke_size: StrokeSize,
     selected: Option<usize>,
-    preview: Arc<RenderImage>,
+    baked_preview: Arc<RenderImage>,
     preview_size: (u32, u32),
     canvas_bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
     drag: Option<DragAction>,
@@ -157,25 +387,34 @@ impl State {
 
     fn default_stroke_width(&self) -> f32 {
         let longest = self.preview_size.0.max(self.preview_size.1).max(1) as f32;
-        (longest * 0.0055).clamp(3.0, 28.0)
+        ((longest * 0.0055).clamp(3.0, 28.0)) * self.stroke_size.scale()
     }
 
     fn default_text_size(&self) -> f32 {
         let longest = self.preview_size.0.max(self.preview_size.1).max(1) as f32;
-        (longest * 0.042).clamp(18.0, 120.0)
+        ((longest * 0.042).clamp(18.0, 120.0)) * self.stroke_size.scale()
     }
 
     fn push_undo(&mut self) {
         self.undo_stack.push(self.steps.clone());
+        self.redo_stack.clear();
         if self.undo_stack.len() > 64 {
             self.undo_stack.remove(0);
         }
     }
 
-    fn rebuild_preview(&mut self, window: &mut Window) {
+    /// Re-rasterize `baked_preview` ONLY if the transform prefix
+    /// (`steps[..first_live_mark]`) changed. Live marks after the last
+    /// Crop/Rotate/Flip paint directly on the GPU at 60+ FPS with zero upload.
+    fn sync_baked_preview(&mut self, window: &mut Window) {
+        let split = first_live_mark(&self.steps);
+        let prefix = &self.steps[..split];
+        if self.baked_prefix.as_slice() == prefix {
+            return;
+        }
         let rendered = apply_recipe(
             &self.loaded.working_base,
-            &self.steps,
+            prefix,
             self.loaded.work_scale,
             None,
             None,
@@ -183,12 +422,13 @@ impl State {
         match rendered {
             Ok(img) => {
                 let next = to_render_image(&img);
-                let old = std::mem::replace(&mut self.preview, next);
+                let old = std::mem::replace(&mut self.baked_preview, next);
                 let _ = window.drop_image(old);
+                self.baked_prefix = prefix.to_vec();
                 self.preview_size = current_dimensions(
                     self.loaded.original_size.0,
                     self.loaded.original_size.1,
-                    &self.steps,
+                    prefix,
                 );
             }
             Err(err) => {
@@ -245,7 +485,7 @@ impl Seek {
         }
         match load_for_editing(&path) {
             Ok(loaded) => {
-                let preview = to_render_image(&loaded.working_base);
+                let baked_preview = to_render_image(&loaded.working_base);
                 let preview_size = loaded.original_size;
                 let focus = cx.focus_handle();
                 focus.focus(window, cx);
@@ -253,12 +493,15 @@ impl Seek {
                     host,
                     loaded,
                     steps: Vec::new(),
+                    baked_prefix: Vec::new(),
                     undo_stack: Vec::new(),
+                    redo_stack: Vec::new(),
                     dirty: false,
                     tool: Tool::Select,
                     ink: Ink::Red,
+                    stroke_size: StrokeSize::Medium,
                     selected: None,
-                    preview,
+                    baked_preview,
                     preview_size,
                     canvas_bounds: Rc::new(Cell::new(None)),
                     drag: None,
@@ -272,7 +515,7 @@ impl Seek {
                     error: None,
                     focus,
                 }) {
-                    let _ = window.drop_image(old.preview);
+                    let _ = window.drop_image(old.baked_preview);
                 }
                 cx.notify();
             }
@@ -317,7 +560,7 @@ impl Seek {
             if let Some(job) = ed.exporting {
                 job.cancel.store(true, Ordering::Relaxed);
             }
-            let _ = window.drop_image(ed.preview);
+            let _ = window.drop_image(ed.baked_preview);
             match ed.host {
                 EditHost::QuickLook => self.preview_focus.focus(window, cx),
                 EditHost::DocumentPane(id) => {
@@ -372,7 +615,8 @@ impl Seek {
         }
         ed.dirty = true;
         ed.error = None;
-        ed.rebuild_preview(window);
+        ed.sync_baked_preview(window);
+        ed.focus.focus(window, cx);
         cx.notify();
     }
 
@@ -393,16 +637,42 @@ impl Seek {
         let Some(prev) = ed.undo_stack.pop() else {
             return;
         };
-        ed.steps = prev;
-        ed.selected = ed.selected.filter(|&i| i >= first_live_mark(&ed.steps) && i < ed.steps.len());
+        ed.redo_stack.push(std::mem::replace(&mut ed.steps, prev));
+        if ed.redo_stack.len() > 64 {
+            ed.redo_stack.remove(0);
+        }
+        ed.selected = ed
+            .selected
+            .filter(|&i| i >= first_live_mark(&ed.steps) && i < ed.steps.len());
         ed.dirty = !ed.steps.is_empty();
         ed.crop_rect = None;
         ed.text_prompt = None;
-        ed.rebuild_preview(window);
+        ed.sync_baked_preview(window);
         cx.notify();
     }
 
-    fn picture_edit_delete_selected(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    fn picture_edit_redo(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(ed) = self.picture_edit.as_mut() else {
+            return;
+        };
+        let Some(next) = ed.redo_stack.pop() else {
+            return;
+        };
+        ed.undo_stack.push(std::mem::replace(&mut ed.steps, next));
+        if ed.undo_stack.len() > 64 {
+            ed.undo_stack.remove(0);
+        }
+        ed.selected = ed
+            .selected
+            .filter(|&i| i >= first_live_mark(&ed.steps) && i < ed.steps.len());
+        ed.dirty = !ed.steps.is_empty();
+        ed.crop_rect = None;
+        ed.text_prompt = None;
+        ed.sync_baked_preview(window);
+        cx.notify();
+    }
+
+    fn picture_edit_delete_selected(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
         let Some(ed) = self.picture_edit.as_mut() else {
             return;
         };
@@ -416,8 +686,7 @@ impl Seek {
         ed.push_undo();
         ed.steps.remove(idx);
         ed.selected = None;
-        ed.dirty = true;
-        ed.rebuild_preview(window);
+        ed.dirty = !ed.steps.is_empty();
         cx.notify();
     }
 
@@ -437,8 +706,8 @@ impl Seek {
             ed.push_undo();
             ed.steps[idx].set_ink(ink);
             ed.dirty = true;
-            ed.rebuild_preview(window);
         }
+        ed.focus.focus(window, cx);
         cx.notify();
     }
 
@@ -506,7 +775,6 @@ impl Seek {
             ed.tool = Tool::Select;
         }
         ed.dirty = true;
-        ed.rebuild_preview(window);
         ed.focus.focus(window, cx);
         cx.notify();
     }
@@ -560,13 +828,11 @@ impl Seek {
                                             .map(|n| n.to_string_lossy().into_owned())
                                             .unwrap_or_else(|| "picture".into());
                                         let host = ed.host;
-                                        let source_path = ed.loaded.path.clone();
                                         ed.dirty = false;
                                         let msg = match mode {
                                             SaveMode::SaveCopy => format!("Saved copy as {name}"),
                                             SaveMode::ReplaceOriginal => format!("Saved {name}"),
                                         };
-                                        // Force preview worker to revalidate fingerprints so updated image reloads fresh.
                                         this.media.force();
                                         let _ = this.backend.tx.send(Command::Changed);
                                         if mode == SaveMode::ReplaceOriginal
@@ -574,7 +840,6 @@ impl Seek {
                                         {
                                             this.reload_document_pane(id, window, cx);
                                         }
-                                        let _ = source_path;
                                         this.close_picture_edit_now(window, cx);
                                         this.show_quiet_toast(msg, window, cx);
                                     }
@@ -643,6 +908,7 @@ impl Seek {
         match ed.tool {
             Tool::Crop => {
                 if let Some(crop) = ed.crop_rect {
+                    // 1. Corners first
                     for (i, corner) in crop.corners().into_iter().enumerate() {
                         let dx = pt.x - corner.x;
                         let dy = pt.y - corner.y;
@@ -652,6 +918,41 @@ impl Seek {
                             return;
                         }
                     }
+                    // 2. Edge midpoint handles (and whole edge band)
+                    let edge_band = 10.0 / ibox.scale;
+                    for (edge, mid) in crop.edge_midpoints() {
+                        let dx = pt.x - mid.x;
+                        let dy = pt.y - mid.y;
+                        let near_mid = (dx * dx + dy * dy).sqrt() <= handle_r * 1.45;
+                        let on_edge = match edge {
+                            CropEdge::Top => {
+                                (pt.y - crop.y).abs() <= edge_band
+                                    && pt.x >= crop.x
+                                    && pt.x <= crop.x + crop.w
+                            }
+                            CropEdge::Bottom => {
+                                (pt.y - (crop.y + crop.h)).abs() <= edge_band
+                                    && pt.x >= crop.x
+                                    && pt.x <= crop.x + crop.w
+                            }
+                            CropEdge::Left => {
+                                (pt.x - crop.x).abs() <= edge_band
+                                    && pt.y >= crop.y
+                                    && pt.y <= crop.y + crop.h
+                            }
+                            CropEdge::Right => {
+                                (pt.x - (crop.x + crop.w)).abs() <= edge_band
+                                    && pt.y >= crop.y
+                                    && pt.y <= crop.y + crop.h
+                            }
+                        };
+                        if near_mid || on_edge {
+                            ed.drag = Some(DragAction::Crop(CropDrag::Edge(edge)));
+                            cx.notify();
+                            return;
+                        }
+                    }
+                    // 3. Inside crop box -> Move
                     if pt.x >= crop.x
                         && pt.x <= crop.x + crop.w
                         && pt.y >= crop.y
@@ -737,7 +1038,6 @@ impl Seek {
                 ed.selected = Some(idx);
                 ed.dirty = true;
                 ed.drag = Some(DragAction::DrawPen { step_index: idx });
-                ed.rebuild_preview(window);
             }
             Tool::Arrow => {
                 let width = ed.default_stroke_width();
@@ -807,7 +1107,7 @@ impl Seek {
     fn picture_edit_mouse_move(
         &mut self,
         event: &MouseMoveEvent,
-        window: &mut Window,
+        _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         let Some(ed) = self.picture_edit.as_mut() else {
@@ -829,18 +1129,17 @@ impl Seek {
 
         match drag {
             DragAction::DrawPen { step_index } => {
-                if let Some(
-                    Step::Pen { points, .. } | Step::Highlighter { points, .. },
-                ) = ed.steps.get_mut(step_index)
+                if let Some(Step::Pen { points, .. } | Step::Highlighter { points, .. }) =
+                    ed.steps.get_mut(step_index)
                 {
+                    let min_step_sq = (2.0 / ibox.scale).powi(2).max(1.5);
                     let far_enough = points.last().is_none_or(|prev| {
                         let dx = prev.x - pt.x;
                         let dy = prev.y - pt.y;
-                        dx * dx + dy * dy >= 4.0
+                        dx * dx + dy * dy >= min_step_sq
                     });
                     if far_enough {
                         points.push(pt);
-                        ed.rebuild_preview(window);
                     }
                 }
             }
@@ -854,7 +1153,6 @@ impl Seek {
                         | Step::Redact { rect: r, .. } => *r = rect,
                         _ => {}
                     }
-                    ed.rebuild_preview(window);
                 }
             }
             DragAction::MoveMark { step_index, last } => {
@@ -867,14 +1165,12 @@ impl Seek {
                         step_index,
                         last: pt,
                     });
-                    ed.rebuild_preview(window);
                 }
             }
             DragAction::Handle { step_index, handle } => {
                 if let Some(step) = ed.steps.get_mut(step_index) {
                     resize_mark_handle(step, handle, pt);
                     ed.dirty = true;
-                    ed.rebuild_preview(window);
                 }
             }
             DragAction::Crop(kind) => {
@@ -889,6 +1185,18 @@ impl Seek {
                             crop.x = (pt.x - offset_x).clamp(0.0, (img_w - crop.w).max(0.0));
                             crop.y = (pt.y - offset_y).clamp(0.0, (img_h - crop.h).max(0.0));
                             ed.crop_rect = Some(crop);
+                        }
+                    }
+                    CropDrag::Edge(edge) => {
+                        if let Some(crop) = ed.crop_rect {
+                            ed.crop_rect = Some(resize_crop_edge(
+                                crop,
+                                edge,
+                                clamped,
+                                ed.crop_aspect,
+                                img_w,
+                                img_h,
+                            ));
                         }
                     }
                     CropDrag::Corner(corner) => {
@@ -935,7 +1243,7 @@ impl Seek {
     fn picture_edit_mouse_up(
         &mut self,
         _event: &MouseUpEvent,
-        window: &mut Window,
+        _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         let Some(ed) = self.picture_edit.as_mut() else {
@@ -944,9 +1252,7 @@ impl Seek {
         if let Some(DragAction::DrawShape { step_index, .. }) = ed.drag.take() {
             // Discard accidental zero-size clicks when drawing shapes/arrows.
             let tiny = ed.steps.get(step_index).is_some_and(|step| match step {
-                Step::Arrow { from, to, .. } => {
-                    (from.x - to.x).hypot(from.y - to.y) < 6.0
-                }
+                Step::Arrow { from, to, .. } => (from.x - to.x).hypot(from.y - to.y) < 6.0,
                 Step::Rectangle { rect, .. }
                 | Step::Ellipse { rect, .. }
                 | Step::Redact { rect, .. } => rect.w < 4.0 && rect.h < 4.0,
@@ -957,9 +1263,6 @@ impl Seek {
                 ed.undo_stack.pop();
                 ed.selected = None;
                 ed.dirty = !ed.steps.is_empty();
-                ed.rebuild_preview(window);
-            } else {
-                ed.rebuild_preview(window);
             }
         } else {
             ed.drag = None;
@@ -967,12 +1270,15 @@ impl Seek {
         cx.notify();
     }
 
-    fn picture_edit_key_down(
+    /// Global key handler called from Seek's root `on_key_down` AND
+    /// `picture-editor-root` so Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y, Escape, Enter,
+    /// and Delete always work regardless of which toolbar button was clicked.
+    pub(super) fn picture_edit_handle_key(
         &mut self,
         event: &KeyDownEvent,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) {
+    ) -> bool {
         let key = event.keystroke.key.as_str();
         let mods = event.keystroke.modifiers;
         let has_prompt = self
@@ -984,6 +1290,7 @@ impl Seek {
                 "enter" => {
                     self.picture_edit_commit_text(window, cx);
                     cx.stop_propagation();
+                    return true;
                 }
                 "escape" => {
                     if let Some(ed) = self.picture_edit.as_mut() {
@@ -992,33 +1299,54 @@ impl Seek {
                     }
                     cx.stop_propagation();
                     cx.notify();
+                    return true;
                 }
-                _ => {}
+                _ => return false,
             }
-            return;
         }
-        if mods.control && !mods.alt && !mods.shift && key.eq_ignore_ascii_case("z") {
-            self.picture_edit_undo(window, cx);
-            cx.stop_propagation();
-            return;
+        if mods.control && !mods.alt {
+            if !mods.shift && key.eq_ignore_ascii_case("z") {
+                self.picture_edit_undo(window, cx);
+                cx.stop_propagation();
+                return true;
+            }
+            if (mods.shift && key.eq_ignore_ascii_case("z"))
+                || (!mods.shift && key.eq_ignore_ascii_case("y"))
+            {
+                self.picture_edit_redo(window, cx);
+                cx.stop_propagation();
+                return true;
+            }
         }
         match key {
             "delete" | "backspace" => {
-                if self.picture_edit.as_ref().is_some_and(|e| e.selected.is_some()) {
+                if self
+                    .picture_edit
+                    .as_ref()
+                    .is_some_and(|e| e.selected.is_some())
+                {
                     self.picture_edit_delete_selected(window, cx);
                     cx.stop_propagation();
+                    return true;
                 }
+                false
             }
             "enter" => {
-                if self.picture_edit.as_ref().is_some_and(|e| e.tool == Tool::Crop) {
+                if self
+                    .picture_edit
+                    .as_ref()
+                    .is_some_and(|e| e.tool == Tool::Crop)
+                {
                     self.picture_edit_apply_crop(window, cx);
                     cx.stop_propagation();
+                    return true;
                 }
+                false
             }
             "escape" => {
                 cx.stop_propagation();
                 let Some(ed) = self.picture_edit.as_mut() else {
-                    return;
+                    return false;
                 };
                 if ed.confirm_discard || ed.confirm_replace {
                     ed.confirm_discard = false;
@@ -1035,8 +1363,9 @@ impl Seek {
                     let host = ed.host;
                     self.request_picture_edit_exit(host, window, cx);
                 }
+                true
             }
-            _ => {}
+            _ => false,
         }
     }
 
@@ -1052,7 +1381,9 @@ impl Seek {
         let host = ed.host;
         let active_tool = ed.tool;
         let active_ink = ed.ink;
+        let active_stroke = ed.stroke_size;
         let can_undo = !ed.undo_stack.is_empty();
+        let can_redo = !ed.redo_stack.is_empty();
         let exporting = ed.exporting.is_some();
         let export_pct = ed
             .exporting
@@ -1062,7 +1393,10 @@ impl Seek {
         let redacted = has_redaction(&ed.steps);
         let strip_meta = ed.effective_strip_metadata();
         let is_heif = ed.loaded.is_heif;
-        let selected_idx = ed.selected.filter(|&i| i >= first_live_mark(&ed.steps) && i < ed.steps.len());
+        let live_start = first_live_mark(&ed.steps);
+        let selected_idx = ed
+            .selected
+            .filter(|&i| i >= live_start && i < ed.steps.len());
         let selected_is_text = selected_idx
             .and_then(|i| ed.steps.get(i))
             .is_some_and(|s| matches!(s, Step::Text { .. }));
@@ -1076,17 +1410,28 @@ impl Seek {
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "picture".into());
 
-        // Helper for compact labelled toolbar pills
-        let tool_btn = |id: &'static str, label: &'static str, active: bool| {
-            Button::new(id)
-                .ghost()
+        // Restrained Seek dark-glass destructive pill styling
+        let danger_bg = rgba(0xE11D4826);
+        let danger_border = rgba(0xE11D4866);
+        let danger_text = rgb(0xFDA4AF);
+
+        // Optically centered compact pill button helper
+        let pill_btn = |id: &'static str, label: &'static str, active: bool| {
+            div()
+                .id(id)
+                .role(Role::Button)
+                .aria_label(label)
                 .h(px(28.))
-                .px_2()
+                .px(px(9.))
                 .rounded(crate::tokens::RADIUS_CONTROL)
+                .flex()
+                .items_center()
+                .justify_center()
+                .cursor_pointer()
                 .text_size(px(12.))
                 .text_color(if active { p.text } else { p.muted })
-                .when(active, |b| b.bg(p.control_selected))
-                .accessibility_label(label)
+                .when(active, |d| d.bg(p.control_selected))
+                .hover(|s| s.bg(p.control_hover).text_color(p.text))
                 .child(super::interface::button_text(label))
         };
 
@@ -1103,7 +1448,7 @@ impl Seek {
             .border_color(p.line)
             .bg(p.chrome);
 
-        // Left group: tools + transforms
+        // Left group: tools + transforms + 7 inks + S/M/L thickness
         let mut left = div().flex().flex_wrap().items_center().gap_1();
         for tool in [
             Tool::Select,
@@ -1128,11 +1473,12 @@ impl Seek {
                 Tool::Redact => "pic-tool-redact",
             };
             left = left.child(
-                tool_btn(id, tool.label(), active_tool == tool)
-                    .disabled(exporting)
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        this.picture_edit_select_tool(tool, window, cx);
-                    })),
+                pill_btn(id, tool.label(), active_tool == tool)
+                    .when(!exporting, |d| {
+                        d.on_click(cx.listener(move |this, _, window, cx| {
+                            this.picture_edit_select_tool(tool, window, cx);
+                        }))
+                    }),
             );
         }
 
@@ -1140,40 +1486,44 @@ impl Seek {
         left = left
             .child(div().w(px(1.)).h(px(16.)).mx_1().bg(p.line))
             .child(
-                tool_btn("pic-rotate-cw", "Rotate 90°", false)
-                    .tooltip("Rotate 90° clockwise")
-                    .disabled(exporting)
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        this.picture_edit_apply_transform(
-                            Step::Rotate { quarter_turns: 1 },
-                            window,
-                            cx,
-                        );
-                    })),
+                pill_btn("pic-rotate-cw", "Rotate 90°", false)
+                    .when(!exporting, |d| {
+                        d.on_click(cx.listener(|this, _, window, cx| {
+                            this.picture_edit_apply_transform(
+                                Step::Rotate { quarter_turns: 1 },
+                                window,
+                                cx,
+                            );
+                        }))
+                    }),
             )
             .child(
-                tool_btn("pic-flip-h", "Flip", false)
-                    .tooltip("Flip horizontally")
-                    .disabled(exporting)
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        this.picture_edit_apply_transform(
-                            Step::Flip { vertical: false },
-                            window,
-                            cx,
-                        );
-                    })),
+                pill_btn("pic-flip-h", "Flip", false)
+                    .when(!exporting, |d| {
+                        d.on_click(cx.listener(|this, _, window, cx| {
+                            this.picture_edit_apply_transform(
+                                Step::Flip { vertical: false },
+                                window,
+                                cx,
+                            );
+                        }))
+                    }),
             );
 
-        // 4 ink swatches
-        let mut inks = div().flex().items_center().gap_1().ml_1();
+        // 7 curated ink swatches
+        let mut inks = div().flex().items_center().gap(px(2.)).ml_1();
         for ink in Ink::ALL {
             let [r, g, b, _] = ink.rgba();
-            let swatch_color = rgba(((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | 0xFF);
+            let swatch_color =
+                rgba(((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | 0xFF);
             let is_active = active_ink == ink;
             let id: &'static str = match ink {
                 Ink::Red => "pic-ink-red",
+                Ink::Orange => "pic-ink-orange",
                 Ink::Yellow => "pic-ink-yellow",
+                Ink::Green => "pic-ink-green",
                 Ink::Blue => "pic-ink-blue",
+                Ink::White => "pic-ink-white",
                 Ink::Black => "pic-ink-black",
             };
             inks = inks.child(
@@ -1191,7 +1541,7 @@ impl Seek {
                     .border_color(if is_active { p.text } else { rgba(0).into() })
                     .child(
                         div()
-                            .size(px(14.))
+                            .size(px(13.))
                             .rounded_full()
                             .bg(swatch_color)
                             .border_1()
@@ -1204,13 +1554,59 @@ impl Seek {
         }
         left = left.child(inks);
 
+        // S / M / L stroke thickness selector
+        let mut sizes = div()
+            .flex()
+            .items_center()
+            .gap(px(1.))
+            .ml_1()
+            .p(px(2.))
+            .rounded(crate::tokens::RADIUS_CONTROL)
+            .bg(p.pane)
+            .border_1()
+            .border_color(p.line);
+        for sz in StrokeSize::ALL {
+            let active = active_stroke == sz;
+            let id: &'static str = match sz {
+                StrokeSize::Small => "pic-stroke-s",
+                StrokeSize::Medium => "pic-stroke-m",
+                StrokeSize::Large => "pic-stroke-l",
+            };
+            sizes = sizes.child(
+                div()
+                    .id(id)
+                    .role(Role::Button)
+                    .aria_label(format!("Stroke size {}", sz.label()))
+                    .w(px(22.))
+                    .h(px(22.))
+                    .rounded(px(4.))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .cursor_pointer()
+                    .text_size(px(11.))
+                    .font_weight(FontWeight::MEDIUM)
+                    .text_color(if active { p.text } else { p.muted })
+                    .when(active, |d| d.bg(p.control_selected))
+                    .hover(|s| s.text_color(p.text))
+                    .child(super::interface::button_text(sz.label()))
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        if let Some(ed) = this.picture_edit.as_mut() {
+                            ed.stroke_size = sz;
+                            ed.focus.focus(window, cx);
+                        }
+                        cx.notify();
+                    })),
+            );
+        }
+        left = left.child(sizes);
+
         if let Some(idx) = selected_idx {
             left = left.child(div().w(px(1.)).h(px(16.)).mx_1().bg(p.line));
             if selected_is_text {
                 left = left.child(
-                    tool_btn("pic-edit-text", "Edit text", false)
-                        .disabled(exporting)
-                        .on_click(cx.listener(move |this, _, window, cx| {
+                    pill_btn("pic-edit-text", "Edit text", false).when(!exporting, |d| {
+                        d.on_click(cx.listener(move |this, _, window, cx| {
                             let at = this
                                 .picture_edit
                                 .as_ref()
@@ -1221,27 +1617,27 @@ impl Seek {
                                 })
                                 .unwrap_or(PointF::new(24.0, 24.0));
                             this.picture_edit_open_text_prompt(at, Some(idx), window, cx);
-                        })),
+                        }))
+                    }),
                 );
             }
             left = left.child(
-                tool_btn("pic-delete-mark", "Delete", false)
-                    .tooltip("Delete selected mark (Del)")
-                    .disabled(exporting)
-                    .on_click(cx.listener(|this, _, window, cx| {
+                pill_btn("pic-delete-mark", "Delete", false).when(!exporting, |d| {
+                    d.on_click(cx.listener(|this, _, window, cx| {
                         this.picture_edit_delete_selected(window, cx);
-                    })),
+                    }))
+                }),
             );
         }
 
-        // Right group: Undo, Save split button, Done
+        // Right group: Undo, Redo, Save split button, Done
         let owner = cx.entity().downgrade();
         let save_menu_btn = Button::new("pic-save-options")
             .ghost()
             .h(px(28.))
-            .w(px(24.))
+            .w(px(26.))
             .px_0()
-            .rounded(crate::tokens::RADIUS_CONTROL)
+            .rounded_r(crate::tokens::RADIUS_CONTROL)
             .accessibility_label("Save options")
             .tooltip("Save options")
             .disabled(exporting)
@@ -1295,51 +1691,77 @@ impl Seek {
         let right = div()
             .flex()
             .items_center()
-            .gap_2()
+            .gap_1()
             .child(
-                tool_btn("pic-undo", "Undo", false)
-                    .tooltip("Undo (Ctrl+Z)")
-                    .disabled(!can_undo || exporting)
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        this.picture_edit_undo(window, cx);
-                    })),
+                pill_btn("pic-undo", "Undo", false)
+                    .when(!can_undo || exporting, |d| d.opacity(0.45).cursor_default())
+                    .when(can_undo && !exporting, |d| {
+                        d.on_click(cx.listener(|this, _, window, cx| {
+                            this.picture_edit_undo(window, cx);
+                        }))
+                    }),
+            )
+            .child(
+                pill_btn("pic-redo", "Redo", false)
+                    .when(!can_redo || exporting, |d| d.opacity(0.45).cursor_default())
+                    .when(can_redo && !exporting, |d| {
+                        d.on_click(cx.listener(|this, _, window, cx| {
+                            this.picture_edit_redo(window, cx);
+                        }))
+                    }),
             )
             .child(
                 div()
+                    .ml_1()
                     .flex()
                     .items_center()
+                    .h(px(28.))
                     .rounded(crate::tokens::RADIUS_CONTROL)
                     .bg(p.accent.opacity(0.16))
                     .border_1()
                     .border_color(p.accent.opacity(0.45))
                     .child(
-                        Button::new("pic-save-copy")
-                            .ghost()
-                            .h(px(28.))
-                            .px_3()
+                        div()
+                            .id("pic-save-copy")
+                            .role(Role::Button)
+                            .aria_label("Save a Copy")
+                            .h_full()
+                            .px(px(12.))
+                            .rounded_l(crate::tokens::RADIUS_CONTROL)
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .cursor_pointer()
                             .text_size(px(12.))
                             .font_weight(FontWeight::MEDIUM)
                             .text_color(p.text)
-                            .accessibility_label("Save a Copy")
-                            .disabled(exporting)
+                            .hover(|s| s.bg(p.accent.opacity(0.24)))
+                            .when(exporting, |d| d.opacity(0.5).cursor_default())
                             .child(super::interface::button_text("Save a Copy"))
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                this.picture_edit_start_export(SaveMode::SaveCopy, window, cx);
-                            })),
+                            .when(!exporting, |d| {
+                                d.on_click(cx.listener(|this, _, window, cx| {
+                                    this.picture_edit_start_export(
+                                        SaveMode::SaveCopy,
+                                        window,
+                                        cx,
+                                    );
+                                }))
+                            }),
                     )
+                    .child(div().w(px(1.)).h(px(16.)).bg(p.accent.opacity(0.32)))
                     .child(save_menu_btn),
             )
             .child(
-                tool_btn("pic-done", "Done", false)
-                    .tooltip("Finish editing (Esc)")
-                    .on_click(cx.listener(move |this, _, window, cx| {
+                pill_btn("pic-done", "Done", false).on_click(cx.listener(
+                    move |this, _, window, cx| {
                         this.request_picture_edit_exit(host, window, cx);
-                    })),
+                    },
+                )),
             );
 
         toolbar = toolbar.child(left).child(right);
 
-        // Optional sub-bar: Crop controls / Export progress / Redaction notice / Confirmations / Error
+        // Optional sub-bars: Crop controls / Text prompt / Confirmations / Export / Error
         let mut sub_bars: Vec<AnyElement> = Vec::new();
 
         if let Some(crop) = ed.crop_rect
@@ -1348,7 +1770,7 @@ impl Seek {
             let cw = crop.w.round().max(1.0) as u32;
             let ch = crop.h.round().max(1.0) as u32;
             let current_aspect = ed.crop_aspect;
-            let mut crop_bar = div()
+            let crop_bar = div()
                 .flex_shrink_0()
                 .px_4()
                 .py_2()
@@ -1371,6 +1793,7 @@ impl Seek {
                                 .text_color(p.text)
                                 .child(format!("{cw} × {ch} px")),
                         )
+                        .child(div().w(px(1.)).h(px(14.)).mx_1().bg(p.line))
                         .children(AspectPreset::ALL.into_iter().map(|preset| {
                             let active = current_aspect == preset;
                             let id: &'static str = match preset {
@@ -1379,16 +1802,23 @@ impl Seek {
                                 AspectPreset::FourThree => "pic-crop-4-3",
                                 AspectPreset::SixteenNine => "pic-crop-16-9",
                             };
-                            Button::new(id)
-                                .ghost()
-                                .h(px(24.))
-                                .px_2()
+                            div()
+                                .id(id)
+                                .role(Role::Button)
+                                .aria_label(preset.label())
+                                .h(px(26.))
+                                .px(px(10.))
                                 .rounded(crate::tokens::RADIUS_CONTROL)
-                                .text_size(px(11.))
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .cursor_pointer()
+                                .text_size(px(12.))
                                 .text_color(if active { p.text } else { p.muted })
-                                .when(active, |b| b.bg(p.control_selected))
+                                .when(active, |d| d.bg(p.control_selected))
+                                .hover(|s| s.bg(p.control_hover).text_color(p.text))
                                 .child(super::interface::button_text(preset.label()))
-                                .on_click(cx.listener(move |this, _, _, cx| {
+                                .on_click(cx.listener(move |this, _, window, cx| {
                                     if let Some(ed) = this.picture_edit.as_mut() {
                                         ed.crop_aspect = preset;
                                         if let Some(rect) = ed.crop_rect {
@@ -1399,6 +1829,7 @@ impl Seek {
                                                 ed.preview_size.1 as f32,
                                             ));
                                         }
+                                        ed.focus.focus(window, cx);
                                     }
                                     cx.notify();
                                 }))
@@ -1410,28 +1841,37 @@ impl Seek {
                         .items_center()
                         .gap_2()
                         .child(
-                            tool_btn("pic-crop-cancel", "Cancel", false).on_click(cx.listener(
+                            pill_btn("pic-crop-cancel", "Cancel", false).on_click(cx.listener(
                                 |this, _, window, cx| {
                                     this.picture_edit_select_tool(Tool::Select, window, cx);
                                 },
                             )),
                         )
                         .child(
-                            Button::new("pic-crop-apply")
-                                .ghost()
-                                .h(px(26.))
-                                .px_3()
+                            div()
+                                .id("pic-crop-apply")
+                                .role(Role::Button)
+                                .aria_label("Apply crop")
+                                .h(px(28.))
+                                .px(px(12.))
                                 .rounded(crate::tokens::RADIUS_CONTROL)
-                                .bg(p.accent.opacity(0.2))
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .cursor_pointer()
+                                .bg(p.accent.opacity(0.22))
+                                .border_1()
+                                .border_color(p.accent.opacity(0.45))
                                 .text_size(px(12.))
+                                .font_weight(FontWeight::MEDIUM)
                                 .text_color(p.text)
+                                .hover(|s| s.bg(p.accent.opacity(0.32)))
                                 .child(super::interface::button_text("Apply crop"))
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.picture_edit_apply_crop(window, cx);
                                 })),
                         ),
                 );
-            let _ = &mut crop_bar;
             sub_bars.push(crop_bar.into_any_element());
         }
 
@@ -1449,21 +1889,31 @@ impl Seek {
                     .border_color(p.line)
                     .child(div().flex_1().child(Input::new(&prompt.input).h(px(30.))))
                     .child(
-                        Button::new("pic-text-commit")
-                            .ghost()
+                        div()
+                            .id("pic-text-commit")
+                            .role(Role::Button)
+                            .aria_label("Place text")
                             .h(px(28.))
-                            .px_3()
+                            .px(px(12.))
                             .rounded(crate::tokens::RADIUS_CONTROL)
-                            .bg(p.accent.opacity(0.2))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .cursor_pointer()
+                            .bg(p.accent.opacity(0.22))
+                            .border_1()
+                            .border_color(p.accent.opacity(0.45))
                             .text_size(px(12.))
+                            .font_weight(FontWeight::MEDIUM)
                             .text_color(p.text)
+                            .hover(|s| s.bg(p.accent.opacity(0.32)))
                             .child(super::interface::button_text("Place text"))
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.picture_edit_commit_text(window, cx);
                             })),
                     )
                     .child(
-                        tool_btn("pic-text-cancel", "Cancel", false).on_click(cx.listener(
+                        pill_btn("pic-text-cancel", "Cancel", false).on_click(cx.listener(
                             |this, _, window, cx| {
                                 if let Some(ed) = this.picture_edit.as_mut() {
                                     ed.text_prompt = None;
@@ -1502,24 +1952,35 @@ impl Seek {
                             .items_center()
                             .gap_2()
                             .child(
-                                tool_btn("pic-keep-editing", "Keep editing", false).on_click(
-                                    cx.listener(|this, _, _, cx| {
+                                pill_btn("pic-keep-editing", "Keep editing", false).on_click(
+                                    cx.listener(|this, _, window, cx| {
                                         if let Some(ed) = this.picture_edit.as_mut() {
                                             ed.confirm_discard = false;
+                                            ed.focus.focus(window, cx);
                                         }
                                         cx.notify();
                                     }),
                                 ),
                             )
                             .child(
-                                Button::new("pic-confirm-discard")
-                                    .ghost()
-                                    .h(px(26.))
-                                    .px_3()
+                                div()
+                                    .id("pic-confirm-discard")
+                                    .role(Role::Button)
+                                    .aria_label("Discard")
+                                    .h(px(28.))
+                                    .px(px(12.))
                                     .rounded(crate::tokens::RADIUS_CONTROL)
-                                    .bg(rgba(0xEF444433))
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .cursor_pointer()
+                                    .bg(danger_bg)
+                                    .border_1()
+                                    .border_color(danger_border)
                                     .text_size(px(12.))
-                                    .text_color(p.text)
+                                    .font_weight(FontWeight::MEDIUM)
+                                    .text_color(danger_text)
+                                    .hover(|s| s.bg(rgba(0xE11D4840)))
                                     .child(super::interface::button_text("Discard"))
                                     .on_click(cx.listener(|this, _, window, cx| {
                                         this.close_picture_edit_now(window, cx);
@@ -1557,24 +2018,35 @@ impl Seek {
                             .items_center()
                             .gap_2()
                             .child(
-                                tool_btn("pic-cancel-replace", "Cancel", false).on_click(
-                                    cx.listener(|this, _, _, cx| {
+                                pill_btn("pic-cancel-replace", "Cancel", false).on_click(
+                                    cx.listener(|this, _, window, cx| {
                                         if let Some(ed) = this.picture_edit.as_mut() {
                                             ed.confirm_replace = false;
+                                            ed.focus.focus(window, cx);
                                         }
                                         cx.notify();
                                     }),
                                 ),
                             )
                             .child(
-                                Button::new("pic-confirm-replace")
-                                    .ghost()
-                                    .h(px(26.))
-                                    .px_3()
+                                div()
+                                    .id("pic-confirm-replace")
+                                    .role(Role::Button)
+                                    .aria_label("Replace Original")
+                                    .h(px(28.))
+                                    .px(px(12.))
                                     .rounded(crate::tokens::RADIUS_CONTROL)
-                                    .bg(rgba(0xEF444433))
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .cursor_pointer()
+                                    .bg(danger_bg)
+                                    .border_1()
+                                    .border_color(danger_border)
                                     .text_size(px(12.))
-                                    .text_color(p.text)
+                                    .font_weight(FontWeight::MEDIUM)
+                                    .text_color(danger_text)
+                                    .hover(|s| s.bg(rgba(0xE11D4840)))
                                     .child(super::interface::button_text("Replace Original"))
                                     .on_click(cx.listener(|this, _, window, cx| {
                                         this.picture_edit_start_export(
@@ -1609,7 +2081,7 @@ impl Seek {
                     .border_color(p.line)
                     .child(div().text_size(px(12.)).text_color(p.text).child(label))
                     .child(
-                        tool_btn("pic-cancel-export", "Cancel", false).on_click(cx.listener(
+                        pill_btn("pic-cancel-export", "Cancel", false).on_click(cx.listener(
                             move |_, _, _, cx| {
                                 cancel.store(true, Ordering::Relaxed);
                                 cx.notify();
@@ -1629,12 +2101,12 @@ impl Seek {
                     .flex()
                     .items_center()
                     .justify_between()
-                    .bg(rgba(0xEF444422))
+                    .bg(danger_bg)
                     .border_b_1()
-                    .border_color(p.line)
+                    .border_color(danger_border)
                     .child(div().text_size(px(12.)).text_color(p.text).child(err.clone()))
                     .child(
-                        tool_btn("pic-dismiss-err", "Dismiss", false).on_click(cx.listener(
+                        pill_btn("pic-dismiss-err", "Dismiss", false).on_click(cx.listener(
                             |this, _, _, cx| {
                                 if let Some(ed) = this.picture_edit.as_mut() {
                                     ed.error = None;
@@ -1647,10 +2119,11 @@ impl Seek {
             );
         }
 
-        // Interactive canvas with exact bounds tracking, image render, selection handles, and crop overlay
+        // Interactive canvas: static baked image + 60 FPS GPU vector overlay + handles + 8-handle crop
         let bounds_cell = ed.canvas_bounds.clone();
-        let preview_image = ed.preview.clone();
+        let preview_image = ed.baked_preview.clone();
         let ibox = ed.image_box();
+        let live_marks: Vec<Step> = ed.steps[live_start..].to_vec();
         let crop_rect = (active_tool == Tool::Crop).then_some(ed.crop_rect).flatten();
 
         let mut overlay = div()
@@ -1667,18 +2140,29 @@ impl Seek {
             );
 
         if let Some(ibox) = ibox {
-            // Render the fitted preview image at the exact ImageBox position
             let img_x = ibox.x - ibox.canvas_x;
             let img_y = ibox.y - ibox.canvas_y;
-            overlay = overlay.child(
-                div()
+            overlay = overlay
+                .child(
+                    div()
+                        .absolute()
+                        .left(px(img_x))
+                        .top(px(img_y))
+                        .w(px(ibox.w))
+                        .h(px(ibox.h))
+                        .child(img(preview_image).size_full().object_fit(ObjectFit::Fill)),
+                )
+                // GPU-accelerated live vector mark layer
+                .child(
+                    canvas(
+                        |_, _, _| {},
+                        move |_bounds, _, window, cx| {
+                            paint_live_marks(&live_marks, ibox, window, cx);
+                        },
+                    )
                     .absolute()
-                    .left(px(img_x))
-                    .top(px(img_y))
-                    .w(px(ibox.w))
-                    .h(px(ibox.h))
-                    .child(img(preview_image).size_full().object_fit(ObjectFit::Fill)),
-            );
+                    .inset_0(),
+                );
 
             // Selection handles for live mark
             if let Some(frame) = selected_frame
@@ -1748,13 +2232,13 @@ impl Seek {
                 }
             }
 
-            // Crop overlay: darkened outer regions + crisp white frame + corner handles
+            // Crop overlay: darkened outer masks + rule-of-thirds guides + 4 corners + 4 edge grab-bars
             if let Some(crop) = crop_rect {
                 let (cx0, cy0) = ibox.image_to_local(PointF::new(crop.x, crop.y));
                 let cw = (crop.w * ibox.scale).max(4.0);
                 let ch = (crop.h * ibox.scale).max(4.0);
-                let shade = rgba(0x00000088);
-                // Top, Bottom, Left, Right dark masks inside image bounds
+                let shade = rgba(0x0000008C);
+                let guide = rgba(0xFFFFFF44);
                 overlay = overlay
                     .child(
                         div()
@@ -1792,6 +2276,44 @@ impl Seek {
                             .h(px(ch))
                             .bg(shade),
                     )
+                    // Rule-of-thirds hairline guides
+                    .child(
+                        div()
+                            .absolute()
+                            .left(px(cx0 + cw / 3.0))
+                            .top(px(cy0))
+                            .w(px(1.0))
+                            .h(px(ch))
+                            .bg(guide),
+                    )
+                    .child(
+                        div()
+                            .absolute()
+                            .left(px(cx0 + cw * 2.0 / 3.0))
+                            .top(px(cy0))
+                            .w(px(1.0))
+                            .h(px(ch))
+                            .bg(guide),
+                    )
+                    .child(
+                        div()
+                            .absolute()
+                            .left(px(cx0))
+                            .top(px(cy0 + ch / 3.0))
+                            .w(px(cw))
+                            .h(px(1.0))
+                            .bg(guide),
+                    )
+                    .child(
+                        div()
+                            .absolute()
+                            .left(px(cx0))
+                            .top(px(cy0 + ch * 2.0 / 3.0))
+                            .w(px(cw))
+                            .h(px(1.0))
+                            .bg(guide),
+                    )
+                    // Crisp white border
                     .child(
                         div()
                             .absolute()
@@ -1802,6 +2324,7 @@ impl Seek {
                             .border_2()
                             .border_color(rgb(0xFFFFFF)),
                     );
+                // 4 corner handles
                 for (idx, corner) in crop.corners().into_iter().enumerate() {
                     let (hx, hy) = ibox.image_to_local(corner);
                     overlay = overlay.child(
@@ -1817,9 +2340,27 @@ impl Seek {
                             .border_color(rgb(0x111827)),
                     );
                 }
+                // 4 edge midpoint grab-bars (Top, Right, Bottom, Left)
+                for (idx, (edge, mid)) in crop.edge_midpoints().into_iter().enumerate() {
+                    let (mx, my) = ibox.image_to_local(mid);
+                    let horizontal = matches!(edge, CropEdge::Top | CropEdge::Bottom);
+                    let (bw, bh) = if horizontal { (22.0, 6.0) } else { (6.0, 22.0) };
+                    overlay = overlay.child(
+                        div()
+                            .id(("pic-crop-edge", idx))
+                            .absolute()
+                            .left(px(mx - bw * 0.5))
+                            .top(px(my - bh * 0.5))
+                            .w(px(bw))
+                            .h(px(bh))
+                            .rounded(px(3.0))
+                            .bg(rgb(0xFFFFFF))
+                            .border_1()
+                            .border_color(rgb(0x111827)),
+                    );
+                }
             }
         } else {
-            // First paint before canvas bounds arrive: render standard contained preview
             overlay = overlay.child(
                 div()
                     .size_full()
@@ -1848,7 +2389,9 @@ impl Seek {
             .flex()
             .flex_col()
             .overflow_hidden()
-            .on_key_down(cx.listener(Self::picture_edit_key_down))
+            .on_key_down(cx.listener(|this, event, window, cx| {
+                let _ = this.picture_edit_handle_key(event, window, cx);
+            }))
             .child(toolbar)
             .children(sub_bars)
             .child(
@@ -1886,12 +2429,14 @@ impl Seek {
                     .child(footer_note)
                     .child(if active_tool == Tool::Select {
                         "Click a mark to move, resize, rotate or recolour · Del removes"
+                    } else if active_tool == Tool::Crop {
+                        "Drag corners or edges to crop · Enter applies · Esc cancels"
                     } else if active_tool == Tool::Redact {
                         "Drag over sensitive areas to black them out permanently"
                     } else if active_tool == Tool::Text {
                         "Click anywhere on the picture to place text"
                     } else {
-                        "Drag on the picture · Ctrl+Z undoes"
+                        "Drag on the picture · Ctrl+Z undoes · Ctrl+Shift+Z redoes"
                     }),
             )
             .into_any_element()

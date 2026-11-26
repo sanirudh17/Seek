@@ -60,19 +60,33 @@ impl Tool {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Ink {
     Red,
+    Orange,
     Yellow,
+    Green,
     Blue,
+    White,
     Black,
 }
 
 impl Ink {
-    pub const ALL: [Ink; 4] = [Ink::Red, Ink::Yellow, Ink::Blue, Ink::Black];
+    pub const ALL: [Ink; 7] = [
+        Ink::Red,
+        Ink::Orange,
+        Ink::Yellow,
+        Ink::Green,
+        Ink::Blue,
+        Ink::White,
+        Ink::Black,
+    ];
 
     pub fn name(self) -> &'static str {
         match self {
             Ink::Red => "Red",
+            Ink::Orange => "Orange",
             Ink::Yellow => "Yellow",
+            Ink::Green => "Green",
             Ink::Blue => "Blue",
+            Ink::White => "White",
             Ink::Black => "Black",
         }
     }
@@ -80,8 +94,11 @@ impl Ink {
     pub fn rgba(self) -> [u8; 4] {
         match self {
             Ink::Red => [239, 68, 68, 255],
+            Ink::Orange => [249, 115, 22, 255],
             Ink::Yellow => [250, 204, 21, 255],
+            Ink::Green => [34, 197, 94, 255],
             Ink::Blue => [59, 130, 246, 255],
+            Ink::White => [248, 250, 252, 255],
             Ink::Black => [17, 24, 39, 255],
         }
     }
@@ -89,11 +106,49 @@ impl Ink {
     pub fn hex(self) -> &'static str {
         match self {
             Ink::Red => "#ef4444",
+            Ink::Orange => "#f97316",
             Ink::Yellow => "#facc15",
+            Ink::Green => "#22c55e",
             Ink::Blue => "#3b82f6",
+            Ink::White => "#f8fafc",
             Ink::Black => "#111827",
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StrokeSize {
+    Small,
+    Medium,
+    Large,
+}
+
+impl StrokeSize {
+    pub const ALL: [StrokeSize; 3] = [StrokeSize::Small, StrokeSize::Medium, StrokeSize::Large];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            StrokeSize::Small => "S",
+            StrokeSize::Medium => "M",
+            StrokeSize::Large => "L",
+        }
+    }
+
+    pub fn scale(self) -> f32 {
+        match self {
+            StrokeSize::Small => 0.6,
+            StrokeSize::Medium => 1.0,
+            StrokeSize::Large => 1.7,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CropEdge {
+    Top,
+    Right,
+    Bottom,
+    Left,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -178,6 +233,21 @@ impl RectF {
             PointF::new(self.x + self.w, self.y),
             PointF::new(self.x + self.w, self.y + self.h),
             PointF::new(self.x, self.y + self.h),
+        ]
+    }
+
+    pub fn edge_midpoints(self) -> [(CropEdge, PointF); 4] {
+        [
+            (CropEdge::Top, PointF::new(self.x + self.w * 0.5, self.y)),
+            (
+                CropEdge::Right,
+                PointF::new(self.x + self.w, self.y + self.h * 0.5),
+            ),
+            (
+                CropEdge::Bottom,
+                PointF::new(self.x + self.w * 0.5, self.y + self.h),
+            ),
+            (CropEdge::Left, PointF::new(self.x, self.y + self.h * 0.5)),
         ]
     }
 }
@@ -1515,6 +1585,62 @@ pub fn apply_aspect_preset(rect: RectF, preset: AspectPreset, img_w: f32, img_h:
     RectF { x, y, w, h }
 }
 
+/// Resize a crop rectangle by dragging one of its 4 edges (top, right, bottom, left).
+pub fn resize_crop_edge(
+    rect: RectF,
+    edge: CropEdge,
+    pt: PointF,
+    preset: AspectPreset,
+    img_w: f32,
+    img_h: f32,
+) -> RectF {
+    let min_side = 16.0_f32.min(img_w).min(img_h).max(1.0);
+    let mut x0 = rect.x;
+    let mut y0 = rect.y;
+    let mut x1 = rect.x + rect.w;
+    let mut y1 = rect.y + rect.h;
+    match edge {
+        CropEdge::Top => y0 = pt.y.clamp(0.0, (y1 - min_side).max(0.0)),
+        CropEdge::Bottom => y1 = pt.y.clamp((y0 + min_side).min(img_h), img_h),
+        CropEdge::Left => x0 = pt.x.clamp(0.0, (x1 - min_side).max(0.0)),
+        CropEdge::Right => x1 = pt.x.clamp((x0 + min_side).min(img_w), img_w),
+    }
+    let raw = RectF {
+        x: x0.min(x1),
+        y: y0.min(y1),
+        w: (x1 - x0).abs().max(min_side),
+        h: (y1 - y0).abs().max(min_side),
+    };
+    if let Some(ratio) = preset.ratio() {
+        let mut out = raw;
+        match edge {
+            CropEdge::Top | CropEdge::Bottom => {
+                let cx = rect.x + rect.w * 0.5;
+                let w = (out.h * ratio).min(img_w);
+                out.h = (w / ratio).min(img_h);
+                out.w = w;
+                out.x = (cx - w * 0.5).clamp(0.0, (img_w - w).max(0.0));
+                if edge == CropEdge::Top {
+                    out.y = (y1 - out.h).clamp(0.0, (img_h - out.h).max(0.0));
+                }
+            }
+            CropEdge::Left | CropEdge::Right => {
+                let cy = rect.y + rect.h * 0.5;
+                let h = (out.w / ratio).min(img_h);
+                out.w = (h * ratio).min(img_w);
+                out.h = h;
+                out.y = (cy - h * 0.5).clamp(0.0, (img_h - h).max(0.0));
+                if edge == CropEdge::Left {
+                    out.x = (x1 - out.w).clamp(0.0, (img_w - out.w).max(0.0));
+                }
+            }
+        }
+        out.clamped_to(img_w, img_h)
+    } else {
+        raw.clamped_to(img_w, img_h)
+    }
+}
+
 /// Helper to create a test pixel with known non-black color.
 #[cfg(test)]
 fn make_bright_image(w: u32, h: u32) -> RgbaImage {
@@ -1762,5 +1888,38 @@ mod tests {
             red_pixels > 40,
             "expected visible rasterized text pixels, got {red_pixels}"
         );
+    }
+
+    #[test]
+    fn crop_edge_handles_resize_independently_and_respect_aspect() {
+        let base = RectF {
+            x: 100.0,
+            y: 100.0,
+            w: 200.0,
+            h: 200.0,
+        };
+        let top = resize_crop_edge(
+            base,
+            CropEdge::Top,
+            PointF::new(180.0, 50.0),
+            AspectPreset::Free,
+            500.0,
+            500.0,
+        );
+        assert_eq!(top.y, 50.0);
+        assert_eq!(top.h, 250.0);
+        assert_eq!(top.x, 100.0);
+        assert_eq!(top.w, 200.0);
+
+        let right_sq = resize_crop_edge(
+            base,
+            CropEdge::Right,
+            PointF::new(400.0, 200.0),
+            AspectPreset::Square,
+            500.0,
+            500.0,
+        );
+        assert!((right_sq.w - 300.0).abs() < 0.5);
+        assert!((right_sq.h - 300.0).abs() < 0.5);
     }
 }

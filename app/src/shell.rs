@@ -2551,6 +2551,9 @@ impl Seek {
             }
             return;
         }
+        if self.picture_edit.is_some() && self.picture_edit_handle_key(event, window, cx) {
+            return;
+        }
         let modifiers = event.keystroke.modifiers;
         if modifiers.alt && !modifiers.control && !modifiers.shift {
             if key == "0" {

@@ -120,6 +120,9 @@ pub struct Settings {
     pub wrap_document_pane: bool,
     /// Show brief confirmation toasts for quiet actions (11.6); on by default.
     pub show_confirmations: bool,
+    /// Sidebar Favorites and Locations independent fold state (11.8).
+    pub favorites_collapsed: bool,
+    pub locations_collapsed: bool,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -179,6 +182,8 @@ impl Default for Settings {
             wrap_quick_look: true,
             wrap_document_pane: true,
             show_confirmations: true,
+            favorites_collapsed: false,
+            locations_collapsed: false,
         }
     }
 }
@@ -573,5 +578,23 @@ mod tests {
         write_with_retry(dir.path(), &changed).unwrap();
         release.join().unwrap();
         assert_eq!(read(dir.path()).glass_opacity, 61);
+    }
+
+    #[test]
+    fn sidebar_fold_and_locations_preferences_round_trip() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut settings = Settings::default();
+        assert!(!settings.favorites_collapsed);
+        assert!(!settings.locations_collapsed);
+        settings.favorites_collapsed = true;
+        settings.locations_collapsed = true;
+        settings.location_order = vec![PathBuf::from(r"D:\"), PathBuf::from(r"C:\")];
+        settings.hidden_locations = vec![PathBuf::from(r"E:\")];
+        write(dir.path(), &settings).unwrap();
+        let loaded = read(dir.path());
+        assert!(loaded.favorites_collapsed);
+        assert!(loaded.locations_collapsed);
+        assert_eq!(loaded.location_order, settings.location_order);
+        assert_eq!(loaded.hidden_locations, settings.hidden_locations);
     }
 }

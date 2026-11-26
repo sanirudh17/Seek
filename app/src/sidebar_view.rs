@@ -535,17 +535,60 @@ impl Seek {
         cx: &mut Context<Self>,
     ) -> Vec<AnyElement> {
         let layout = self.sidebar_layout();
+        let collapsed = self.preferences.favorites_collapsed;
         let mut out = vec![];
         let owner = cx.entity().downgrade();
         out.push(
-            super::interface::heading("Favorites", p)
+            div()
                 .id("favorites-heading")
+                .role(Role::Button)
+                .aria_label(if collapsed {
+                    "Expand Favorites"
+                } else {
+                    "Collapse Favorites"
+                })
+                .px_2()
+                .h(px(30.))
+                .mb_2()
+                .flex_shrink_0()
+                .flex()
+                .items_center()
+                .gap_1()
+                .rounded(crate::tokens::RADIUS_ROW)
+                .cursor_pointer()
+                .line_height(px(20.))
+                .text_size(px(12.))
+                .font_weight(FontWeight::MEDIUM)
+                .text_color(p.muted)
+                .hover(move |s| s.text_color(p.text).bg(p.hover))
+                .child(
+                    Icon::new(if collapsed {
+                        Glyph::ChevronRight
+                    } else {
+                        Glyph::ChevronDown
+                    })
+                    .size(px(11.))
+                    .text_color(p.muted),
+                )
+                .child("Favorites")
+                .on_click(cx.listener(|this, _, window, cx| {
+                    this.preferences.favorites_collapsed = !this.preferences.favorites_collapsed;
+                    this.save_preferences(window, cx);
+                }))
                 .drag_over::<PlaceDrag>(move |style, _, _, _| style.text_color(p.text))
-                .on_drop(cx.listener(|this, drag: &PlaceDrag, _, cx| {
+                .on_drop(cx.listener(|this, drag: &PlaceDrag, window, cx| {
                     this.sidebar_state.drop = None;
+                    if this.preferences.favorites_collapsed {
+                        this.preferences.favorites_collapsed = false;
+                        this.save_preferences(window, cx);
+                    }
                     this.drop_on_place(drag, Place::Favorites, cx)
                 }))
                 .on_drop(cx.listener(|this, drag: &super::daily::FilesDrag, window, cx| {
+                    if this.preferences.favorites_collapsed {
+                        this.preferences.favorites_collapsed = false;
+                        this.save_preferences(window, cx);
+                    }
                     this.add_dragged_folders(&drag.paths, Place::Favorites, window, cx)
                 }))
                 .context_menu(move |menu, window, _| {
@@ -558,6 +601,9 @@ impl Seek {
                 })
                 .into_any_element(),
         );
+        if collapsed {
+            return out;
+        }
         out.push(self.all_locations_row(p, cx));
         for (index, item) in layout.favorites.iter().enumerate() {
             out.push(self.sidebar_item(item, Place::Favorites, index, false, p, cx));

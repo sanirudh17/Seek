@@ -862,6 +862,8 @@ pub struct Seek {
     quick_look_return: Option<FocusHandle>,
     /// Hidden sidebar Locations are listed for now.
     show_hidden_locations: bool,
+    /// Inline reorder / hide-show edit mode on sidebar Locations (11.8).
+    editing_locations: bool,
     /// Storage overview (Phase 9.1), shown in place of the file list.
     storage_page: Option<storage_view::StoragePage>,
     cleanup: cleanup_view::Cleanup,
@@ -1446,6 +1448,7 @@ impl Seek {
             quick_look_row: None,
             quick_look_return: None,
             show_hidden_locations: false,
+            editing_locations: false,
             storage_page: None,
             cleanup: Default::default(),
             duplicates: Default::default(),

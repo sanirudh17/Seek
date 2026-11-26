@@ -604,6 +604,17 @@ impl Seek {
         self.refresh_preview(cx);
         cx.notify();
     }
+    /// Ordered list of discovered drives, user's custom order first.
+    pub(super) fn ordered_locations(&self) -> Vec<PathBuf> {
+        let order = &self.preferences.location_order;
+        let mut all: Vec<PathBuf> = order
+            .iter()
+            .filter(|p| self.roots.contains(p))
+            .cloned()
+            .collect();
+        all.extend(self.roots.iter().filter(|p| !order.contains(p)).cloned());
+        all
+    }
     /// Put `moved` where `before` is in the Locations order.
     fn move_location(
         &mut self,
@@ -615,20 +626,39 @@ impl Seek {
         if moved == before || !self.roots.contains(&moved) {
             return;
         }
-        let order = &self.preferences.location_order;
-        let mut all: Vec<PathBuf> = order
-            .iter()
-            .filter(|p| self.roots.contains(p))
-            .cloned()
-            .collect();
-        all.extend(self.roots.iter().filter(|p| !order.contains(p)).cloned());
+        let mut all = self.ordered_locations();
         all.retain(|p| *p != moved);
         let at = all.iter().position(|p| *p == before).unwrap_or(all.len());
         all.insert(at, moved);
         self.preferences.location_order = all;
         self.save_preferences(window, cx);
     }
-    fn toggle_location_hidden(&mut self, path: PathBuf, window: &mut Window, cx: &mut Context<Self>) {
+    /// Shift `path` up (`delta = -1`) or down (`delta = 1`) in Locations order.
+    fn move_location_by(
+        &mut self,
+        path: PathBuf,
+        delta: isize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let mut all = self.ordered_locations();
+        let Some(index) = all.iter().position(|p| *p == path) else {
+            return;
+        };
+        let next = index as isize + delta;
+        if next < 0 || next as usize >= all.len() {
+            return;
+        }
+        all.swap(index, next as usize);
+        self.preferences.location_order = all;
+        self.save_preferences(window, cx);
+    }
+    pub(super) fn toggle_location_hidden(
+        &mut self,
+        path: PathBuf,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let hidden = &mut self.preferences.hidden_locations;
         if let Some(at) = hidden.iter().position(|p| *p == path) {
             hidden.remove(at);
@@ -648,172 +678,384 @@ impl Seek {
             .flex()
             .flex_col();
         scroll = scroll.children(self.favorites_section(p, cx));
-        scroll = scroll.child(heading("Locations", p));
-        // The user's order first, then any new locations; hidden ones only
-        // while "Show hidden" is on.
-        let order = &self.preferences.location_order;
-        let mut roots: Vec<PathBuf> = order
-            .iter()
-            .filter(|p| self.roots.contains(p))
-            .cloned()
-            .collect();
-        roots.extend(self.roots.iter().filter(|p| !order.contains(p)).cloned());
+        let locations_collapsed = self.preferences.locations_collapsed && !self.editing_locations;
+        let editing_locations = self.editing_locations;
+        scroll = scroll.child(
+            div()
+                .mt_3()
+                .mb_2()
+                .h(px(30.))
+                .flex_shrink_0()
+                .flex()
+                .items_center()
+                .justify_between()
+                .child(
+                    div()
+                        .id("locations-heading")
+                        .role(Role::Button)
+                        .aria_label(if locations_collapsed {
+                            "Expand Locations"
+                        } else {
+                            "Collapse Locations"
+                        })
+                        .flex_1()
+                        .min_w_0()
+                        .h_full()
+                        .px_2()
+                        .flex()
+                        .items_center()
+                        .gap_1()
+                        .rounded(crate::tokens::RADIUS_ROW)
+                        .cursor_pointer()
+                        .line_height(px(20.))
+                        .text_size(px(12.))
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_color(p.muted)
+                        .hover(move |s| s.text_color(p.text).bg(p.hover))
+                        .child(
+                            Icon::new(if locations_collapsed {
+                                Glyph::ChevronRight
+                            } else {
+                                Glyph::ChevronDown
+                            })
+                            .size(px(11.))
+                            .text_color(p.muted),
+                        )
+                        .child("Locations")
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.editing_locations = false;
+                            this.preferences.locations_collapsed =
+                                !this.preferences.locations_collapsed;
+                            this.save_preferences(window, cx);
+                        })),
+                )
+                .when(!self.roots.is_empty(), |row| {
+                    row.child(
+                        div()
+                            .id("edit-locations-toggle")
+                            .role(Role::Button)
+                            .aria_label(if editing_locations {
+                                "Done editing locations"
+                            } else {
+                                "Edit locations"
+                            })
+                            .px_2()
+                            .h(px(22.))
+                            .flex()
+                            .items_center()
+                            .rounded(crate::tokens::RADIUS_CONTROL)
+                            .cursor_pointer()
+                            .text_size(px(11.))
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(if editing_locations { p.accent } else { p.muted })
+                            .hover(move |s| s.bg(p.hover).text_color(p.text))
+                            .child(if editing_locations { "Done" } else { "Edit" })
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.editing_locations = !this.editing_locations;
+                                if this.editing_locations && this.preferences.locations_collapsed {
+                                    this.preferences.locations_collapsed = false;
+                                    this.save_preferences(window, cx);
+                                } else {
+                                    cx.notify();
+                                }
+                            })),
+                    )
+                }),
+        );
+        // The user's order first, then any new locations; hidden ones are shown
+        // in Edit mode or while "Show hidden" is on.
+        let mut roots = self.ordered_locations();
         let hidden_count = roots
             .iter()
             .filter(|p| self.preferences.hidden_locations.contains(p))
             .count();
-        if !self.show_hidden_locations {
-            roots.retain(|p| !self.preferences.hidden_locations.contains(p));
-        }
-        for (index, path) in roots.iter().enumerate() {
-            let path = path.clone();
-            let hidden = self.preferences.hidden_locations.contains(&path);
-            let reorder_target = path.clone();
-            let menu_path = path.clone();
-            let menu_owner = cx.entity().downgrade();
-            let drop_path = path.clone();
-            let feedback_path = path.clone();
-            let tab_path = path.clone();
-            let tab_owner = cx.entity().downgrade();
-            let selected = self.scope.as_ref() == Some(&path);
-            let capacity = self.places.capacity.get(&path).cloned();
-            let name = path
-                .to_string_lossy()
-                .trim_start_matches(r"\\?\")
-                .to_owned();
-            scroll = scroll.child(
-                div()
-                    .id(("drive", index))
-                    .on_drag(
-                        super::drag_split::PlaceDrag {
-                            path: Some(path.clone()),
-                            label: name.clone(),
-                            item: None,
-                        },
-                        |drag, offset, _, cx| {
-                            super::drag_preview::near_cursor(drag.clone(), offset, cx)
-                        },
-                    )
-                    .drag_over::<super::daily::FilesDrag>(move |style, drag, _, _| {
-                        if super::daily::drop_allowed(&drag.paths, &feedback_path) {
-                            style.bg(p.accent.opacity(0.22))
-                        } else {
-                            style
-                        }
-                    })
-                    .on_drop(cx.listener(
-                        move |this, drag: &super::daily::FilesDrag, window, cx| {
-                            this.drop_files(drag, drop_path.clone(), window, cx)
-                        },
-                    ))
-                    // Drop one location on another to put it there.
-                    .drag_over::<super::drag_split::PlaceDrag>(move |style, drag, _, _| {
-                        if drag.item.is_none() && drag.path.is_some() {
-                            style.bg(p.accent.opacity(0.12))
-                        } else {
-                            style
-                        }
-                    })
-                    .on_drop(cx.listener(
-                        move |this, drag: &super::drag_split::PlaceDrag, window, cx| {
-                            if drag.item.is_none()
-                                && let Some(moved) = drag.path.clone()
-                            {
-                                this.move_location(moved, reorder_target.clone(), window, cx);
-                            }
-                        },
-                    ))
-                    .when(hidden, |d| d.opacity(0.55))
-                    .role(Role::Button)
-                    .aria_label(name.clone())
-                    .flex()
-                    .items_center()
-                    .gap_2()
-                    .h(px(30.))
-                    .px_2()
-                    .rounded(crate::tokens::RADIUS_ROW)
-                    .cursor_pointer()
-                    .bg(if selected { p.hover } else { rgba(0).into() })
-                    .text_color(p.text)
-                    .hover(move |s| s.bg(p.hover))
-                    .child(
-                        Icon::new(Glyph::HardDrive)
-                            .size(px(16.))
-                            .text_color(if selected { p.text } else { p.muted }),
-                    )
-                    .child(
-                        div()
-                            .min_w_0()
-                            .flex_1()
-                            .flex()
-                            .flex_col()
-                            .child(div().truncate().child(name))
-                            .when_some(capacity.clone(), |view, disk| {
-                                view.child(div().text_size(px(11.)).text_color(p.muted).child(
-                                    format!(
-                                        "{} free of {}",
-                                        super::storage_view::human(disk.free),
-                                        super::storage_view::human(disk.total),
-                                    ),
-                                ))
-                            }),
-                    )
-                    .when(capacity.is_some(), |view| view.h(px(44.)))
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        this.scope_to(Some(path.clone()), window, cx)
-                    }))
-                    .context_menu(move |menu, window, cx| {
-                        let owner = menu_owner.clone();
-                        let path = menu_path.clone();
-                        let menu = super::daily::menu_style(menu, window)
-                            .item(
-                                gpui_component::menu::PopupMenuItem::new(if hidden {
-                                    "Show in sidebar"
-                                } else {
-                                    "Hide from sidebar"
-                                })
-                                .on_click(move |_, window, cx| {
-                                    let _ = owner.update(cx, |this, cx| {
-                                        this.toggle_location_hidden(path.clone(), window, cx)
-                                    });
-                                }),
-                            )
-                            .separator();
-                        super::daily::actions_menu(
-                            menu,
-                            tab_owner.clone(),
-                            Some(tab_path.clone()),
-                            true,
-                            cx,
+        if !locations_collapsed {
+            if !self.show_hidden_locations && !editing_locations {
+                roots.retain(|p| !self.preferences.hidden_locations.contains(p));
+            }
+            let total_roots = roots.len();
+            for (index, path) in roots.iter().enumerate() {
+                let path = path.clone();
+                let hidden = self.preferences.hidden_locations.contains(&path);
+                let reorder_target = path.clone();
+                let menu_path = path.clone();
+                let menu_owner = cx.entity().downgrade();
+                let drop_path = path.clone();
+                let feedback_path = path.clone();
+                let tab_path = path.clone();
+                let tab_owner = cx.entity().downgrade();
+                let selected = self.scope.as_ref() == Some(&path);
+                let capacity = self.places.capacity.get(&path).cloned();
+                let name = path
+                    .to_string_lossy()
+                    .trim_start_matches(r"\\?\")
+                    .to_owned();
+                let up_path = path.clone();
+                let down_path = path.clone();
+                let hide_path = path.clone();
+                let click_path = path.clone();
+                scroll = scroll.child(
+                    div()
+                        .id(("drive", index))
+                        .on_drag(
+                            super::drag_split::PlaceDrag {
+                                path: Some(path.clone()),
+                                label: name.clone(),
+                                item: None,
+                            },
+                            |drag, offset, _, cx| {
+                                super::drag_preview::near_cursor(drag.clone(), offset, cx)
+                            },
                         )
-                    }),
-            );
-        }
-        if hidden_count > 0 {
-            let showing = self.show_hidden_locations;
-            scroll = scroll.child(
-                div()
-                    .id("show-hidden-locations")
-                    .role(Role::Button)
-                    .h(px(26.))
-                    .px_2()
-                    .flex()
-                    .items_center()
-                    .rounded(crate::tokens::RADIUS_ROW)
-                    .cursor_pointer()
-                    .text_size(px(12.))
-                    .text_color(p.muted)
-                    .hover(move |s| s.bg(p.hover).text_color(p.text))
-                    .child(if showing {
-                        "Hide hidden locations".to_string()
-                    } else {
-                        format!("Show {hidden_count} hidden")
-                    })
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.show_hidden_locations = !this.show_hidden_locations;
-                        cx.notify();
-                    })),
-            );
+                        .drag_over::<super::daily::FilesDrag>(move |style, drag, _, _| {
+                            if super::daily::drop_allowed(&drag.paths, &feedback_path) {
+                                style.bg(p.accent.opacity(0.22))
+                            } else {
+                                style
+                            }
+                        })
+                        .on_drop(cx.listener(
+                            move |this, drag: &super::daily::FilesDrag, window, cx| {
+                                this.drop_files(drag, drop_path.clone(), window, cx)
+                            },
+                        ))
+                        // Drop one location on another to put it there.
+                        .drag_over::<super::drag_split::PlaceDrag>(move |style, drag, _, _| {
+                            if drag.item.is_none() && drag.path.is_some() {
+                                style.bg(p.accent.opacity(0.12))
+                            } else {
+                                style
+                            }
+                        })
+                        .on_drop(cx.listener(
+                            move |this, drag: &super::drag_split::PlaceDrag, window, cx| {
+                                if drag.item.is_none()
+                                    && let Some(moved) = drag.path.clone()
+                                {
+                                    this.move_location(moved, reorder_target.clone(), window, cx);
+                                }
+                            },
+                        ))
+                        .when(hidden, |d| d.opacity(0.55))
+                        .role(Role::Button)
+                        .aria_label(name.clone())
+                        .flex()
+                        .items_center()
+                        .gap_2()
+                        .h(px(30.))
+                        .px_2()
+                        .rounded(crate::tokens::RADIUS_ROW)
+                        .cursor_pointer()
+                        .bg(if selected && !editing_locations {
+                            p.hover
+                        } else {
+                            rgba(0).into()
+                        })
+                        .text_color(p.text)
+                        .hover(move |s| s.bg(p.hover))
+                        .child(
+                            Icon::new(Glyph::HardDrive)
+                                .size(px(16.))
+                                .text_color(if selected { p.text } else { p.muted }),
+                        )
+                        .child(
+                            div()
+                                .min_w_0()
+                                .flex_1()
+                                .flex()
+                                .flex_col()
+                                .child(div().truncate().child(name))
+                                .when(!editing_locations, |view| {
+                                    view.when_some(capacity.clone(), |view, disk| {
+                                        view.child(
+                                            div().text_size(px(11.)).text_color(p.muted).child(
+                                                format!(
+                                                    "{} free of {}",
+                                                    super::storage_view::human(disk.free),
+                                                    super::storage_view::human(disk.total),
+                                                ),
+                                            ),
+                                        )
+                                    })
+                                }),
+                        )
+                        .when(editing_locations, |row| {
+                            row.child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(2.))
+                                    .flex_shrink_0()
+                                    .child(
+                                        div()
+                                            .id(("loc-up", index))
+                                            .role(Role::Button)
+                                            .aria_label("Move location up")
+                                            .size(px(20.))
+                                            .flex()
+                                            .items_center()
+                                            .justify_center()
+                                            .rounded(crate::tokens::RADIUS_CONTROL)
+                                            .when(index > 0, |d| {
+                                                d.cursor_pointer()
+                                                    .hover(move |s| s.bg(p.hover))
+                                            })
+                                            .when(index == 0, |d| d.opacity(0.3))
+                                            .child(
+                                                Icon::new(Glyph::ChevronUp)
+                                                    .size(px(12.))
+                                                    .text_color(p.muted),
+                                            )
+                                            .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                                                cx.stop_propagation();
+                                            })
+                                            .on_click(cx.listener(move |this, _, window, cx| {
+                                                cx.stop_propagation();
+                                                if index > 0 {
+                                                    this.move_location_by(
+                                                        up_path.clone(),
+                                                        -1,
+                                                        window,
+                                                        cx,
+                                                    );
+                                                }
+                                            })),
+                                    )
+                                    .child(
+                                        div()
+                                            .id(("loc-down", index))
+                                            .role(Role::Button)
+                                            .aria_label("Move location down")
+                                            .size(px(20.))
+                                            .flex()
+                                            .items_center()
+                                            .justify_center()
+                                            .rounded(crate::tokens::RADIUS_CONTROL)
+                                            .when(index + 1 < total_roots, |d| {
+                                                d.cursor_pointer()
+                                                    .hover(move |s| s.bg(p.hover))
+                                            })
+                                            .when(index + 1 >= total_roots, |d| d.opacity(0.3))
+                                            .child(
+                                                Icon::new(Glyph::ChevronDown)
+                                                    .size(px(12.))
+                                                    .text_color(p.muted),
+                                            )
+                                            .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                                                cx.stop_propagation();
+                                            })
+                                            .on_click(cx.listener(move |this, _, window, cx| {
+                                                cx.stop_propagation();
+                                                if index + 1 < total_roots {
+                                                    this.move_location_by(
+                                                        down_path.clone(),
+                                                        1,
+                                                        window,
+                                                        cx,
+                                                    );
+                                                }
+                                            })),
+                                    )
+                                    .child(
+                                        div()
+                                            .id(("loc-hide", index))
+                                            .role(Role::Button)
+                                            .aria_label(if hidden {
+                                                "Show location in sidebar"
+                                            } else {
+                                                "Hide location from sidebar"
+                                            })
+                                            .size(px(20.))
+                                            .flex()
+                                            .items_center()
+                                            .justify_center()
+                                            .rounded(crate::tokens::RADIUS_CONTROL)
+                                            .cursor_pointer()
+                                            .hover(move |s| s.bg(p.hover))
+                                            .child(
+                                                Icon::new(if hidden {
+                                                    Glyph::EyeOff
+                                                } else {
+                                                    Glyph::Eye
+                                                })
+                                                .size(px(12.))
+                                                .text_color(if hidden { p.muted } else { p.text }),
+                                            )
+                                            .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                                                cx.stop_propagation();
+                                            })
+                                            .on_click(cx.listener(move |this, _, window, cx| {
+                                                cx.stop_propagation();
+                                                this.toggle_location_hidden(
+                                                    hide_path.clone(),
+                                                    window,
+                                                    cx,
+                                                );
+                                            })),
+                                    ),
+                            )
+                        })
+                        .when(!editing_locations && capacity.is_some(), |view| {
+                            view.h(px(44.))
+                        })
+                        .on_click(cx.listener(move |this, _, window, cx| {
+                            if !this.editing_locations {
+                                this.scope_to(Some(click_path.clone()), window, cx)
+                            }
+                        }))
+                        .context_menu(move |menu, window, cx| {
+                            let owner = menu_owner.clone();
+                            let path = menu_path.clone();
+                            let menu = super::daily::menu_style(menu, window)
+                                .item(
+                                    gpui_component::menu::PopupMenuItem::new(if hidden {
+                                        "Show in sidebar"
+                                    } else {
+                                        "Hide from sidebar"
+                                    })
+                                    .on_click(move |_, window, cx| {
+                                        let _ = owner.update(cx, |this, cx| {
+                                            this.toggle_location_hidden(path.clone(), window, cx)
+                                        });
+                                    }),
+                                )
+                                .separator();
+                            super::daily::actions_menu(
+                                menu,
+                                tab_owner.clone(),
+                                Some(tab_path.clone()),
+                                true,
+                                cx,
+                            )
+                        }),
+                );
+            }
+            if hidden_count > 0 && !editing_locations {
+                let showing = self.show_hidden_locations;
+                scroll = scroll.child(
+                    div()
+                        .id("show-hidden-locations")
+                        .role(Role::Button)
+                        .h(px(26.))
+                        .px_2()
+                        .flex()
+                        .items_center()
+                        .rounded(crate::tokens::RADIUS_ROW)
+                        .cursor_pointer()
+                        .text_size(px(12.))
+                        .text_color(p.muted)
+                        .hover(move |s| s.bg(p.hover).text_color(p.text))
+                        .child(if showing {
+                            "Hide hidden locations".to_string()
+                        } else {
+                            format!("Show {hidden_count} hidden")
+                        })
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.show_hidden_locations = !this.show_hidden_locations;
+                            cx.notify();
+                        })),
+                );
+            }
         }
         // Tools that look across locations, apart from the places you go.
         scroll = scroll

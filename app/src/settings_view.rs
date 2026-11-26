@@ -1089,12 +1089,56 @@ impl Seek {
                     }),
             )
         });
+        let ordered_drives = self.ordered_locations();
+        let mut sidebar_drives = div().w_full().flex().flex_col().gap_1();
+        for (index, drive) in ordered_drives.iter().enumerate() {
+            let shown = !self.preferences.hidden_locations.contains(drive);
+            let name = drive
+                .to_string_lossy()
+                .trim_start_matches(r"\\?\")
+                .to_owned();
+            let toggle_path = drive.clone();
+            sidebar_drives = sidebar_drives.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .py_1()
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .text_size(px(13.))
+                            .text_color(if shown { p.text } else { p.muted })
+                            .child(Icon::new(Glyph::HardDrive).size(px(14.)).text_color(p.muted))
+                            .child(name.clone()),
+                    )
+                    .child(
+                        Switch::new(("settings-sidebar-loc", index))
+                            .color(p.accent)
+                            .checked(shown)
+                            .accessibility_label(format!("Show {name} in sidebar"))
+                            .on_change(cx.listener(move |this, _, window, cx| {
+                                this.toggle_location_hidden(toggle_path.clone(), window, cx);
+                            })),
+                    ),
+            );
+        }
         let locations = section("Indexed locations")
             .child(card("Indexed folders", "Folders and drives to include in the index. Separate folders with semicolons; changes apply on the next launch.",
                 div().w_full().flex().flex_col().gap_2().child(location_mode)
                     .when(custom, |d| d.child(Input::new(&self.locations_input).h(px(34.)))), p))
             .child(card("Excluded folders", "Hide these folders from results. Separate multiple folders with semicolons (;).",
                 Input::new(&self.exclusions_input).h(px(34.)), p))
+            .when(!ordered_drives.is_empty(), |sec| {
+                sec.child(card(
+                    "Sidebar locations",
+                    "Hide drives from the sidebar without removing them from search or Storage. Drag or use Edit on Locations in the sidebar to reorder.",
+                    sidebar_drives,
+                    p,
+                ))
+            })
             .child(div().flex().gap_2().pt_2()
                 .child(control("save-locations", "Save locations", p, cx)
                     .px_5()

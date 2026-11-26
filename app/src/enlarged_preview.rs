@@ -85,7 +85,10 @@ impl Seek {
         cx.notify();
     }
     pub(super) fn close_quick_look(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.quick_look_closing || self.request_text_reader_exit(window, cx) {
+        if self.quick_look_closing
+            || self.request_text_reader_exit(window, cx)
+            || self.request_picture_edit_exit(picture_edit_view::EditHost::QuickLook, window, cx)
+        {
             return;
         }
         self.quick_look_pan = None;
@@ -123,7 +126,9 @@ impl Seek {
         match key {
             "escape" | "space" => self.close_quick_look(window, cx),
             "up" | "down" => {
-                if self.text_reader_blocks_navigation(cx) {
+                if self.text_reader_blocks_navigation(cx)
+                    || self.picture_edit_for(picture_edit_view::EditHost::QuickLook)
+                {
                     return;
                 }
                 let current = self.table.read(cx).selected_row();
@@ -438,7 +443,13 @@ impl Seek {
             &row.file.path,
             row.file.kind & 3 == seek_engine::walk::KIND_DIR,
         ) == crate::icons::Kind::Image;
-        if super::text_reader::text_file(&row) {
+        let editing_picture = self.picture_edit_for(picture_edit_view::EditHost::QuickLook);
+        if editing_picture {
+            content = content
+                .p_0()
+                .overflow_hidden()
+                .child(self.picture_edit_view(p, window, cx));
+        } else if super::text_reader::text_file(&row) {
             content = content
                 .p_0()
                 .overflow_hidden()
@@ -622,7 +633,9 @@ impl Seek {
                             })),
                     ),
             )
-            .when(image_file, |view| {
+            .when(image_file && !editing_picture, |view| {
+                let edit_path = row.file.path.clone();
+                let can_edit = crate::image_tools::readable(&edit_path);
                 let resolution = match self.cache.lock().unwrap().get(&media::Key::new(&row, crate::document_preview::ENLARGED_EDGE, false)) {
                     Some(media::Value::Image(Some(image))) => {
                         let size = image.size(0);
@@ -740,7 +753,26 @@ impl Seek {
                                 .font_family(crate::tokens::FONT_MONO)
                                 .text_size(crate::tokens::TEXT_CAPTION)
                                 .child(resolution),
-                        ),
+                        )
+                        .when(can_edit, |bar| {
+                            bar.child(
+                                control("quick-look-edit-picture", "", p, cx)
+                                    .accessibility_label("Edit picture")
+                                    .tooltip("Edit picture (crop, rotate, flip, annotate, redact)")
+                                    .h(crate::tokens::BUTTON_HEIGHT)
+                                    .px_3()
+                                    .flex_shrink_0()
+                                    .child(super::interface::button_text("Edit"))
+                                    .on_click(cx.listener(move |this, _, window, cx| {
+                                        this.open_picture_edit(
+                                            picture_edit_view::EditHost::QuickLook,
+                                            edit_path.clone(),
+                                            window,
+                                            cx,
+                                        );
+                                    })),
+                            )
+                        }),
                 )
             })
             .child(content)

@@ -55,6 +55,7 @@ pub mod pane_layout;
 mod pane_session;
 mod pdf_session;
 mod pdf_text;
+mod picture_edit;
 mod prettify;
 mod preview_cache;
 mod preview_diagnostics;

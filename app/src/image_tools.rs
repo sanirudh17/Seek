@@ -92,13 +92,13 @@ pub fn readable(path: &Path) -> bool {
         })
 }
 
-fn heif(path: &Path) -> bool {
+pub(crate) fn heif(path: &Path) -> bool {
     path.extension()
         .and_then(|e| e.to_str())
         .is_some_and(|ext| matches!(ext.to_ascii_lowercase().as_str(), "heic" | "heif"))
 }
 
-fn placeholder(path: &Path) -> bool {
+pub(crate) fn placeholder(path: &Path) -> bool {
     use std::os::windows::fs::MetadataExt;
     std::fs::symlink_metadata(path)
         .is_ok_and(|m| m.file_attributes() & (0x400000 | 0x40000 | 0x1000) != 0)
@@ -108,7 +108,7 @@ const HEIF_MISSING: &str =
     "HEIC needs Microsoft's HEIF Image Extensions, which aren't installed on this PC";
 
 /// Decodes HEIC/HEIF with Windows' codec, if one is installed.
-fn decode_heif(path: &Path) -> Result<DynamicImage, String> {
+pub(crate) fn decode_heif(path: &Path) -> Result<DynamicImage, String> {
     use windows::{Graphics::Imaging::*, Storage::*};
     let open = || -> windows::core::Result<DynamicImage> {
         let full = std::path::absolute(path).unwrap_or(path.into());

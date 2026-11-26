@@ -54,6 +54,8 @@ mod organize_view;
 mod live_folders;
 #[path = "panes.rs"]
 mod panes;
+#[path = "picture_edit_view.rs"]
+mod picture_edit_view;
 #[path = "permanent_delete.rs"]
 mod permanent_delete;
 #[path = "places_view.rs"]
@@ -818,6 +820,8 @@ pub struct Seek {
     /// Image tools confirm dialog (8.3).
     image_job: Option<image_tools_view::ImageJob>,
     image_job_focus: FocusHandle,
+    /// Inline picture editor in Quick Look or a picture Document pane (11.9).
+    picture_edit: Option<picture_edit_view::State>,
     drag_hover: Option<PathBuf>,
     drag_hover_task: Task<()>,
     show_hidden: bool,
@@ -1408,6 +1412,7 @@ impl Seek {
             tab_hover_task: Task::ready(()),
             image_job: None,
             image_job_focus: cx.focus_handle(),
+            picture_edit: None,
             drag_hover: None,
             drag_hover_task: Task::ready(()),
             show_hidden: preferences.show_hidden,

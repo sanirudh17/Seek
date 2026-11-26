@@ -331,6 +331,18 @@ impl Seek {
 
     /// Close a document pane. Refused while its draft has unsaved changes.
     pub(super) fn close_document_pane(&mut self, id: PaneId, cx: &mut Context<Self>) {
+        if let Some(ed) = self
+            .picture_edit
+            .as_mut()
+            .filter(|e| e.host == picture_edit_view::EditHost::DocumentPane(id))
+        {
+            if ed.is_dirty() {
+                ed.confirm_discard = true;
+                cx.notify();
+                return;
+            }
+            self.picture_edit = None;
+        }
         let Some(doc) = self.doc_panes.iter_mut().find(|doc| doc.id == id) else {
             return;
         };
@@ -358,6 +370,12 @@ impl Seek {
     /// Any document pane with unsaved changes keeps the window open.
     pub(super) fn documents_block_close(&mut self, cx: &mut Context<Self>) -> bool {
         let mut blocked = false;
+        if let Some(ed) = self.picture_edit.as_mut()
+            && ed.is_dirty()
+        {
+            ed.confirm_discard = true;
+            blocked = true;
+        }
         for doc in &mut self.doc_panes {
             if doc.reader.blocked() {
                 doc.error = Some("Save or discard your changes before closing Seek.".into());
@@ -487,6 +505,34 @@ impl Seek {
                             .child(details),
                     ),
             )
+            .when(
+                kind == Kind::Image
+                    && !self.picture_edit_for(picture_edit_view::EditHost::DocumentPane(id))
+                    && row
+                        .as_ref()
+                        .is_some_and(|r| crate::image_tools::readable(&r.file.path)),
+                |hdr| {
+                    let edit_path = row.as_ref().unwrap().file.path.clone();
+                    hdr.child(
+                        gpui_base::Button::new(("document-edit-picture", id.0 as usize))
+                            .accessibility_label(format!("Edit picture {name}"))
+                            .h(px(28.))
+                            .px_2()
+                            .rounded(px(6.))
+                            .text_size(px(12.))
+                            .hover(move |d| d.bg(p.hover))
+                            .child("Edit")
+                            .on_click(cx.listener(move |this, _, window, cx| {
+                                this.open_picture_edit(
+                                    picture_edit_view::EditHost::DocumentPane(id),
+                                    edit_path.clone(),
+                                    window,
+                                    cx,
+                                );
+                            })),
+                    )
+                },
+            )
             .child(
                 gpui_base::Button::new(("document-reload", id.0 as usize))
                     .accessibility_label(format!("Reload {name}"))
@@ -570,28 +616,32 @@ impl Seek {
                 })
                 .unwrap_or_else(|| div().into_any_element()),
             (Kind::Image, Some(row)) => {
-                let image = match self.cache.lock().unwrap().get(&media::Key::new(
-                    &row,
-                    media::PREVIEW_EDGE,
-                    false,
-                )) {
-                    Some(media::Value::Image(Some(image))) => Some(image),
-                    _ => None,
-                };
-                match image {
-                    Some(image) => div()
-                        .size_full()
-                        .p_4()
-                        .child(img(image).size_full().object_fit(ObjectFit::Contain))
-                        .into_any_element(),
-                    None => div()
-                        .size_full()
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .text_color(p.muted)
-                        .child("Loading image...")
-                        .into_any_element(),
+                if self.picture_edit_for(picture_edit_view::EditHost::DocumentPane(id)) {
+                    self.picture_edit_view(p, window, cx)
+                } else {
+                    let image = match self.cache.lock().unwrap().get(&media::Key::new(
+                        &row,
+                        media::PREVIEW_EDGE,
+                        false,
+                    )) {
+                        Some(media::Value::Image(Some(image))) => Some(image),
+                        _ => None,
+                    };
+                    match image {
+                        Some(image) => div()
+                            .size_full()
+                            .p_4()
+                            .child(img(image).size_full().object_fit(ObjectFit::Contain))
+                            .into_any_element(),
+                        None => div()
+                            .size_full()
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .text_color(p.muted)
+                            .child("Loading image...")
+                            .into_any_element(),
+                    }
                 }
             }
             (Kind::Other, Some(row)) => div()

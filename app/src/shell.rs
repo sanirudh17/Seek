@@ -870,6 +870,10 @@ pub struct Seek {
     editing_locations: bool,
     /// Storage overview (Phase 9.1), shown in place of the file list.
     storage_page: Option<storage_view::StoragePage>,
+    /// Cached Storage measurements by normalized path so opening Storage
+    /// renders "By kind" and folder sizes immediately without a 1s blank wait.
+    storage_cache: std::collections::HashMap<String, seek_engine::live::storage::Storage>,
+    storage_warm_started: bool,
     cleanup: cleanup_view::Cleanup,
     duplicates: duplicates_view::Duplicates,
     similar: similar_view::Similar,
@@ -1455,6 +1459,8 @@ impl Seek {
             show_hidden_locations: false,
             editing_locations: false,
             storage_page: None,
+            storage_cache: Default::default(),
+            storage_warm_started: false,
             cleanup: Default::default(),
             duplicates: Default::default(),
             similar: Default::default(),
@@ -1713,6 +1719,7 @@ impl Seek {
         self.favorites = update.favorites;
         self.roots = update.roots;
         self.refresh_places(cx);
+        self.prewarm_storage(cx);
         self.refresh_command_palette(cx);
         if update.message.is_some() {
             self.message = update.message.clone();

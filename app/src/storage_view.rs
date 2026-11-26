@@ -126,18 +126,94 @@ fn percent(share: f64) -> String {
     }
 }
 
+/// Normalized lowercase path key for `Seek::storage_cache`.
+fn cache_key(path: &std::path::Path) -> String {
+    path.to_string_lossy()
+        .trim_start_matches(r"\\?\")
+        .trim_end_matches(['\\', '/'])
+        .to_ascii_lowercase()
+}
+
+fn report_has_data(report: &Storage) -> bool {
+    report.stopped.is_none() && (report.files > 0 || !report.children.is_empty())
+}
+
 impl Seek {
+    /// Pre-warm the default drive's Storage report once the index is ready so
+    /// opening the Storage tab renders "By kind" and largest folders instantly.
+    pub(super) fn prewarm_storage(&mut self, cx: &mut Context<Self>) {
+        if self.storage_warm_started || self.roots.is_empty() {
+            return;
+        }
+        if crate::backend::ENGINE.get().is_none() {
+            return;
+        }
+        let Some(drive) = self
+            .ordered_locations()
+            .into_iter()
+            .next()
+            .or_else(|| self.roots.first().cloned())
+        else {
+            return;
+        };
+        let key = cache_key(&drive);
+        if self.storage_cache.contains_key(&key) {
+            self.storage_warm_started = true;
+            return;
+        }
+        self.storage_warm_started = true;
+        let drive_bg = drive.clone();
+        let job = cx.background_executor().spawn(async move {
+            let Some(engine) = crate::backend::ENGINE.get() else {
+                return None;
+            };
+            let cancel = AtomicBool::new(false);
+            Some(engine.storage(
+                &drive_bg,
+                cluster_size(&drive_bg),
+                std::time::Instant::now() + DEADLINE,
+                &cancel,
+            ))
+        });
+        cx.spawn(async move |this, cx| {
+            let result = job.await;
+            let _ = this.update(cx, |this, cx| {
+                match result {
+                    Some(report) if report_has_data(&report) => {
+                        this.storage_cache.insert(key.clone(), report.clone());
+                        if let Some(page) = &mut this.storage_page
+                            && cache_key(&page.scope) == key
+                            && page.report.as_ref().is_none_or(|r| !report_has_data(r))
+                        {
+                            page.report = Some(report);
+                            cx.notify();
+                        }
+                    }
+                    _ => {
+                        // Index wasn't populated yet; allow a later update to warm it.
+                        this.storage_warm_started = false;
+                    }
+                }
+            });
+        })
+        .detach();
+    }
+
     pub(super) fn open_storage(&mut self, drive: Option<PathBuf>, cx: &mut Context<Self>) {
-        let Some(drive) = drive.or_else(|| self.roots.first().cloned()) else {
+        let Some(drive) = drive
+            .or_else(|| self.ordered_locations().into_iter().next())
+            .or_else(|| self.roots.first().cloned())
+        else {
             self.message = Some("No locations are indexed yet.".into());
             cx.notify();
             return;
         };
         self.close_worktrees();
+        let cached = self.storage_cache.get(&cache_key(&drive)).cloned();
         self.storage_page = Some(StoragePage {
             drive: drive.clone(),
             scope: drive.clone(),
-            report: None,
+            report: cached,
             measuring: false,
             cancel: Arc::new(AtomicBool::new(false)),
             generation: 0,
@@ -194,6 +270,7 @@ impl Seek {
     }
 
     fn measure_storage(&mut self, scope: PathBuf, cx: &mut Context<Self>) {
+        let cached_for_scope = self.storage_cache.get(&cache_key(&scope)).cloned();
         let Some(page) = &mut self.storage_page else {
             return;
         };
@@ -206,7 +283,9 @@ impl Seek {
             .eq_ignore_ascii_case(scope.as_os_str());
         if scope_changed {
             page.bar_anim += 1;
-            page.report = None;
+            page.report = cached_for_scope;
+        } else if page.report.is_none() {
+            page.report = cached_for_scope;
         }
         page.scope = scope.clone();
         page.measuring = true;
@@ -248,11 +327,12 @@ impl Seek {
                     // Keep the previous valid report for the same scope while
                     // waiting for an index update so the folder list never
                     // blanks out to "No folders here".
-                    let had_data = page
-                        .report
-                        .as_ref()
-                        .is_some_and(|prev| prev.stopped.is_none() && (prev.files > 0 || !prev.children.is_empty()));
-                    let now_has_data = report.stopped.is_none() && (report.files > 0 || !report.children.is_empty());
+                    let had_data = page.report.as_ref().is_some_and(report_has_data);
+                    let now_has_data = report_has_data(&report);
+                    if now_has_data {
+                        this.storage_cache
+                            .insert(cache_key(&page.scope), report.clone());
+                    }
                     if !had_data && now_has_data {
                         page.bar_anim += 1;
                     }
@@ -324,7 +404,8 @@ impl Seek {
                 }
                 menu
             });
-        let status = if page.measuring {
+        let has_measured_data = report_has_data(&report);
+        let status = if page.measuring && !has_measured_data {
             "Measuring…".to_string()
         } else if let Some(reason) = &report.stopped {
             match reason.as_str() {
@@ -511,7 +592,27 @@ impl Seek {
                     ),
             )
             .children(drive_bar)
-            .when(measured > 0, |d| d.child(measured_label).child(bar).child(legend));
+            .when(measured > 0, |d| d.child(measured_label).child(bar).child(legend))
+            .when(measured == 0 && page.measuring, |d| {
+                d.child(
+                    div()
+                        .flex()
+                        .items_baseline()
+                        .justify_between()
+                        .text_size(TEXT_SMALL)
+                        .child(
+                            div()
+                                .font_weight(FontWeight::MEDIUM)
+                                .child(if page.scope == page.drive {
+                                    "By kind"
+                                } else {
+                                    "By kind, in this folder"
+                                }),
+                        )
+                        .child(div().text_color(p.muted).child("Measuring…")),
+                )
+                .child(track(10.))
+            });
         // Where we are: the drive, then each folder drilled into.
         let mut crumbs = div().flex().items_center().gap_1().text_size(TEXT_SMALL);
         let mut walk = page.drive.clone();
@@ -763,7 +864,8 @@ fn drives() -> Vec<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::human;
+    use super::{cache_key, human};
+    use std::path::Path;
 
     #[test]
     fn human_matches_windows_explorer_binary_sizes() {
@@ -778,5 +880,14 @@ mod tests {
         assert_eq!(human(91_176_579_072), "84.9 GB");
         assert_eq!(human(510_844_203_008), "475 GB");
         assert_eq!(human(2u64 << 40), "2.00 TB");
+    }
+
+    #[test]
+    fn cache_key_normalizes_case_slashes_and_verbatim_prefix() {
+        assert_eq!(cache_key(Path::new(r"C:\")), cache_key(Path::new(r"\\?\c:\")));
+        assert_eq!(
+            cache_key(Path::new(r"C:\Users\Demo\")),
+            cache_key(Path::new(r"c:\users\demo"))
+        );
     }
 }

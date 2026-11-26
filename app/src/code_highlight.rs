@@ -339,8 +339,8 @@ fn tokenize_diff(line: &str, out: &mut Vec<(Range<usize>, &'static str)>) {
     if line.is_empty() {
         return;
     }
-    if line.starts_with("@@") {
-        let end = line[2..]
+    if let Some(rest) = line.strip_prefix("@@") {
+        let end = rest
             .find("@@")
             .map(|i| i + 4)
             .unwrap_or(line.len());
@@ -429,15 +429,15 @@ fn tokenize_ini(line: &str, out: &mut Vec<(Range<usize>, &'static str)>) {
         out.push((i..bytes.len(), "comment"));
         return;
     }
-    if bytes[i] == b'[' {
-        if let Some(close) = line[i..].find(']') {
-            out.push((i..i + 1, "punctuation"));
-            if close > 1 {
-                out.push((i + 1..i + close, "type"));
-            }
-            out.push((i + close..i + close + 1, "punctuation"));
-            return;
+    if bytes[i] == b'['
+        && let Some(close) = line[i..].find(']')
+    {
+        out.push((i..i + 1, "punctuation"));
+        if close > 1 {
+            out.push((i + 1..i + close, "type"));
         }
+        out.push((i + close..i + close + 1, "punctuation"));
+        return;
     }
     if let Some(sep_rel) = line[i..].find(['=', ':']) {
         let sep = i + sep_rel;
@@ -675,12 +675,13 @@ fn tokenize_markup(
         }
         if bytes[i] == b'&' {
             let start = i;
-            if let Some(semi) = line[i..].find(';') {
-                if semi > 1 && semi <= 12 {
-                    out.push((start..start + semi + 1, "constant"));
-                    i = start + semi + 1;
-                    continue;
-                }
+            if let Some(semi) = line[i..].find(';')
+                && semi > 1
+                && semi <= 12
+            {
+                out.push((start..start + semi + 1, "constant"));
+                i = start + semi + 1;
+                continue;
             }
         }
         i += 1;
@@ -801,9 +802,7 @@ fn tokenize_css(
                 i += 1;
             }
             let rest = line[i..].trim_start();
-            if rest.starts_with(':') && !rest.starts_with("::") {
-                out.push((start..i, "function"));
-            } else if rest.starts_with('(') {
+            if (rest.starts_with(':') && !rest.starts_with("::")) || rest.starts_with('(') {
                 out.push((start..i, "function"));
             } else if matches!(
                 &line[start..i],
@@ -961,15 +960,15 @@ fn tokenize_config(line: &str, out: &mut Vec<(Range<usize>, &'static str)>) {
         out.push((i..bytes.len(), "comment"));
         return;
     }
-    if bytes[i] == b'[' {
-        if let Some(close) = line[i..].rfind(']') {
-            out.push((i..i + 1, "punctuation"));
-            if close > 1 {
-                out.push((i + 1..i + close, "type"));
-            }
-            out.push((i + close..i + close + 1, "punctuation"));
-            return;
+    if bytes[i] == b'['
+        && let Some(close) = line[i..].rfind(']')
+    {
+        out.push((i..i + 1, "punctuation"));
+        if close > 1 {
+            out.push((i + 1..i + close, "type"));
         }
+        out.push((i + close..i + close + 1, "punctuation"));
+        return;
     }
     while i < bytes.len() {
         if bytes[i] == b'#' {
@@ -1045,34 +1044,34 @@ fn tokenize_code(
     }
 
     while i < bytes.len() {
-        if let Some((_, close, kind)) = block {
-            if state == kind {
-                if let Some(rel) = line[i..].find(close) {
-                    let end = i + rel + close.len();
-                    out.push((i..end, "comment"));
-                    i = end;
-                    state = BlockState::Normal;
-                } else {
-                    out.push((i..bytes.len(), "comment"));
-                    return state;
-                }
-                continue;
+        if let Some((_, close, kind)) = block
+            && state == kind
+        {
+            if let Some(rel) = line[i..].find(close) {
+                let end = i + rel + close.len();
+                out.push((i..end, "comment"));
+                i = end;
+                state = BlockState::Normal;
+            } else {
+                out.push((i..bytes.len(), "comment"));
+                return state;
             }
+            continue;
         }
-        if let Some((open, close, kind)) = block {
-            if bytes[i..].starts_with(open.as_bytes()) {
-                let start = i;
-                i += open.len();
-                if let Some(rel) = line[i..].find(close) {
-                    let end = i + rel + close.len();
-                    out.push((start..end, "comment"));
-                    i = end;
-                } else {
-                    out.push((start..bytes.len(), "comment"));
-                    return kind;
-                }
-                continue;
+        if let Some((open, close, kind)) = block
+            && bytes[i..].starts_with(open.as_bytes())
+        {
+            let start = i;
+            i += open.len();
+            if let Some(rel) = line[i..].find(close) {
+                let end = i + rel + close.len();
+                out.push((start..end, "comment"));
+                i = end;
+            } else {
+                out.push((start..bytes.len(), "comment"));
+                return kind;
             }
+            continue;
         }
         if slash_comment && bytes[i..].starts_with(b"//") {
             out.push((i..bytes.len(), "comment"));
@@ -1157,17 +1156,7 @@ fn tokenize_code(
                     i += 1;
                 }
             }
-            let var = &line[start..i];
-            let role = if lang == "powershell"
-                && matches!(
-                    var.to_ascii_lowercase().as_str(),
-                    "$true" | "$false" | "$null"
-                ) {
-                "constant"
-            } else {
-                "constant"
-            };
-            out.push((start..i, role));
+            out.push((start..i, "constant"));
             continue;
         }
         // PowerShell `-Parameter`

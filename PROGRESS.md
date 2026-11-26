@@ -1,3 +1,25 @@
+# November 26 — Seek 1.2 (Phase 11: preview polish, secret protection, picture editing, refinements & instant Storage)
+
+Worktree: `C:\Users\sanir\Seek-1.2-preview-polish`, branch `feature/1.2-preview-polish` (branched from `origin/main` `e37a0f5`, with 1.1.1 bugfixes cherry-picked as `8fd6319`).
+
+Commits: `25a6cfc` (11.1 palette-matched syntax highlighting for 25 languages), `3677048` (11.2 minified JSON/XML prettify + Raw + Format document), `9117acf` (11.3 `.env` secret masking in previews, search snippets & MCP `read_text`), `83771e3` (11.4 selectable previews & right-click Copy), `7c89bc6` (11.5 per-surface `Wrap` toggle), `8ec37b5` (11.6 quiet confirmation toasts & `Show confirmations`), `59b3394` (11.7 `Show in folder` `Ctrl+Shift+O`), `c621025` (11.8 sidebar Locations Edit mode, Settings visibility toggles & independent Favorites/Locations folding), `d6aaf1d` (11.9 inline picture editing with crop, marks, permanent redaction & atomic save), `314d0bb` (Storage instant By-kind cache & background pre-warm), plus the Clippy/docs commit.
+
+Verified on current head:
+- `powershell -NoProfile -File scripts/check-motion.ps1`: passed.
+- `cargo test -p seek-engine --lib`: 60 passed, 0 failed, 1 ignored.
+- `cargo test -p seek`: 314 passed, 0 failed, 11 ignored (+19 new tests covering 8-palette × dark/light × 8-role >= 3:1 syntax contrast, 25-language tokenizer, JSON/XML streaming prettifiers, `.env` masking/debug-safety/MCP `read_text`, per-surface Wrap & Settings round-trip, `TOAST_QUIET`, `Show in folder` path matching, sidebar fold/Locations preferences, picture editing redaction permanence + EXIF stripping + animated GIF refusal + mark geometry + Save a Copy/Replace Original failure paths + text rasterization, and Storage cache-key normalization).
+- `cargo clippy -p seek -p seek-engine --all-targets -- -D warnings`: passed with 0 warnings.
+- `cargo build -p seek --bin seek`: passed with 0 warnings.
+
+Unverified (NOT RUN):
+- Live interactive GUI visual inspection on screen (dark/light themes, high-contrast, transparency-off, real-file Quick Look/Document pane picture editing drag interactions, live HEIC decode with Windows HEIF Extensions, live Storage open timing on the user's real drives).
+- Release build binary size, startup time, idle CPU, and preview-open latency measurements on release binaries.
+
+Decisions for review:
+- Chose `Ctrl+Shift+O` for `Show in folder` (checked against all existing bindings; zero conflicts).
+- Picture editing rasterizes text marks via bundled `Geist-SemiBold.ttf` / `Geist.ttf` through `resvg` (zero new crate dependencies) and forces EXIF stripping whenever any redaction step is present.
+- Storage pre-warms the default drive once the index is ready and caches reports per normalized path so opening Storage renders "By kind" immediately while silently refreshing in the background.
+
 # November 24 — revamp phase ten (MCP server)
 
 Commits: 1b33faf (10.1-10.4 server, tools, pipe, safety, contract), a51962f (10.5 Settings > Agents), 0889f0e (10.6 fixes from agent runs), and this record. Docs: docs/MCP.md.

@@ -5,8 +5,10 @@
 //!
 //! Architecture inspired by Monodrive's `edits.rs` / `marks.rs` (MIT).
 use image::{
-    DynamicImage, GenericImageView, ImageDecoder, ImageEncoder, ImageFormat, Rgba, RgbaImage,
+    DynamicImage, GenericImageView, ImageDecoder, ImageEncoder, ImageFormat, RgbaImage,
 };
+#[cfg(test)]
+use image::Rgba;
 use resvg::tiny_skia::{
     BlendMode, Color, FillRule, LineCap, LineJoin, Paint, PathBuilder, Pixmap, Stroke, Transform,
 };
@@ -799,9 +801,11 @@ fn check_animated_gif(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+pub type DecodedPicture = (RgbaImage, Option<Vec<u8>>, OutputFormat, bool);
+
 /// Decode a picture at full resolution, applying EXIF orientation and checking
 /// safety caps and animated GIFs.
-pub fn decode_full(path: &Path) -> Result<(RgbaImage, Option<Vec<u8>>, OutputFormat, bool), String> {
+pub fn decode_full(path: &Path) -> Result<DecodedPicture, String> {
     if crate::image_tools::placeholder(path) {
         return Err("Download this cloud file before editing it.".into());
     }

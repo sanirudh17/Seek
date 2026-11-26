@@ -441,25 +441,25 @@ pub fn format_xml(input: &str) -> Result<String, &'static str> {
                                    stack: &mut Vec<XmlFrame>,
                                    pending_text: &mut String| {
         let depth = stack.len();
-        if let Some(parent) = stack.last_mut() {
-            if !pending_text.is_empty() {
-                if !parent.preserve_space {
-                    let trimmed = pending_text.trim();
-                    if !trimmed.is_empty() {
-                        out.push('\n');
-                        push_indent(out, depth);
-                        out.push_str(trimmed);
-                        parent.has_non_ws_text = true;
-                        parent.opened_multiline = true;
-                    }
-                } else {
-                    out.push_str(pending_text);
-                    if !pending_text.trim().is_empty() {
-                        parent.has_non_ws_text = true;
-                    }
+        if let Some(parent) = stack.last_mut()
+            && !pending_text.is_empty()
+        {
+            if !parent.preserve_space {
+                let trimmed = pending_text.trim();
+                if !trimmed.is_empty() {
+                    out.push('\n');
+                    push_indent(out, depth);
+                    out.push_str(trimmed);
+                    parent.has_non_ws_text = true;
+                    parent.opened_multiline = true;
                 }
-                pending_text.clear();
+            } else {
+                out.push_str(pending_text);
+                if !pending_text.trim().is_empty() {
+                    parent.has_non_ws_text = true;
+                }
             }
+            pending_text.clear();
         }
     };
 

@@ -566,8 +566,7 @@ impl Seek {
                                             SaveMode::SaveCopy => format!("Saved copy as {name}"),
                                             SaveMode::ReplaceOriginal => format!("Saved {name}"),
                                         };
-                                        // Invalidate preview cache so updated image reloads fresh.
-                                        this.cache.lock().unwrap().clear();
+                                        // Force preview worker to revalidate fingerprints so updated image reloads fresh.
                                         this.media.force();
                                         let _ = this.backend.tx.send(Command::Changed);
                                         if mode == SaveMode::ReplaceOriginal

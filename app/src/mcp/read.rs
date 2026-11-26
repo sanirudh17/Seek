@@ -463,8 +463,10 @@ mod tests {
         assert!(!out.data["text"].as_str().unwrap().contains("super_secret_token_42"));
 
         // Turning on "Let agents read secret values" reveals real values.
-        let mut settings = crate::settings::Settings::default();
-        settings.agent_read_secrets = true;
+        let settings = crate::settings::Settings {
+            agent_read_secrets: true,
+            ..Default::default()
+        };
         crate::settings::write(&data, &settings).unwrap();
         let revealed = call(
             "read_text",

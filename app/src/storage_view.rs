@@ -164,9 +164,7 @@ impl Seek {
         self.storage_warm_started = true;
         let drive_bg = drive.clone();
         let job = cx.background_executor().spawn(async move {
-            let Some(engine) = crate::backend::ENGINE.get() else {
-                return None;
-            };
+            let engine = crate::backend::ENGINE.get()?;
             let cancel = AtomicBool::new(false);
             Some(engine.storage(
                 &drive_bg,

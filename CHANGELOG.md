@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased (Seek 1.2 — Phase 11)
+
+#### Previews and editing
+
+- Palette-matched syntax highlighting for 25 languages (Rust, TypeScript/JavaScript, Python, JSON, TOML, YAML, Markdown, C/C++, C#, Java, HTML, XML, CSS/SCSS, SQL, Go, Kotlin, Swift, Ruby, PHP, Lua, PowerShell, Shell, Dockerfile, ini/conf, diff/patch, `.env`), visible-range only, across info panel, Quick Look, Document panes and Markdown code blocks.
+- Minified JSON and XML previews format automatically with a `Formatted` / `Raw` toggle (up to 5 MiB) and an explicit undoable `Format document` action in the editor.
+- `.env` secret masking in previews, content search snippets and MCP `read_text` (deterministic letter masks that do not leak real length, per-value click-to-reveal, Reveal/Hide all, auto re-hide, pre-edit notice, Settings > Previews and Settings > Agents controls).
+- Selectable text, code and Markdown previews with drag-select, double/triple-click, `Ctrl+A`, `Ctrl+C` and right-click `Copy` across info panel, Quick Look and Document panes.
+- `Wrap` toggle persisted independently for info panel, Quick Look and Document panes.
+- Inline picture editing in Quick Look and picture Document panes: crop (with live pixel size and `Free`, `1:1`, `4:3`, `16:9` presets), rotate 90°, flip, pen, highlighter, arrow, rectangle, ellipse, text, and permanent pixel-level redaction (with forced EXIF stripping), 4 ink colours, editable marks until save, undo, cancellable full-resolution export, and `Save a Copy` (default) / `Replace Original` (with confirmation and atomic replacement).
+
+#### Browsing, Storage and refinements
+
+- `Show in folder` (`Ctrl+Shift+O`) from the file context menu, Jump palette and Recent files opens the parent folder inside Seek, selects the item and scrolls it into view.
+- Brief confirmation toasts (2.5 s, configurable in Settings > Files and search > `Show confirmations`) for Copy path, Copy name, Copy, Cut, Paste, Undo, Redo and pinning folders to the sidebar.
+- Sidebar `Locations` inline `Edit` / `Done` mode (reorder and hide/show drives), Settings > Locations sidebar visibility toggles, and independent persisted folding for `Favorites` and `Locations`.
+- Storage caches and pre-warms drive measurements once the index is ready so opening Storage renders "By kind" and largest folders immediately without a 1-second blank wait.
+
 ## 1.1.1 - 2026-11-25
 
 Seek 1.1.1 makes Cleanup much faster and gives you control over what it removes, lets Storage measure any drive, speeds up All locations, and fixes several window and startup glitches. Saved data from earlier versions is kept.

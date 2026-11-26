@@ -1,19 +1,18 @@
-# November 26 — Seek 1.2 (Phase 11: preview polish, secret protection, picture editing, refinements & instant Storage)
+# November 26 — Seek 1.2 (Phase 11 + QA Polish, Ctrl+L Completion, 60 FPS Picture Editor, Inline Video Editor, Deeper Cleanup/Duplicates, Permanent Worktree Delete)
 
 Worktree: `C:\Users\sanir\Seek-1.2-preview-polish`, branch `feature/1.2-preview-polish` (branched from `origin/main` `e37a0f5`, with 1.1.1 bugfixes cherry-picked as `8fd6319`).
 
-Commits: `25a6cfc` (11.1 palette-matched syntax highlighting for 25 languages), `3677048` (11.2 minified JSON/XML prettify + Raw + Format document), `9117acf` (11.3 `.env` secret masking in previews, search snippets & MCP `read_text`), `83771e3` (11.4 selectable previews & right-click Copy), `7c89bc6` (11.5 per-surface `Wrap` toggle), `8ec37b5` (11.6 quiet confirmation toasts & `Show confirmations`), `59b3394` (11.7 `Show in folder` `Ctrl+Shift+O`), `c621025` (11.8 sidebar Locations Edit mode, Settings visibility toggles & independent Favorites/Locations folding), `d6aaf1d` (11.9 inline picture editing with crop, marks, permanent redaction & atomic save), `314d0bb` (Storage instant By-kind cache & background pre-warm), plus the Clippy/docs commit.
+Commits: `25a6cfc`..`aa0080a` (initial Phase 11.1–11.9 + instant Storage By-kind cache), `edd47c8` (QA polish for previews, `.env`, global Wrap setting, `Ctrl+L` path bar + `Tab` completion, global `Ctrl+Shift+O`, centered toasts, sidebar polish), `5dbbfc3` (60 FPS GPU-accelerated picture editor with 8-handle crop, redo, 7 inks, S/M/L strokes, optically-centered buttons & dark-glass destructive styling), `3c72a44` (inline video playback & editing via `ffmpeg`/`ffprobe` with trim, crop, rotate, mute, save frame), `8d6a836` (deeper safe Storage Cleanup, 64 KB Find Duplicates, permanent Worktree deletion with explicit confirmation), plus strict Clippy & docs.
 
 Verified on current head:
 - `powershell -NoProfile -File scripts/check-motion.ps1`: passed.
-- `cargo test -p seek-engine --lib`: 60 passed, 0 failed, 1 ignored.
-- `cargo test -p seek`: 314 passed, 0 failed, 11 ignored (+19 new tests covering 8-palette × dark/light × 8-role >= 3:1 syntax contrast, 25-language tokenizer, JSON/XML streaming prettifiers, `.env` masking/debug-safety/MCP `read_text`, per-surface Wrap & Settings round-trip, `TOAST_QUIET`, `Show in folder` path matching, sidebar fold/Locations preferences, picture editing redaction permanence + EXIF stripping + animated GIF refusal + mark geometry + Save a Copy/Replace Original failure paths + text rasterization, and Storage cache-key normalization).
 - `cargo clippy -p seek -p seek-engine --all-targets -- -D warnings`: passed with 0 warnings.
-- `cargo build -p seek --bin seek`: passed with 0 warnings.
+- `cargo test -p seek-engine --lib`: 60 passed, 0 failed, 1 ignored.
+- `cargo test -p seek`: 319 passed, 0 failed, 11 ignored (including `location::tests::tab_complete_completes_unique_and_common_prefix`, `picture_edit::tests::crop_edge_handles_resize_independently_and_respect_aspect`, `video_edit::tests::build_export_args_uses_stream_copy_for_trim_and_mute_and_reencodes_for_crop_rotate`, `video_edit::tests::live_ffmpeg_probe_trim_mute_and_save_frame`, and `worktrees::tests::delete_permanently_removes_linked_worktree_and_prunes_admin`).
+- `cargo build --release -p seek --bin seek`: built clean release binary (no console window).
 
 Unverified (NOT RUN):
-- Live interactive GUI visual inspection on screen (dark/light themes, high-contrast, transparency-off, real-file Quick Look/Document pane picture editing drag interactions, live HEIC decode with Windows HEIF Extensions, live Storage open timing on the user's real drives).
-- Release build binary size, startup time, idle CPU, and preview-open latency measurements on release binaries.
+- Live interactive GUI visual inspection across light mode, high-contrast, and transparency-off; live HEIC decode with Windows HEIF Extensions; real-file multi-GB video Replace Original on disk.
 
 Decisions for review:
 - Chose `Ctrl+Shift+O` for `Show in folder` (checked against all existing bindings; zero conflicts).

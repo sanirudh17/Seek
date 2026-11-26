@@ -126,7 +126,7 @@ impl VideoEdit {
         self.trim_start > 0.02
             || (duration > 0.05 && (duration - self.trim_end).abs() > 0.02)
             || self.crop.is_some()
-            || (self.quarter_turns % 4) != 0
+            || !self.quarter_turns.is_multiple_of(4)
             || self.muted
     }
 
@@ -135,7 +135,7 @@ impl VideoEdit {
     }
 
     pub fn needs_reencode(&self) -> bool {
-        self.crop.is_some() || (self.quarter_turns % 4) != 0
+        self.crop.is_some() || !self.quarter_turns.is_multiple_of(4)
     }
 }
 
@@ -726,11 +726,11 @@ pub fn export_video(
         return Err("FFmpeg export failed. Try Save a Copy or check the video format.".into());
     }
 
-    if req.mode == SaveMode::ReplaceOriginal {
-        if let Err(err) = atomic_replace(&final_path, &staged_path) {
-            let _ = std::fs::remove_file(&staged_path);
-            return Err(err);
-        }
+    if req.mode == SaveMode::ReplaceOriginal
+        && let Err(err) = atomic_replace(&final_path, &staged_path)
+    {
+        let _ = std::fs::remove_file(&staged_path);
+        return Err(err);
     }
     progress.store(100, Ordering::Relaxed);
     Ok(final_path)

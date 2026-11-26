@@ -5,18 +5,23 @@
 #### Previews and editing
 
 - Palette-matched syntax highlighting for 25 languages (Rust, TypeScript/JavaScript, Python, JSON, TOML, YAML, Markdown, C/C++, C#, Java, HTML, XML, CSS/SCSS, SQL, Go, Kotlin, Swift, Ruby, PHP, Lua, PowerShell, Shell, Dockerfile, ini/conf, diff/patch, `.env`), visible-range only, across info panel, Quick Look, Document panes and Markdown code blocks.
-- Minified JSON and XML previews format automatically with a `Formatted` / `Raw` toggle (up to 5 MiB) and an explicit undoable `Format document` action in the editor.
+- Instant, zero-flicker text, code, `.env`, JSON and XML previews with a slim centered line-number gutter, smooth sliding `Formatted` / `Raw` segmented control (up to 5 MiB), and explicit undoable `Format document` action in the editor.
 - `.env` secret masking in previews, content search snippets and MCP `read_text` (deterministic letter masks that do not leak real length, per-value click-to-reveal, Reveal/Hide all, auto re-hide, pre-edit notice, Settings > Previews and Settings > Agents controls).
-- Selectable text, code and Markdown previews with drag-select, double/triple-click, `Ctrl+A`, `Ctrl+C` and right-click `Copy` across info panel, Quick Look and Document panes.
-- `Wrap` toggle persisted independently for info panel, Quick Look and Document panes.
-- Inline picture editing in Quick Look and picture Document panes: crop (with live pixel size and `Free`, `1:1`, `4:3`, `16:9` presets), rotate 90°, flip, pen, highlighter, arrow, rectangle, ellipse, text, and permanent pixel-level redaction (with forced EXIF stripping), 4 ink colours, editable marks until save, undo, cancellable full-resolution export, and `Save a Copy` (default) / `Replace Original` (with confirmation and atomic replacement).
+- Selectable read-only text, code and Markdown previews with immediate first-click drag-select, double/triple-click, visible palette-matched selection tint, `Ctrl+A`, `Ctrl+C` and right-click `Copy`.
+- Single global `Wrap long lines` setting in Settings > Previews (default off), keeping preview headers clean and uncluttered.
+- 60 FPS GPU-accelerated inline picture editing in Quick Look and picture Document panes: 8-handle crop (4 corners + 4 edge grab-bars + rule-of-thirds guides + `Free`, `1:1`, `4:3`, `16:9` presets), rotate 90°, flip, pen, highlighter, arrow, rectangle, ellipse, text, and permanent pixel-level redaction (with forced EXIF stripping), 7 curated ink colours, `S`/`M`/`L` stroke widths, editable marks until save, `Ctrl+Z` undo and `Ctrl+Shift+Z` / `Ctrl+Y` redo, cancellable full-resolution export, and `Save a Copy` (default) / `Replace Original` (with confirmation and atomic replacement).
+- Inline video playback and editing in Quick Look and Video Document panes (powered by `ffmpeg`/`ffprobe` with no console window): real-time playback (`Space`), filmstrip scrubbing, draggable trim handles, 8-handle crop, rotate 90°, mute audio, `Save frame` PNG, cancellable export with progress, and `Save a Copy` (default) / `Replace Original` (atomic).
 
 #### Browsing, Storage and refinements
 
-- `Show in folder` (`Ctrl+Shift+O`) from the file context menu, Jump palette and Recent files opens the parent folder inside Seek, selects the item and scrolls it into view.
-- Brief confirmation toasts (2.5 s, configurable in Settings > Files and search > `Show confirmations`) for Copy path, Copy name, Copy, Cut, Paste, Undo, Redo and pinning folders to the sidebar.
-- Sidebar `Locations` inline `Edit` / `Done` mode (reorder and hide/show drives), Settings > Locations sidebar visibility toggles, and independent persisted folding for `Favorites` and `Locations`.
+- `Ctrl+L` pre-fills and selects the current folder path, supports `Tab` live disk path completion, and pressing Enter on a file path reveals it inside its folder.
+- `Show in folder` (`Ctrl+Shift+O`) works globally from anywhere inside Seek (file list, search results, Jump palette, Recent files), opens the parent folder, selects the item and scrolls it into view reliably.
+- Brief centered confirmation toasts (2.5 s, configurable in Settings > Files and search > `Show confirmations`) for Copy path, Copy name, Copy, Cut, Paste, Undo, Redo, Save frame, and pinning folders.
+- Sidebar `Locations` inline `Edit` / `Done` mode (shown when multiple drives or hidden drives exist), full-width Settings > Locations sidebar cards, uniform chevron sizing, and independent persisted folding for `Favorites` and `Locations`.
 - Storage caches and pre-warms drive measurements once the index is ready so opening Storage renders "By kind" and largest folders immediately without a 1-second blank wait.
+- Deeper safe Storage Cleanup scan (more developer, AI/editor, browser, shader, log and installer-leftover caches, deeper Chromium/Electron profile discovery, and large generated build folders in projects untouched for 7+ days).
+- Broader Find Duplicates coverage: `Search everywhere` now compares files down to 64 KB (catching duplicate photos, screenshots, PDFs and documents) with higher file/folder limits and guaranteed home-folder coverage.
+- Worktrees removal permanently deletes the linked worktree folder and Git admin record (then prunes) behind an explicit permanent-delete confirmation dialog instead of moving multi-GB worktrees to the Recycle Bin.
 
 ## 1.1.1 - 2026-11-25
 

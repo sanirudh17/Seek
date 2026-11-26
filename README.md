@@ -57,7 +57,7 @@ Get-FileHash .\Seek-<version>-Setup-x64.exe -Algorithm SHA256
 - **Four views.** List (with inline folder expansion), Icons (size, spacing and label position are adjustable), Gallery (with an optional large preview) and Columns.
 - **Live folders.** A folder on screen updates the moment something changes on disk: a finished download, a file saved by another app, or a change made by a coding agent. New items appear at the top.
 - **Sidebar.** Your Windows folders (including OneDrive-redirected ones), drives, saved searches and your own groups, with icons in your accent colour. Drag folders onto it to pin them.
-- **Addresses.** Type a path, `%TEMP%`, `~` or `cd <folder>` in the search field and press Enter to go straight there.
+- **Addresses.** Press `Ctrl+L` to focus and pre-fill the current folder path, press `Tab` for live disk path completion, or type `%TEMP%`, `~` or `cd <folder>` and press Enter (entering a file path reveals it in its parent folder).
 - **Information panel.** Details, dates, size on disk, ownership and a preview of the selection, in a resizable panel.
 - **Reopen as you left it.** Panes, tabs and folders come back when you start Seek (can be turned off).
 
@@ -70,7 +70,7 @@ Get-FileHash .\Seek-<version>-Setup-x64.exe -Algorithm SHA256
 
 ### Look inside files
 
-- **Quick Look** (Space) for pictures, PDFs, Word documents and Excel sheets: zoom, pan, actual size, and page and file navigation from the keyboard.
+- **Quick Look** (Space) for pictures, videos, PDFs, Word documents and Excel sheets: zoom, pan, actual size, inline picture editing (crop, rotate, flip, annotate, redact), inline video playback and editing (trim, crop, rotate, mute, save frame), and page and file navigation from the keyboard.
 - **Previews** in the information panel and Gallery, loaded only for what you select.
 - **Document panes** open text, code and Markdown beside your files for reading or editing, with find, optional auto-save and optional backups.
 - **Image tools** for common picture tasks from the information panel.

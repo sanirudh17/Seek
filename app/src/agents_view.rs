@@ -540,6 +540,14 @@ impl Seek {
                 this.preferences.agent_tools_all = *checked;
                 this.save_preferences(window, cx);
             }));
+        let read_secrets = Switch::new("agents-read-secrets")
+            .color(p.accent)
+            .checked(self.preferences.agent_read_secrets)
+            .accessibility_label("Let agents read secret values")
+            .on_change(cx.listener(|this, checked, window, cx| {
+                this.preferences.agent_read_secrets = *checked;
+                this.save_preferences(window, cx);
+            }));
         let setting = |id: &'static str, title: &'static str, detail: &'static str, control: AnyElement| {
             div()
                 .id(id)
@@ -637,6 +645,14 @@ impl Seek {
                     "Offer every tool",
                     "Adds storage, duplicates, worktrees and saved searches. Off keeps agents' context small.",
                     all_tools.into_any_element(),
+                )),
+            )
+            .child(
+                div().border_t_1().border_color(p.line).child(setting(
+                    "agents-secrets-row",
+                    "Let agents read secret values",
+                    "Values in .env files are masked when agents call read_text. Turn this on only when you want agents to see the real values.",
+                    read_secrets.into_any_element(),
                 )),
             );
         // Recent activity, in plain words.

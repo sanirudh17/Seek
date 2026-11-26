@@ -630,6 +630,11 @@ fn scan_files(
                     report.recovered += 1;
                 }
                 if let Some(line) = matching_line(&text, query) {
+                    let line = if crate::env_secrets::is_env_file(&path) {
+                        crate::env_secrets::mask_snippet(&line)
+                    } else {
+                        line
+                    };
                     let file = seek_engine::Found {
                         path,
                         kind: seek_engine::walk::KIND_FILE,

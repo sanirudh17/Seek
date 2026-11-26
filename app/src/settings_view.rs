@@ -36,7 +36,7 @@ pub(super) const SETTINGS_PAGES: [(usize, &str, Glyph, &str); 11] = [
         9,
         "Previews",
         Glyph::Eye,
-        "automatic information panel image thumbnails quick look markdown images gallery large preview",
+        "automatic information panel image thumbnails quick look markdown images gallery large preview env secrets hide mask reveal",
     ),
     (
         10,
@@ -586,10 +586,19 @@ impl Seek {
                 this.preferences.gallery_preview = *checked;
                 this.save_preferences(window, cx);
             }));
+        let hide_secrets = Switch::new("hide-env-secrets")
+            .color(p.accent)
+            .checked(self.preferences.hide_env_secrets)
+            .accessibility_label("Hide secrets in env previews")
+            .on_change(cx.listener(|this, checked, window, cx| {
+                this.preferences.hide_env_secrets = *checked;
+                this.save_preferences(window, cx);
+            }));
         section("Previews")
             .child(card("Automatic previews", "Show file content in the information panel. Metadata and explicit Quick Look remain available when this is off.", automatic, p))
             .child(card("Image and video thumbnails", "Show thumbnails while browsing. Quick Look and the gallery's enlarged preview remain available when this is off.", thumbnails, p))
             .child(card("Gallery large preview", "Show the selected item large above the gallery's strip. The preview's × hides it; Show preview brings it back.", gallery, p))
+            .child(card("Hide secrets in env previews", "Mask values in .env, .env.* and *.env previews until you reveal them. Hidden values are never copied.", hide_secrets, p))
 
             .into_any_element()
     }

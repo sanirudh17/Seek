@@ -21,6 +21,7 @@ mod content_catalog;
 mod document_audit;
 mod document_preview;
 mod duplicates;
+mod env_secrets;
 mod explorer_menu;
 mod file_changes;
 mod file_info;

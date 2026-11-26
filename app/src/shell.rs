@@ -890,6 +890,8 @@ pub struct Seek {
     inspector: inspector_view::State,
     /// Per-file Formatted/Raw override for JSON & XML in the info panel.
     info_pretty: Option<(PathBuf, bool)>,
+    /// Per-file `.env` reveal state in the info panel (auto-resets on file change).
+    info_env_reveal: Option<(PathBuf, bool, std::collections::HashSet<usize>)>,
     share: Option<crate::native_share::Session>,
     text_reader: text_reader::State,
     documents: crate::document_preview::Worker,
@@ -1453,6 +1455,7 @@ impl Seek {
             info_resizing: false,
             inspector: inspector_view::State::new(),
             info_pretty: None,
+            info_env_reveal: None,
             share: None,
             text_reader: text_reader::State::new(),
             documents,

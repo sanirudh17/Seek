@@ -110,6 +110,10 @@ pub struct Settings {
     pub agent_folders: Vec<PathBuf>,
     /// Offer agents every tool, not only the core set.
     pub agent_tools_all: bool,
+    /// Hide secret values in `.env` previews (11.3); on by default.
+    pub hide_env_secrets: bool,
+    /// Let coding agents read unmasked `.env` values through MCP (11.3); off by default.
+    pub agent_read_secrets: bool,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -163,6 +167,8 @@ impl Default for Settings {
             agents_can_change: false,
             agent_folders: vec![],
             agent_tools_all: false,
+            hide_env_secrets: true,
+            agent_read_secrets: false,
         }
     }
 }

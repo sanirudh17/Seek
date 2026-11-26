@@ -232,9 +232,20 @@ pub fn call(name: &str, args: &Value, index: Option<&dyn IndexView>, data: &Path
                 return Err(ToolError::invalid("This looks like a binary file, not text."));
             }
             let end = offset + bytes.len() as u64;
-            let text = crate::text_decode::decode(&bytes, end < meta.len()).map_err(ToolError::failed)?;
+            let raw_text = crate::text_decode::decode(&bytes, end < meta.len()).map_err(ToolError::failed)?;
+            let settings = crate::settings::read(data);
+            let secrets_masked = crate::env_secrets::is_env_file(&path) && !settings.agent_read_secrets;
+            let text = if secrets_masked {
+                crate::env_secrets::mask_all(&raw_text)
+            } else {
+                raw_text
+            };
+            let mut payload = json!({"path": path, "text": text, "offset": offset, "next_offset": end, "size": meta.len(), "truncated": end < meta.len()});
+            if secrets_masked {
+                payload["secrets_masked"] = json!(true);
+            }
             Ok(Outcome {
-                data: json!({"path": path, "text": text, "offset": offset, "next_offset": end, "size": meta.len(), "truncated": end < meta.len()}),
+                data: payload,
                 text,
             })
         }
@@ -423,5 +434,46 @@ pub fn call(name: &str, args: &Value, index: Option<&dyn IndexView>, data: &Path
             })
         }
         _ => Err(ToolError::new("not_found", format!("No read-only tool \"{name}\"."), false)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn read_text_masks_env_secrets_by_default_and_respects_setting() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = dir.path().join("data");
+        std::fs::create_dir_all(&data).unwrap();
+        let env_file = dir.path().join(".env.local");
+        std::fs::write(&env_file, "# comment\nAPI_TOKEN=super_secret_token_42\n").unwrap();
+
+        let out = call(
+            "read_text",
+            &json!({"path": env_file.to_string_lossy()}),
+            None,
+            &data,
+        )
+        .unwrap();
+        assert!(out.text.contains("API_TOKEN="));
+        assert!(out.text.contains("# comment"));
+        assert!(!out.text.contains("super_secret_token_42"));
+        assert_eq!(out.data["secrets_masked"], json!(true));
+        assert!(!out.data["text"].as_str().unwrap().contains("super_secret_token_42"));
+
+        // Turning on "Let agents read secret values" reveals real values.
+        let mut settings = crate::settings::Settings::default();
+        settings.agent_read_secrets = true;
+        crate::settings::write(&data, &settings).unwrap();
+        let revealed = call(
+            "read_text",
+            &json!({"path": env_file.to_string_lossy()}),
+            None,
+            &data,
+        )
+        .unwrap();
+        assert!(revealed.text.contains("super_secret_token_42"));
+        assert!(revealed.data.get("secrets_masked").is_none());
     }
 }

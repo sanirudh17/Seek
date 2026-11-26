@@ -1965,7 +1965,15 @@ impl Seek {
                             .font_weight(FontWeight::SEMIBOLD)
                             .child("Search matches"),
                     );
-                    for line in row.snippet.as_deref().unwrap_or_default().lines() {
+                    let snippet = row.snippet.as_deref().unwrap_or_default();
+                    let snippet = if self.preferences.hide_env_secrets
+                        && crate::env_secrets::is_env_file(&row.file.path)
+                    {
+                        std::borrow::Cow::Owned(crate::env_secrets::mask_snippet(snippet))
+                    } else {
+                        std::borrow::Cow::Borrowed(snippet)
+                    };
+                    for line in snippet.lines() {
                         matches = matches.child(
                             div()
                                 .text_size(px(12.))

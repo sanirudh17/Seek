@@ -80,6 +80,7 @@ impl Seek {
         self.preview_enlarged = false;
         self.quick_look_row = None;
         self.quick_look_viewport.set(None);
+        self.text_reader.reset_env_reveal();
         self.refresh_preview(cx);
         cx.notify();
     }
@@ -108,6 +109,7 @@ impl Seek {
                 this.preview_enlarged = false;
                 this.quick_look_row = None;
                 this.quick_look_viewport.set(None);
+                this.text_reader.reset_env_reveal();
                 this.refresh_preview(cx);
                 cx.notify();
             });

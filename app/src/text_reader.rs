@@ -74,6 +74,14 @@ pub(super) struct State {
     show_formatted: bool,
     /// Guard so programmatic view switches (Formatted/Raw) never mark the draft dirty.
     syncing_display: bool,
+    /// Parsed `.env` structure for secret masking (11.3).
+    env_masked: Option<crate::env_secrets::MaskedEnv>,
+    /// Whether the whole `.env` preview is temporarily revealed.
+    env_reveal_all: bool,
+    /// Individual `.env` lines temporarily revealed by clicking their masked value.
+    env_revealed_lines: std::collections::HashSet<usize>,
+    /// Confirmation notice shown before entering Edit mode on a masked `.env` file.
+    env_edit_prompt: bool,
 }
 impl State {
     /// Editing text: Space types a space instead of opening Quick Look.
@@ -110,7 +118,16 @@ impl State {
             pretty: None,
             show_formatted: false,
             syncing_display: false,
+            env_masked: None,
+            env_reveal_all: false,
+            env_revealed_lines: std::collections::HashSet::new(),
+            env_edit_prompt: false,
         }
+    }
+    pub fn reset_env_reveal(&mut self) {
+        self.env_reveal_all = false;
+        self.env_revealed_lines.clear();
+        self.env_edit_prompt = false;
     }
     pub fn blocked(&self) -> bool {
         self.dirty || self.saving
@@ -178,7 +195,9 @@ impl Seek {
                 .spawn(async move {
                     let doc = crate::text_document::load(&path)?;
                     let pretty = crate::prettify::analyze(&doc.path, &doc.text);
-                    Ok::<_, String>((doc, pretty))
+                    let env_masked = crate::env_secrets::is_env_file(&doc.path)
+                        .then(|| crate::env_secrets::MaskedEnv::parse(&doc.text));
+                    Ok::<_, String>((doc, pretty, env_masked))
                 })
                 .await;
             let _ = this.update(cx, |this, cx| {
@@ -189,7 +208,7 @@ impl Seek {
                         return;
                     }
                     match result {
-                        Ok((document, pretty)) => {
+                        Ok((document, pretty, env_masked)) => {
                             this.text_reader.tasks = crate::markdown_tasks::tasks(&document.text);
                             this.text_reader.show_formatted = matches!(
                                 &pretty,
@@ -199,6 +218,8 @@ impl Seek {
                                 })
                             );
                             this.text_reader.pretty = pretty;
+                            this.text_reader.env_masked = env_masked;
+                            this.text_reader.reset_env_reveal();
                             this.text_reader.document = Some(document);
                         }
                         Err(error) => this.text_reader.error = Some(error),
@@ -343,6 +364,19 @@ impl Seek {
             return true;
         }
 
+        if event.keystroke.modifiers.control
+            && key == "c"
+            && self.preferences.hide_env_secrets
+            && !self.text_reader.editing
+            && !self.text_reader.env_reveal_all
+            && let Some(env) = &self.text_reader.env_masked
+            && env.has_any_secret()
+        {
+            let safe = env.render(false, &self.text_reader.env_revealed_lines);
+            cx.write_to_clipboard(ClipboardItem::new_string(safe));
+            cx.stop_propagation();
+            return true;
+        }
         if event.keystroke.modifiers.control && key == "s" {
             self.save_text_reader(false, window, cx);
             cx.stop_propagation();
@@ -656,6 +690,116 @@ impl Seek {
                         }
                     }),
                 );
+            } else if self.preferences.hide_env_secrets
+                && crate::env_secrets::is_env_file(&row.file.path)
+            {
+                let parsed = crate::env_secrets::MaskedEnv::parse(&text);
+                let (reveal_all, revealed_lines) = self
+                    .info_env_reveal
+                    .as_ref()
+                    .filter(|(p, _, _)| *p == row.file.path)
+                    .map(|(_, all, set)| (*all, set.clone()))
+                    .unwrap_or_default();
+                let syntax = crate::appearance::SyntaxPalette::from_palette(p);
+                let path_all = row.file.path.clone();
+                let copy_text = parsed.render(reveal_all, &revealed_lines);
+                let bar = div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .gap_2()
+                    .pb_2()
+                    .flex_shrink_0()
+                    .child(
+                        div()
+                            .text_size(px(11.))
+                            .text_color(p.muted)
+                            .child(if reveal_all {
+                                "Secrets revealed"
+                            } else {
+                                "Secrets hidden · click a value to reveal"
+                            }),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_1()
+                            .child(
+                                reader_control(
+                                    "info-env-copy",
+                                    "Copy",
+                                    p,
+                                )
+                                .h(px(22.))
+                                .text_size(px(11.))
+                                .tooltip("Copy visible preview (hidden values stay masked)")
+                                .on_click(cx.listener(move |this, _, window, cx| {
+                                    cx.write_to_clipboard(ClipboardItem::new_string(
+                                        copy_text.clone(),
+                                    ));
+                                    this.show_toast("Copied".into(), false, window, cx);
+                                })),
+                            )
+                            .child(
+                                reader_control(
+                                    "info-env-reveal",
+                                    if reveal_all { "Hide" } else { "Reveal" },
+                                    p,
+                                )
+                                .h(px(22.))
+                                .text_size(px(11.))
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    let entry = this.info_env_reveal.get_or_insert_with(|| {
+                                        (path_all.clone(), false, std::collections::HashSet::new())
+                                    });
+                                    if entry.0 != path_all {
+                                        *entry = (
+                                            path_all.clone(),
+                                            true,
+                                            std::collections::HashSet::new(),
+                                        );
+                                    } else {
+                                        entry.1 = !entry.1;
+                                        if !entry.1 {
+                                            entry.2.clear();
+                                        }
+                                    }
+                                    cx.notify();
+                                })),
+                            ),
+                    );
+                let mut rows = div()
+                    .id("compact-env-preview")
+                    .w_full()
+                    .h(px(240.))
+                    .flex_shrink_0()
+                    .overflow_y_scroll()
+                    .font_family(crate::tokens::FONT_MONO)
+                    .text_size(px(12.))
+                    .line_height(px(20.))
+                    .flex()
+                    .flex_col();
+                for line in &parsed.lines {
+                    rows = rows.child(self.env_preview_row(
+                        line,
+                        reveal_all,
+                        &revealed_lines,
+                        syntax,
+                        p,
+                        None,
+                        Some(row.file.path.clone()),
+                        cx,
+                    ));
+                }
+                return div()
+                    .w_full()
+                    .flex_shrink_0()
+                    .flex()
+                    .flex_col()
+                    .child(bar)
+                    .child(rows)
+                    .into_any_element();
             } else {
                 let lang = crate::code_highlight::language(&row.file.path);
                 let syntax = crate::appearance::SyntaxPalette::from_palette(p);
@@ -779,9 +923,23 @@ impl Seek {
                 )
                 .into_any_element();
         };
+        let env_hiding = self.preferences.hide_env_secrets
+            && !self.text_reader.editing
+            && self
+                .text_reader
+                .env_masked
+                .as_ref()
+                .is_some_and(|e| e.has_any_secret());
         if self.text_reader.editor.is_none() {
             let language = crate::code_highlight::language(&document.path);
-            let initial_text = if !self.text_reader.editing
+            let initial_text = if env_hiding
+                && let Some(env) = &self.text_reader.env_masked
+            {
+                env.render(
+                    self.text_reader.env_reveal_all,
+                    &self.text_reader.env_revealed_lines,
+                )
+            } else if !self.text_reader.editing
                 && self.text_reader.show_formatted
                 && let Some(crate::prettify::Outcome::Formatted { text, .. }) =
                     &self.text_reader.pretty
@@ -1034,6 +1192,36 @@ impl Seek {
                 .child(bar)
                 .child(div().w(px(1.)).h(px(16.)).bg(p.line));
         }
+        if env_hiding {
+            let revealed = self.text_reader.env_reveal_all;
+            controls = controls
+                .child(
+                    reader_control(
+                        "text-env-reveal",
+                        if revealed { "Hide values" } else { "Reveal" },
+                        p,
+                    )
+                    .tooltip(if revealed {
+                        "Hide secret values again"
+                    } else {
+                        "Temporarily reveal all secret values in this preview"
+                    })
+                    .on_click(Self::reader_listener::<ClickEvent>(
+                        target,
+                        cx,
+                        |this, _, window, cx| {
+                            this.text_reader.env_reveal_all = !this.text_reader.env_reveal_all;
+                            if !this.text_reader.env_reveal_all {
+                                this.text_reader.env_revealed_lines.clear();
+                            }
+                            this.sync_reader_display(window, cx);
+                            this.focus_reader(window, cx);
+                            cx.notify();
+                        },
+                    )),
+                )
+                .child(div().w(px(1.)).h(px(16.)).bg(p.line));
+        }
         if !self.text_reader.editing
             && matches!(
                 self.text_reader.pretty,
@@ -1132,21 +1320,19 @@ impl Seek {
                 controls = controls.child(
                     reader_icon("text-edit", "icons/pencil.svg", "Edit", p).on_click(
                         Self::reader_listener::<ClickEvent>(target, cx, |this, _, window, cx| {
-                            this.text_reader.editing = true;
-                            this.slide_segment("text-view-mode", this.text_reader.source as usize, 1);
-                            this.text_reader.source = true;
-                            // Entering the editor always edits the real raw text, never the
-                            // preview-only prettified representation.
-                            if this.text_reader.show_formatted {
-                                this.sync_reader_display(window, cx);
+                            let needs_env_notice = this.preferences.hide_env_secrets
+                                && this
+                                    .text_reader
+                                    .env_masked
+                                    .as_ref()
+                                    .is_some_and(|e| e.has_any_secret())
+                                && !this.text_reader.env_reveal_all;
+                            if needs_env_notice {
+                                this.text_reader.env_edit_prompt = true;
+                                cx.notify();
+                                return;
                             }
-                            if let Some(editor) = &this.text_reader.editor {
-                                editor.update(cx, |editor, cx| {
-                                    editor.set_readonly(false, cx);
-                                    editor.focus(window, cx);
-                                });
-                            }
-                            cx.notify();
+                            this.enter_text_edit(window, cx);
                         }),
                     ),
                 );
@@ -1301,6 +1487,14 @@ impl Seek {
                                             if let Some(doc) = &this.text_reader.document {
                                                 this.text_reader.pretty =
                                                     crate::prettify::analyze(&doc.path, &doc.text);
+                                                this.text_reader.env_masked =
+                                                    crate::env_secrets::is_env_file(&doc.path)
+                                                        .then(|| {
+                                                            crate::env_secrets::MaskedEnv::parse(
+                                                                &doc.text,
+                                                            )
+                                                        });
+                                                this.text_reader.reset_env_reveal();
                                             }
                                             if let Some(editor) = &this.text_reader.editor {
                                                 editor.update(cx, |editor, cx| {
@@ -1405,7 +1599,36 @@ impl Seek {
         } else {
             None
         };
-        let body = if self.text_reader.source {
+        let body = if env_hiding
+            && !self.text_reader.env_reveal_all
+            && let Some(env) = self.text_reader.env_masked.clone()
+        {
+            let syntax = crate::appearance::SyntaxPalette::from_palette(p);
+            let revealed = self.text_reader.env_revealed_lines.clone();
+            let mut list = div()
+                .id("env-masked-reader")
+                .size_full()
+                .overflow_y_scroll()
+                .p_4()
+                .font_family(crate::tokens::FONT_MONO)
+                .text_size(px(14.))
+                .line_height(px(22.))
+                .flex()
+                .flex_col();
+            for line in &env.lines {
+                list = list.child(self.env_preview_row(
+                    line,
+                    false,
+                    &revealed,
+                    syntax,
+                    p,
+                    Some(target),
+                    None,
+                    cx,
+                ));
+            }
+            list.into_any_element()
+        } else if self.text_reader.source {
             div()
                 .size_full()
                 .child(
@@ -1603,6 +1826,55 @@ impl Seek {
             }
             view = view.child(prompt);
         }
+        if self.text_reader.env_edit_prompt {
+            let notice = div()
+                .id("env-edit-notice")
+                .role(Role::Group)
+                .aria_label("Reveal secret values to edit")
+                .font_family(crate::tokens::FONT_UI)
+                .text_size(px(13.))
+                .line_height(px(20.))
+                .flex()
+                .flex_wrap()
+                .items_center()
+                .gap_3()
+                .px_4()
+                .py_3()
+                .border_b_1()
+                .border_color(p.line)
+                .bg(p.tints.orange.opacity(0.08))
+                .child(
+                    div()
+                        .flex_1()
+                        .child("Editing this .env file will reveal its secret values on screen."),
+                )
+                .child(
+                    super::settings_view::control("env-edit-confirm", "Reveal and edit", p, cx)
+                        .h(crate::tokens::BUTTON_HEIGHT)
+                        .on_click(Self::reader_listener::<ClickEvent>(
+                            target,
+                            cx,
+                            |this, _, window, cx| {
+                                this.text_reader.env_edit_prompt = false;
+                                this.text_reader.env_reveal_all = true;
+                                this.enter_text_edit(window, cx);
+                            },
+                        )),
+                )
+                .child(
+                    super::settings_view::control("env-edit-cancel", "Cancel", p, cx)
+                        .h(crate::tokens::BUTTON_HEIGHT)
+                        .on_click(Self::reader_listener::<ClickEvent>(
+                            target,
+                            cx,
+                            |this, _, _, cx| {
+                                this.text_reader.env_edit_prompt = false;
+                                cx.notify();
+                            },
+                        )),
+                );
+            view = view.child(notice);
+        }
         if let Some(reason) = document.read_only {
             view = view.child(div().px_4().py_2().text_color(p.muted).child(reason));
         }
@@ -1753,7 +2025,16 @@ impl Seek {
         ) else {
             return;
         };
-        let wanted = if !self.text_reader.editing
+        let wanted = if self.preferences.hide_env_secrets
+            && !self.text_reader.editing
+            && let Some(env) = &self.text_reader.env_masked
+            && env.has_any_secret()
+        {
+            env.render(
+                self.text_reader.env_reveal_all,
+                &self.text_reader.env_revealed_lines,
+            )
+        } else if !self.text_reader.editing
             && self.text_reader.show_formatted
             && let Some(crate::prettify::Outcome::Formatted { text, .. }) =
                 &self.text_reader.pretty
@@ -1767,6 +2048,195 @@ impl Seek {
             editor.set_value(wanted, window, cx);
         });
         self.text_reader.syncing_display = false;
+    }
+
+    fn enter_text_edit(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.text_reader.editing = true;
+        self.slide_segment("text-view-mode", self.text_reader.source as usize, 1);
+        self.text_reader.source = true;
+        // Always load the real raw document text when entering Edit mode.
+        self.sync_reader_display(window, cx);
+        if let Some(editor) = &self.text_reader.editor {
+            editor.update(cx, |editor, cx| {
+                editor.set_readonly(false, cx);
+                editor.focus(window, cx);
+            });
+        }
+        cx.notify();
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn env_preview_row(
+        &self,
+        line: &crate::env_secrets::EnvLine,
+        reveal_all: bool,
+        revealed_lines: &std::collections::HashSet<usize>,
+        syntax: crate::appearance::SyntaxPalette,
+        p: crate::appearance::Palette,
+        reader_target: Option<ReaderTarget>,
+        info_path: Option<PathBuf>,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let idx = line.line_index();
+        let line_no = div()
+            .w(px(34.))
+            .flex_shrink_0()
+            .pr_2()
+            .text_right()
+            .text_color(p.muted.opacity(0.6))
+            .child(format!("{}", idx + 1));
+        match line {
+            crate::env_secrets::EnvLine::Plain { text, .. } => {
+                let is_comment = text.trim_start().starts_with('#');
+                div()
+                    .flex()
+                    .items_baseline()
+                    .w_full()
+                    .child(line_no)
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .text_color(if is_comment { syntax.comment } else { p.text })
+                            .when(is_comment, |d| d.italic())
+                            .child(if text.is_empty() {
+                                " ".to_owned()
+                            } else {
+                                text.clone()
+                            }),
+                    )
+                    .into_any_element()
+            }
+            crate::env_secrets::EnvLine::Entry {
+                prefix,
+                key,
+                eq,
+                open_quote,
+                masked_value,
+                real_value,
+                close_quote,
+                suffix,
+                ..
+            } => {
+                let is_revealed = reveal_all || revealed_lines.contains(&idx);
+                let has_secret = !real_value.is_empty();
+                let mut content = div()
+                    .flex_1()
+                    .min_w_0()
+                    .flex()
+                    .flex_wrap()
+                    .items_baseline();
+                if !prefix.is_empty() {
+                    content = content.child(
+                        div()
+                            .text_color(syntax.keyword)
+                            .child(prefix.clone()),
+                    );
+                }
+                content = content
+                    .child(div().text_color(syntax.function).child(key.clone()))
+                    .child(div().text_color(syntax.punctuation).child(eq.clone()));
+                if !open_quote.is_empty() {
+                    content = content.child(
+                        div()
+                            .text_color(syntax.string)
+                            .child(open_quote.clone()),
+                    );
+                }
+                if has_secret {
+                    let display_val = if is_revealed {
+                        real_value.clone()
+                    } else {
+                        masked_value.clone()
+                    };
+                    let mut pill = div()
+                        .id((
+                            if reader_target.is_some() {
+                                "env-val-reader"
+                            } else {
+                                "env-val-info"
+                            },
+                            idx,
+                        ))
+                        .role(Role::Button)
+                        .aria_label(if is_revealed {
+                            format!("Hide value for {key}")
+                        } else {
+                            format!("Reveal value for {key}")
+                        })
+                        .cursor_pointer()
+                        .rounded(px(4.))
+                        .px(px(4.))
+                        .when(!is_revealed, |d| {
+                            d.bg(p.text.opacity(0.08))
+                                .text_color(p.muted)
+                                .hover(move |s| s.bg(p.text.opacity(0.14)))
+                        })
+                        .when(is_revealed, |d| {
+                            d.text_color(syntax.string)
+                                .hover(move |s| s.bg(p.hover))
+                        })
+                        .tooltip(move |window, cx| {
+                            gpui_component::tooltip::Tooltip::new(if is_revealed {
+                                "Click to hide"
+                            } else {
+                                "Click to reveal value"
+                            })
+                            .build(window, cx)
+                        })
+                        .child(display_val);
+                    if let Some(target) = reader_target {
+                        pill = pill.on_click(Self::reader_listener::<ClickEvent>(
+                            target,
+                            cx,
+                            move |this, _, window, cx| {
+                                if !this.text_reader.env_revealed_lines.insert(idx) {
+                                    this.text_reader.env_revealed_lines.remove(&idx);
+                                }
+                                this.sync_reader_display(window, cx);
+                                cx.notify();
+                            },
+                        ));
+                    } else if let Some(path) = info_path {
+                        pill = pill.on_click(cx.listener(move |this, _, _, cx| {
+                            let entry = this.info_env_reveal.get_or_insert_with(|| {
+                                (path.clone(), false, std::collections::HashSet::new())
+                            });
+                            if entry.0 != path {
+                                *entry = (path.clone(), false, std::collections::HashSet::new());
+                            }
+                            if !entry.2.insert(idx) {
+                                entry.2.remove(&idx);
+                            }
+                            cx.notify();
+                        }));
+                    }
+                    content = content.child(pill);
+                }
+                if !close_quote.is_empty() {
+                    content = content.child(
+                        div()
+                            .text_color(syntax.string)
+                            .child(close_quote.clone()),
+                    );
+                }
+                if !suffix.is_empty() {
+                    content = content.child(
+                        div()
+                            .text_color(syntax.comment)
+                            .italic()
+                            .child(suffix.clone()),
+                    );
+                }
+                div()
+                    .flex()
+                    .items_baseline()
+                    .w_full()
+                    .child(line_no)
+                    .child(content)
+                    .into_any_element()
+            }
+        }
     }
 
     /// Explicit "Format document" command inside the editor. Never runs

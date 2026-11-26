@@ -43,6 +43,7 @@ pub(super) struct InfoEditor {
     mtime: u32,
     size: u64,
     formatted: bool,
+    wrap: bool,
     text_hash: u64,
     editor: Entity<EditorState>,
 }
@@ -123,6 +124,8 @@ pub(super) struct State {
     env_revealed_lines: std::collections::HashSet<usize>,
     /// Confirmation notice shown before entering Edit mode on a masked `.env` file.
     env_edit_prompt: bool,
+    /// Last applied soft-wrap setting on `editor` (11.5).
+    applied_wrap: Option<bool>,
 }
 impl State {
     /// Editing text: Space types a space instead of opening Quick Look.
@@ -163,6 +166,7 @@ impl State {
             env_reveal_all: false,
             env_revealed_lines: std::collections::HashSet::new(),
             env_edit_prompt: false,
+            applied_wrap: None,
         }
     }
     pub fn reset_env_reveal(&mut self) {
@@ -849,12 +853,14 @@ impl Seek {
                                 })),
                             ),
                     );
+                let wrap = self.preferences.wrap_info_panel;
                 let mut rows = div()
                     .id("compact-env-preview")
                     .w_full()
                     .h(px(240.))
                     .flex_shrink_0()
                     .overflow_y_scroll()
+                    .when(!wrap, |d| d.overflow_x_scroll())
                     .font_family(crate::tokens::FONT_MONO)
                     .text_size(px(12.))
                     .line_height(px(20.))
@@ -867,11 +873,23 @@ impl Seek {
                         &revealed_lines,
                         syntax,
                         p,
+                        wrap,
                         None,
                         Some(row.file.path.clone()),
                         cx,
                     ));
                 }
+                let bar = bar.child(
+                    reader_control("info-env-wrap", "Wrap", p)
+                        .h(px(22.))
+                        .text_size(px(11.))
+                        .when(wrap, |b| b.bg(p.control_selected))
+                        .tooltip("Wrap long lines")
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.preferences.wrap_info_panel = !this.preferences.wrap_info_panel;
+                            this.save_preferences(window, cx);
+                        })),
+                );
                 return div()
                     .w_full()
                     .flex_shrink_0()
@@ -909,6 +927,7 @@ impl Seek {
                     shown_text.hash(&mut h);
                     h.finish()
                 };
+                let wrap = self.preferences.wrap_info_panel;
                 let reuse = self.info_editor.as_ref().is_some_and(|cached| {
                     cached.path == row.file.path
                         && cached.mtime == row.file.mtime
@@ -922,6 +941,7 @@ impl Seek {
                         let mut ed = EditorState::new(window, cx)
                             .language(lang)
                             .folding(false)
+                            .soft_wrap(wrap)
                             .default_value(value);
                         ed.set_readonly(true, cx);
                         ed.set_highlighter_factory(
@@ -937,8 +957,16 @@ impl Seek {
                         mtime: row.file.mtime,
                         size: row.file.size,
                         formatted: formatted_flag,
+                        wrap,
                         text_hash,
                         editor,
+                    });
+                } else if let Some(cached) = &mut self.info_editor
+                    && cached.wrap != wrap
+                {
+                    cached.wrap = wrap;
+                    cached.editor.update(cx, |ed, cx| {
+                        ed.set_soft_wrap(wrap, window, cx);
                     });
                 }
                 let editor = self.info_editor.as_ref().unwrap().editor.clone();
@@ -957,75 +985,85 @@ impl Seek {
                             .font_family(crate::tokens::FONT_MONO)
                             .text_size(px(12.)),
                     );
-                if pretty_toggle.is_some() || pretty_note.is_some() {
-                    let path = row.file.path.clone();
-                    let mut bar = div()
+                let path = row.file.path.clone();
+                let mut bar = div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .gap_2()
+                    .pb_2()
+                    .flex_shrink_0();
+                let mut left = div().flex().items_center().gap_2().min_w_0();
+                if let Some(show_fmt) = pretty_toggle {
+                    let mut switch = div()
+                        .id("info-pretty-mode")
+                        .role(Role::RadioGroup)
+                        .aria_label("Preview format")
                         .flex()
                         .items_center()
-                        .justify_between()
-                        .gap_2()
-                        .pb_2()
-                        .flex_shrink_0();
-                    if let Some(show_fmt) = pretty_toggle {
-                        let mut switch = div()
-                            .id("info-pretty-mode")
-                            .role(Role::RadioGroup)
-                            .aria_label("Preview format")
-                            .flex()
-                            .items_center()
-                            .p(px(2.))
-                            .rounded(px(6.))
-                            .border_1()
-                            .border_color(p.text.opacity(0.08))
-                            .bg(p.text.opacity(0.04));
-                        for (id, label, formatted_mode) in [
-                            ("info-pretty-formatted", "Formatted", true),
-                            ("info-pretty-raw", "Raw", false),
-                        ] {
-                            let active = show_fmt == formatted_mode;
-                            let path = path.clone();
-                            switch = switch.child(
-                                div()
-                                    .id(id)
-                                    .role(Role::RadioButton)
-                                    .aria_label(label)
-                                    .aria_selected(active)
-                                    .h(px(20.))
-                                    .px_2()
-                                    .flex()
-                                    .items_center()
-                                    .rounded(px(4.))
-                                    .cursor_pointer()
-                                    .text_size(px(11.))
-                                    .text_color(if active { p.text } else { p.muted })
-                                    .when(active, |d| d.bg(p.hover))
-                                    .child(label)
-                                    .on_click(cx.listener(move |this, _, _, cx| {
-                                        this.info_pretty = Some((path.clone(), formatted_mode));
-                                        cx.notify();
-                                    })),
-                            );
-                        }
-                        bar = bar.child(switch);
-                    }
-                    if let Some(note) = pretty_note {
-                        bar = bar.child(
+                        .p(px(2.))
+                        .rounded(px(6.))
+                        .border_1()
+                        .border_color(p.text.opacity(0.08))
+                        .bg(p.text.opacity(0.04));
+                    for (id, label, formatted_mode) in [
+                        ("info-pretty-formatted", "Formatted", true),
+                        ("info-pretty-raw", "Raw", false),
+                    ] {
+                        let active = show_fmt == formatted_mode;
+                        let path = path.clone();
+                        switch = switch.child(
                             div()
+                                .id(id)
+                                .role(Role::RadioButton)
+                                .aria_label(label)
+                                .aria_selected(active)
+                                .h(px(20.))
+                                .px_2()
+                                .flex()
+                                .items_center()
+                                .rounded(px(4.))
+                                .cursor_pointer()
                                 .text_size(px(11.))
-                                .text_color(p.muted)
-                                .child(note),
+                                .text_color(if active { p.text } else { p.muted })
+                                .when(active, |d| d.bg(p.hover))
+                                .child(label)
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    this.info_pretty = Some((path.clone(), formatted_mode));
+                                    cx.notify();
+                                })),
                         );
                     }
-                    return div()
-                        .w_full()
-                        .flex_shrink_0()
-                        .flex()
-                        .flex_col()
-                        .child(bar)
-                        .child(editor_box)
-                        .into_any_element();
+                    left = left.child(switch);
                 }
-                return editor_box.into_any_element();
+                if let Some(note) = pretty_note {
+                    left = left.child(
+                        div()
+                            .text_size(px(11.))
+                            .text_color(p.muted)
+                            .truncate()
+                            .child(note),
+                    );
+                }
+                bar = bar.child(left).child(
+                    reader_control("info-wrap-toggle", "Wrap", p)
+                        .h(px(22.))
+                        .text_size(px(11.))
+                        .when(wrap, |b| b.bg(p.control_selected))
+                        .tooltip("Wrap long lines in information panel")
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.preferences.wrap_info_panel = !this.preferences.wrap_info_panel;
+                            this.save_preferences(window, cx);
+                        })),
+                );
+                return div()
+                    .w_full()
+                    .flex_shrink_0()
+                    .flex()
+                    .flex_col()
+                    .child(bar)
+                    .child(editor_box)
+                    .into_any_element();
             }
         } else {
             preview = preview
@@ -1060,6 +1098,10 @@ impl Seek {
                 .env_masked
                 .as_ref()
                 .is_some_and(|e| e.has_any_secret());
+        let wrap = match target {
+            ReaderTarget::QuickLook => self.preferences.wrap_quick_look,
+            ReaderTarget::Document(_) => self.preferences.wrap_document_pane,
+        };
         if self.text_reader.editor.is_none() {
             let language = crate::code_highlight::language(&document.path);
             let initial_text = if env_hiding
@@ -1083,6 +1125,7 @@ impl Seek {
                     .language(language)
                     // Fold arrows only where code has blocks to fold.
                     .folding(!matches!(language, "text" | "markdown"))
+                    .soft_wrap(wrap)
                     .default_value(initial_text);
                 editor.set_readonly(true, cx);
                 editor.set_highlighter_factory(
@@ -1124,6 +1167,12 @@ impl Seek {
             ));
             self.text_reader.editor = Some(editor);
             self.text_reader.rendered = Some(rendered);
+            self.text_reader.applied_wrap = Some(wrap);
+        } else if self.text_reader.applied_wrap != Some(wrap)
+            && let Some(editor) = &self.text_reader.editor
+        {
+            self.text_reader.applied_wrap = Some(wrap);
+            editor.update(cx, |ed, cx| ed.set_soft_wrap(wrap, window, cx));
         }
         let editor = self.text_reader.editor.as_ref().unwrap().clone();
         let mut controls = div()
@@ -1427,6 +1476,36 @@ impl Seek {
                         target,
                         cx,
                         |this, _, window, cx| this.format_editor_document(window, cx),
+                    )),
+            );
+        }
+        if self.text_reader.source || env_hiding {
+            controls = controls.child(
+                reader_control("text-wrap-toggle", "Wrap", p)
+                    .when(wrap, |b| b.bg(p.control_selected))
+                    .tooltip("Wrap long lines")
+                    .on_click(Self::reader_listener::<ClickEvent>(
+                        target,
+                        cx,
+                        move |this, _, window, cx| {
+                            let next = match target {
+                                ReaderTarget::QuickLook => {
+                                    this.preferences.wrap_quick_look =
+                                        !this.preferences.wrap_quick_look;
+                                    this.preferences.wrap_quick_look
+                                }
+                                ReaderTarget::Document(_) => {
+                                    this.preferences.wrap_document_pane =
+                                        !this.preferences.wrap_document_pane;
+                                    this.preferences.wrap_document_pane
+                                }
+                            };
+                            if let Some(editor) = &this.text_reader.editor {
+                                editor.update(cx, |ed, cx| ed.set_soft_wrap(next, window, cx));
+                            }
+                            this.save_preferences(window, cx);
+                            this.focus_reader(window, cx);
+                        },
                     )),
             );
         }
@@ -1739,6 +1818,7 @@ impl Seek {
                 .id("env-masked-reader")
                 .size_full()
                 .overflow_y_scroll()
+                .when(!wrap, |d| d.overflow_x_scroll())
                 .p_4()
                 .font_family(crate::tokens::FONT_MONO)
                 .text_size(px(14.))
@@ -1752,6 +1832,7 @@ impl Seek {
                     &revealed,
                     syntax,
                     p,
+                    wrap,
                     Some(target),
                     None,
                     cx,
@@ -2220,6 +2301,7 @@ impl Seek {
         revealed_lines: &std::collections::HashSet<usize>,
         syntax: crate::appearance::SyntaxPalette,
         p: crate::appearance::Palette,
+        wrap: bool,
         reader_target: Option<ReaderTarget>,
         info_path: Option<PathBuf>,
         cx: &mut Context<Self>,
@@ -2244,6 +2326,7 @@ impl Seek {
                         div()
                             .flex_1()
                             .min_w_0()
+                            .when(!wrap, |d| d.whitespace_nowrap())
                             .text_color(if is_comment { syntax.comment } else { p.text })
                             .when(is_comment, |d| d.italic())
                             .child(if text.is_empty() {
@@ -2271,7 +2354,8 @@ impl Seek {
                     .flex_1()
                     .min_w_0()
                     .flex()
-                    .flex_wrap()
+                    .when(wrap, |d| d.flex_wrap())
+                    .when(!wrap, |d| d.whitespace_nowrap())
                     .items_baseline();
                 if !prefix.is_empty() {
                     content = content.child(

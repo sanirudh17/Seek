@@ -344,6 +344,27 @@ impl Engine {
             .map_err(|e| e.to_string())?;
         rx.recv().map_err(|e| e.to_string())?
     }
+    /// Lightweight shutdown checkpoint: skips work when nothing changed and
+    /// avoids reloading/prefaulting the 200 MB mmap right before exit.
+    pub fn checkpoint_for_shutdown(&self) -> Result<(), String> {
+        let (tx, rx) = mpsc::channel();
+        self.control
+            .tx
+            .send(Change::ShutdownCheckpoint(tx))
+            .map_err(|e| e.to_string())?;
+        rx.recv().map_err(|e| e.to_string())?
+    }
+    /// Signals the engine thread to stop immediately (e.g. when a new Seek
+    /// instance is launching while this one is shutting down).
+    pub fn abort_shutdown(&self) {
+        self.shared
+            .closing
+            .store(true, std::sync::atomic::Ordering::Release);
+        if let Some(cancel) = self.shared.helper_cancel.lock().unwrap().as_ref() {
+            cancel.cancel();
+        }
+        let _ = self.control.tx.send(Change::Stop);
+    }
     pub fn record_open(&self, path: &Path) {
         let _ = self
             .control
@@ -776,6 +797,9 @@ fn run(
             Change::Checkpoint(reply) => {
                 let _ = reply.send(save(shared, &options.dir));
             }
+            Change::ShutdownCheckpoint(reply) => {
+                let _ = reply.send(save_shutdown(shared, &options.dir));
+            }
             Change::Opened(path) => {
                 record_open(shared, &options.dir, path)?;
             }
@@ -836,6 +860,19 @@ fn relist(shared: &Shared, path: &[u8], recursive: bool) {
     let began = Instant::now();
     if let Some(mut snapshot) = snapshot {
         snapshot.apply(fetched);
+        // A full-drive overflow or large recursive relist can leave hundreds of
+        // thousands of entries in the BTreeMap overlay; compact back into a flat
+        // Index off-lock so memory stays low and searches/Storage stay fast.
+        if recursive && snapshot.over.len() > 100_000 {
+            let listings = snapshot.to_listings();
+            let index = Index::build(
+                listings,
+                snapshot.event_id,
+                snapshot.synced_at,
+                &crate::places::home(),
+            );
+            snapshot = Live::new(index);
+        }
         shared.install_live(snapshot);
         shared.status.lock().unwrap().progress.apply_ms += began.elapsed().as_secs_f64() * 1000.;
         return;
@@ -850,8 +887,42 @@ fn relist(shared: &Shared, path: &[u8], recursive: bool) {
     shared.status.lock().unwrap().progress.apply_ms += began.elapsed().as_secs_f64() * 1000.;
 }
 fn save(shared: &Shared, dir: &Path) -> Result<(), String> {
+    save_inner(shared, dir, true)
+}
+
+fn save_shutdown(shared: &Shared, dir: &Path) -> Result<(), String> {
+    // If nothing changed since the last saved index (no dead base entries, no
+    // overlay additions, no dir metadata updates, and same USN cursor), skip
+    // rebuilding and rewriting `index.bin` completely so closing is instant.
+    let path = dir.join("index.bin");
+    if path.is_file() {
+        let state = shared.journal.lock().unwrap().clone();
+        let event_id = state
+            .as_ref()
+            .and_then(|s| s.cursors.first())
+            .map_or(0, |c| c.next_usn as u64);
+        let guard = shared.live.read().unwrap();
+        if let Some(live) = guard.as_ref()
+            && live.dead_count == 0
+            && live.over.is_empty()
+            && !live.has_dir_metadata()
+            && live.base.event_id == event_id
+        {
+            return Ok(());
+        }
+    }
+    save_inner(shared, dir, false)
+}
+
+fn save_inner(shared: &Shared, dir: &Path, reload: bool) -> Result<(), String> {
     let saving = Instant::now();
+    if !reload && shared.closing.load(std::sync::atomic::Ordering::Acquire) {
+        return Ok(());
+    }
     let listings = shared.live.read().unwrap().as_ref().unwrap().to_listings();
+    if !reload && shared.closing.load(std::sync::atomic::Ordering::Acquire) {
+        return Ok(());
+    }
     let mut state = shared.journal.lock().unwrap().clone();
     if let Some(state) = state.as_mut() {
         state.skipped = walk::DENIED
@@ -878,6 +949,9 @@ fn save(shared: &Shared, dir: &Path) -> Result<(), String> {
         crate::query::now_secs(),
         &crate::places::home(),
     );
+    if !reload && shared.closing.load(std::sync::atomic::Ordering::Acquire) {
+        return Ok(());
+    }
     // File-backed mappings are immutable snapshots; replacement is done after dropping the old map.
     shared.install(index);
     let path = dir.join("index.bin");
@@ -898,9 +972,11 @@ fn save(shared: &Shared, dir: &Path) -> Result<(), String> {
                 .as_deref(),
         )
         .map_err(|e| e.to_string())?;
-    let mapped = Index::load(&path).ok_or("Saved index failed validation")?;
     let _ = std::fs::write(dir.join("ranking.applied"), ranking_fingerprint());
-    shared.install(mapped);
+    if reload {
+        let mapped = Index::load(&path).ok_or("Saved index failed validation")?;
+        shared.install(mapped);
+    }
     shared.status.lock().unwrap().progress.save_ms += saving.elapsed().as_secs_f64() * 1000.;
     Ok(())
 }

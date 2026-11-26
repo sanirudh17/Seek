@@ -43,13 +43,17 @@ pub struct Picture {
     pub height: u32,
     /// Size and modified time when hashed; a changed picture is skipped.
     pub stamp: (u64, u64),
+    /// Horizontal 64-bit difference hash (9x8).
     hash: u64,
+    /// Vertical 64-bit difference hash (8x9).
+    vhash: u64,
     /// Average colour. The hash sees only light and dark; two pictures of
     /// one layout in different colours, or two blank pictures, are told
     /// apart by this.
     tone: [u8; 3],
-    /// The picture at 32 x 32 in grey, to confirm what the hash proposes:
-    /// at 9 x 8 two different screenshots of one app look the same.
+    /// The picture at 24 x 24 in RGB (1728 bytes), used for both global mean
+    /// colour difference and worst 6x6 regional block difference so two UI
+    /// screenshots with the same chrome or spatial colour swaps never group.
     fine: Arc<[u8]>,
     pub thumbnail: Option<Arc<gpui::RenderImage>>,
 }
@@ -59,31 +63,48 @@ pub struct Picture {
 const TONE: i32 = 40;
 
 impl Picture {
-    /// A flat picture (blank, one colour, a dark screenshot): its hash says
-    /// almost nothing, so it only matches a picture that is the same.
+    /// A flat picture (blank, one colour, a dark screenshot): its hashes say
+    /// almost nothing, so it only matches a picture that is virtually identical.
     fn flat(&self) -> bool {
-        let ones = self.hash.count_ones();
-        ones <= 3 || ones >= 61
+        let h = self.hash.count_ones();
+        let v = self.vhash.count_ones();
+        (h <= 3 || h >= 61) && (v <= 3 || v >= 61)
     }
 
     fn close_to(&self, other: &Picture, distance: u32) -> bool {
-        let tone = self.tone.iter().zip(other.tone).map(|(a, b)| (i32::from(*a) - i32::from(b)).abs()).max().unwrap_or(0);
-        let bits = (self.hash ^ other.hash).count_ones();
+        let tone = self
+            .tone
+            .iter()
+            .zip(other.tone)
+            .map(|(a, b)| (i32::from(*a) - i32::from(b)).abs())
+            .max()
+            .unwrap_or(0);
+        let hbits = (self.hash ^ other.hash).count_ones();
+        let vbits = (self.vhash ^ other.vhash).count_ones();
         if !same_shape(self, other) {
             return false;
         }
-        // The hash proposes, the 32 x 32 comparison confirms: how far the
-        // pictures may differ there grows with the level.
-        let fine = difference(self, other);
-        let limit = match distance {
-            d if d <= LEVELS[0].0 => 60,
-            d if d <= LEVELS[1].0 => 150,
-            _ => 300,
-        };
+        // The hashes propose, the 24 x 24 RGB comparison (both global mean and
+        // worst 6x6 region) confirms: prevents dark UI screenshots with
+        // different content or spatial colour swaps from false-positiving.
+        let (global_diff, max_block_diff) = difference_rgb(self, other);
         if self.flat() || other.flat() {
-            return bits == 0 && tone <= 8 && fine <= 60;
+            return hbits == 0
+                && vbits == 0
+                && tone <= 8
+                && global_diff <= 60
+                && max_block_diff <= 150;
         }
-        bits <= distance && tone <= TONE && fine <= limit
+        let (tone_limit, global_limit, block_limit) = match distance {
+            d if d <= LEVELS[0].0 => (25, 160, 480),
+            d if d <= LEVELS[1].0 => (35, 360, 950),
+            _ => (TONE, 600, 1450),
+        };
+        hbits <= distance
+            && vbits <= distance
+            && tone <= tone_limit
+            && global_diff <= global_limit
+            && max_block_diff <= block_limit
     }
 }
 
@@ -115,7 +136,7 @@ fn stamp(meta: &std::fs::Metadata) -> (u64, u64) {
 /// Picture files with their stamps, and why the listing stopped early.
 type Listed = (Vec<(PathBuf, (u64, u64))>, Option<String>);
 
-fn pictures_in(folder: &Path, cancel: &AtomicBool) -> Listed {
+fn pictures_in(folder: &Path, skip_system: bool, cancel: &AtomicBool) -> Listed {
     use std::os::windows::fs::MetadataExt;
     let mut found = vec![];
     let mut stack = vec![folder.to_path_buf()];
@@ -132,11 +153,25 @@ fn pictures_in(folder: &Path, cancel: &AtomicBool) -> Listed {
                 continue;
             }
             let path = entry.path();
+            if skip_system {
+                let rel = path.strip_prefix(folder).unwrap_or(&path);
+                let skip = if meta.is_dir() {
+                    crate::duplicates::system_path(&rel.join("_"))
+                } else {
+                    crate::duplicates::system_path(rel)
+                };
+                if skip {
+                    continue;
+                }
+            }
             if meta.is_dir() {
+                if skip_system && std::fs::symlink_metadata(path.join(".git")).is_ok() {
+                    continue;
+                }
                 stack.push(path);
             } else if big_enough(meta.len())
                 && is_picture(&path)
-                && meta.file_attributes() & 0x0040_0000 == 0
+                && meta.file_attributes() & (0x0040_0000 | 0x0004_0000 | 0x1000) == 0
             {
                 found.push((path, stamp(&meta)));
                 if found.len() >= MOST {
@@ -148,7 +183,7 @@ fn pictures_in(folder: &Path, cancel: &AtomicBool) -> Listed {
     (found, None)
 }
 
-/// The 64-bit difference hash of a picture.
+/// The 64-bit horizontal difference hash of a picture (9x8).
 fn dhash(image: &image::DynamicImage) -> u64 {
     let small = image.thumbnail_exact(9, 8).to_luma8();
     let mut hash = 0u64;
@@ -156,6 +191,21 @@ fn dhash(image: &image::DynamicImage) -> u64 {
         for x in 0..8 {
             hash <<= 1;
             if small.get_pixel(x, y)[0] < small.get_pixel(x + 1, y)[0] {
+                hash |= 1;
+            }
+        }
+    }
+    hash
+}
+
+/// The 64-bit vertical difference hash of a picture (8x9).
+fn vhash(image: &image::DynamicImage) -> u64 {
+    let small = image.thumbnail_exact(8, 9).to_luma8();
+    let mut hash = 0u64;
+    for y in 0..8 {
+        for x in 0..8 {
+            hash <<= 1;
+            if small.get_pixel(x, y)[0] < small.get_pixel(x, y + 1)[0] {
                 hash |= 1;
             }
         }
@@ -188,19 +238,47 @@ fn open(path: &Path) -> Option<image::DynamicImage> {
     Some(image)
 }
 
-/// The picture at 32 x 32 in grey.
+/// The picture at 24 x 24 in RGB (1728 bytes).
+const FINE_SIDE: usize = 24;
+const FINE_LEN: usize = FINE_SIDE * FINE_SIDE * 3;
+
 fn fine(image: &image::DynamicImage) -> Arc<[u8]> {
-    image.thumbnail_exact(32, 32).to_luma8().into_raw().into()
+    image
+        .thumbnail_exact(FINE_SIDE as u32, FINE_SIDE as u32)
+        .to_rgb8()
+        .into_raw()
+        .into()
 }
 
-/// How different two pictures are at 32 x 32: the average difference of
-/// their grey levels, in hundredths of a percent of full scale.
-fn difference(a: &Picture, b: &Picture) -> u32 {
-    if a.fine.len() != b.fine.len() || a.fine.is_empty() {
-        return u32::MAX;
+/// How different two pictures are at 24 x 24 RGB: returns `(global, max_block)`
+/// in hundredths of a percent of full scale, where `max_block` is the largest
+/// mean channel difference across the 16 (4x4 grid of 6x6 pixel) sub-regions.
+fn difference_rgb(a: &Picture, b: &Picture) -> (u32, u32) {
+    if a.fine.len() != FINE_LEN || b.fine.len() != FINE_LEN {
+        return (u32::MAX, u32::MAX);
     }
-    let total: u64 = a.fine.iter().zip(b.fine.iter()).map(|(x, y)| u64::from(x.abs_diff(*y))).sum();
-    (total * 10_000 / (a.fine.len() as u64 * 255)) as u32
+    let mut total = 0u64;
+    let mut blocks = [0u64; 16];
+    for y in 0..FINE_SIDE {
+        let by = y / 6;
+        for x in 0..FINE_SIDE {
+            let bx = x / 6;
+            let i = (y * FINE_SIDE + x) * 3;
+            let d = u64::from(a.fine[i].abs_diff(b.fine[i]))
+                + u64::from(a.fine[i + 1].abs_diff(b.fine[i + 1]))
+                + u64::from(a.fine[i + 2].abs_diff(b.fine[i + 2]));
+            total += d;
+            blocks[by * 4 + bx] += d;
+        }
+    }
+    let global = (total * 10_000 / (FINE_LEN as u64 * 255)) as u32;
+    let block_channels = (6 * 6 * 3) as u64 * 255;
+    let max_block = blocks
+        .into_iter()
+        .map(|s| (s * 10_000 / block_channels) as u32)
+        .max()
+        .unwrap_or(0);
+    (global, max_block)
 }
 
 /// The average colour of a picture.
@@ -225,11 +303,23 @@ pub fn scan(
     thumbnails: bool,
     progress: impl Fn(usize, usize, &'static str) + Sync,
 ) -> Scan {
+    scan_in(folders, false, cancel, thumbnails, progress)
+}
+
+/// Like `scan`, optionally skipping system, app-data, dot-folders and Git
+/// repositories (used by "Search everywhere").
+pub fn scan_in(
+    folders: &[std::path::PathBuf],
+    skip_system: bool,
+    cancel: &AtomicBool,
+    thumbnails: bool,
+    progress: impl Fn(usize, usize, &'static str) + Sync,
+) -> Scan {
     progress(0, 0, "Listing pictures");
     let mut files = vec![];
     let mut stopped = None;
     for folder in folders {
-        let (found, why) = pictures_in(folder, cancel);
+        let (found, why) = pictures_in(folder, skip_system, cancel);
         files.extend(found);
         if why.is_some() || files.len() >= MOST {
             files.truncate(MOST);
@@ -238,7 +328,10 @@ pub fn scan(
         }
     }
     files.sort_by(|a, b| a.0.cmp(&b.0));
-    files.dedup_by(|a, b| a.0 == b.0);
+    files.dedup_by(|a, b| a.0.as_os_str().eq_ignore_ascii_case(b.0.as_os_str()));
+    // Hard links to one picture are the same file, never similar duplicates.
+    let mut seen_ids = std::collections::HashSet::new();
+    files.retain(|(path, _)| crate::duplicates::file_id(path).is_none_or(|id| seen_ids.insert(id)));
     let total = files.len();
     let done = AtomicUsize::new(0);
     let pool = rayon::ThreadPoolBuilder::new().num_threads(decoders()).build();
@@ -266,6 +359,7 @@ pub fn scan(
                 height: image.height(),
                 stamp: *stamp,
                 hash: dhash(&image),
+                vhash: vhash(&image),
                 tone: tone(&image),
                 fine: fine(&image),
                 thumbnail: None,
@@ -390,6 +484,10 @@ mod tests {
     }
 
     fn made(name: &str, hash: u64, tone: [u8; 3], size: u64) -> Picture {
+        let mut fine = Vec::with_capacity(FINE_LEN);
+        for _ in 0..(FINE_SIDE * FINE_SIDE) {
+            fine.extend_from_slice(&tone);
+        }
         Picture {
             path: PathBuf::from(name),
             size,
@@ -397,8 +495,9 @@ mod tests {
             height: 100,
             stamp: (0, 0),
             hash,
+            vhash: hash,
             tone,
-            fine: vec![tone[0]; 1024].into(),
+            fine: fine.into(),
             thumbnail: None,
         }
     }
@@ -418,6 +517,53 @@ mod tests {
         assert!(groups(&[red, blue], LEVELS[2].0).is_empty());
     }
 
+    #[test]
+    fn dark_app_screenshots_with_different_content_and_color_swaps_do_not_false_positive() {
+        let dir = tempfile::tempdir().unwrap();
+        // Two 640x360 dark-mode UI screenshots sharing identical sidebar & top
+        // bar chrome, but showing completely different content cards in the middle.
+        let mut shot_a = image::RgbImage::from_pixel(640, 360, image::Rgb([22, 22, 25]));
+        let mut shot_b = shot_a.clone();
+        for x in 0..140 {
+            for y in 0..360 {
+                shot_a.put_pixel(x, y, image::Rgb([30, 30, 34]));
+                shot_b.put_pixel(x, y, image::Rgb([30, 30, 34]));
+            }
+        }
+        // Bright card in middle-left of shot A vs bright card in lower-right of shot B.
+        for x in 200..360 {
+            for y in 80..180 {
+                shot_a.put_pixel(x, y, image::Rgb([220, 220, 230]));
+            }
+        }
+        for x in 420..580 {
+            for y in 200..300 {
+                shot_b.put_pixel(x, y, image::Rgb([220, 220, 230]));
+            }
+        }
+        shot_a.save(dir.path().join("shot_a.png")).unwrap();
+        shot_b.save(dir.path().join("shot_b.png")).unwrap();
+        // Two images with identical global average tone (half red, half blue)
+        // but flipped spatial layout.
+        let swap_a = image::RgbImage::from_fn(200, 200, |x, _| {
+            if x < 100 { image::Rgb([210, 40, 40]) } else { image::Rgb([40, 40, 210]) }
+        });
+        let swap_b = image::RgbImage::from_fn(200, 200, |x, _| {
+            if x < 100 { image::Rgb([40, 40, 210]) } else { image::Rgb([210, 40, 40]) }
+        });
+        swap_a.save(dir.path().join("swap_a.png")).unwrap();
+        swap_b.save(dir.path().join("swap_b.png")).unwrap();
+        // Hard link to shot_a must not show up as a second picture at all.
+        std::fs::hard_link(dir.path().join("shot_a.png"), dir.path().join("shot_a_link.png")).unwrap();
+
+        let scan = scan(&[dir.path().to_path_buf()], &AtomicBool::new(false), false, |_, _, _| {});
+        assert_eq!(scan.pictures.len(), 4, "hard link must be deduplicated");
+        assert!(
+            groups(&scan.pictures, LEVELS[2].0).is_empty(),
+            "distinct screenshots and color swaps must not group even at loosest level"
+        );
+    }
+
     /// Read-only: prints the groups found under $SEEK_SIMILAR_SURVEY.
     #[test]
     #[ignore]
@@ -432,11 +578,13 @@ mod tests {
                     .iter()
                     .map(|&i| {
                         let p = &scan.pictures[i];
+                        let (gd, bd) = difference_rgb(p, &scan.pictures[g[0]]);
                         format!(
-                            "{} (bits {}, diff {:.2}%)",
+                            "{} (bits {}, diff {:.2}% / block {:.2}%)",
                             p.path.file_name().unwrap().to_string_lossy(),
                             (p.hash ^ scan.pictures[g[0]].hash).count_ones(),
-                            difference(p, &scan.pictures[g[0]]) as f64 / 100.
+                            gd as f64 / 100.,
+                            bd as f64 / 100.,
                         )
                     })
                     .collect();

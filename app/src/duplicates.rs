@@ -95,7 +95,7 @@ pub fn keeper(group: &Group, rule: Keep) -> usize {
     .unwrap_or(0)
 }
 
-fn file_id(path: &Path) -> Option<(u32, u64)> {
+pub(crate) fn file_id(path: &Path) -> Option<(u32, u64)> {
     use std::os::windows::io::AsRawHandle;
     use windows_sys::Win32::Storage::FileSystem::{
         BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle,
@@ -103,6 +103,23 @@ fn file_id(path: &Path) -> Option<(u32, u64)> {
     let file = std::fs::File::open(path).ok()?;
     let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
     (unsafe { GetFileInformationByHandle(file.as_raw_handle(), &mut info) } != 0).then_some((
+        info.dwVolumeSerialNumber,
+        ((info.nFileIndexHigh as u64) << 32) | info.nFileIndexLow as u64,
+    ))
+}
+
+fn dir_id(path: &Path) -> Option<(u32, u64)> {
+    use std::os::windows::{fs::OpenOptionsExt, io::AsRawHandle};
+    use windows_sys::Win32::Storage::FileSystem::{
+        BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle,
+    };
+    let dir = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(0x0200_0000) // FILE_FLAG_BACKUP_SEMANTICS
+        .open(path)
+        .ok()?;
+    let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
+    (unsafe { GetFileInformationByHandle(dir.as_raw_handle(), &mut info) } != 0).then_some((
         info.dwVolumeSerialNumber,
         ((info.nFileIndexHigh as u64) << 32) | info.nFileIndexLow as u64,
     ))
@@ -132,12 +149,19 @@ fn sample_hash(path: &Path, size: u64) -> std::io::Result<[u8; 32]> {
     Ok(*hasher.finalize().as_bytes())
 }
 
-/// The whole file's hash. A file whose length or last change differ
-/// after reading from before (it was being written) is an error, so it is
-/// never grouped on a half-read state.
-fn full_hash(path: &Path, cancel: &AtomicBool) -> std::io::Result<Option<[u8; 32]>> {
+/// The whole file's hash. A file whose length doesn't match `expected_size` or
+/// whose length or last change differ after reading from before (it was being
+/// written) is an error, so it is never grouped on a stale or half-read state.
+fn full_hash(
+    path: &Path,
+    expected_size: u64,
+    cancel: &AtomicBool,
+) -> std::io::Result<Option<[u8; 32]>> {
     let mut file = std::fs::File::open(path)?;
     let before = file.metadata()?;
+    if before.len() != expected_size {
+        return Err(std::io::Error::other("size changed before hashing"));
+    }
     let mut hasher = blake3::Hasher::new();
     let mut buffer = vec![0u8; 1 << 20];
     let mut read = 0u64;
@@ -153,8 +177,8 @@ fn full_hash(path: &Path, cancel: &AtomicBool) -> std::io::Result<Option<[u8; 32
         hasher.update(&buffer[..n]);
     }
     let after = std::fs::metadata(path)?;
-    if read != before.len()
-        || after.len() != before.len()
+    if read != expected_size
+        || after.len() != expected_size
         || after.modified().ok() != before.modified().ok()
     {
         return Err(std::io::Error::other("changed while it was read"));
@@ -301,7 +325,7 @@ fn confirm(
                     for (_, files) in by_sample.into_iter().filter(|(_, v)| v.len() > 1) {
                         let mut by_full: HashMap<[u8; 32], Vec<Copy>> = HashMap::new();
                         for (path, modified) in files {
-                            match full_hash(&path, cancel) {
+                            match full_hash(&path, size, cancel) {
                                 Ok(Some(hash)) => {
                                     by_full.entry(hash).or_default().push(Copy { path, modified })
                                 }
@@ -410,6 +434,11 @@ fn same_folders(
     budget: &mut u64,
     cancel: &AtomicBool,
 ) -> Option<FolderCopy> {
+    if let (Some(ia), Some(ib)) = (dir_id(a), dir_id(b))
+        && ia == ib
+    {
+        return None;
+    }
     let (listing_a, files_a) = listing(a)?;
     let (listing_b, files_b) = listing(b)?;
     // Same names, same kinds, same sizes, or not the same folder.
@@ -424,13 +453,22 @@ fn same_folders(
     }
     let mut spent = 0u64;
     let mut bytes = 0u64;
+    let mut distinct_files = 0usize;
     for (rel, size, _) in &listing_a {
         let Some(size) = size else { continue };
-        bytes += size;
         if *size == 0 {
             continue;
         }
         let (pa, pb) = (&files_a[rel], &files_b[rel]);
+        // Hard links to the same underlying file take no duplicate space and
+        // must not count as duplicated bytes.
+        if let (Some(ia), Some(ib)) = (file_id(pa), file_id(pb))
+            && ia == ib
+        {
+            continue;
+        }
+        distinct_files += 1;
+        bytes += size;
         let known = match (group_of.get(&key(pa)), group_of.get(&key(pb))) {
             (Some(x), Some(y)) => Some(x == y),
             _ => None,
@@ -443,13 +481,16 @@ fn same_folders(
                 if spent > PAIR_BYTES || spent > *budget || cancel.load(Ordering::Relaxed) {
                     return None;
                 }
-                let ha = full_hash(pa, cancel).ok()??;
-                let hb = full_hash(pb, cancel).ok()??;
+                let ha = full_hash(pa, *size, cancel).ok()??;
+                let hb = full_hash(pb, *size, cancel).ok()??;
                 if ha != hb {
                     return None;
                 }
             }
         }
+    }
+    if distinct_files == 0 {
+        return None;
     }
     *budget = budget.saturating_sub(spent);
     Some(FolderCopy {
@@ -549,10 +590,10 @@ fn bundle(name: &str) -> bool {
 }
 
 /// Folders whose copies aren't the person's to tidy: Windows, installed
-/// programs, app data (AppData and the profile's hidden dot-folders such as
-/// .codex or .local), package caches, repositories' internals, and files
-/// inside document bundles.
-fn system_path(path: &Path) -> bool {
+/// programs and games, app data (AppData and the profile's hidden dot-folders
+/// such as .codex or .local), package caches, repositories' internals, and
+/// files inside document bundles.
+pub(crate) fn system_path(path: &Path) -> bool {
     let parts: Vec<_> = path.components().collect();
     let last = parts.len().saturating_sub(1);
     parts.iter().enumerate().any(|(i, c)| {
@@ -564,18 +605,39 @@ fn system_path(path: &Path) -> bool {
         }
         matches!(
             c.as_str(),
-            "windows" | "program files" | "program files (x86)" | "programdata" | "appdata"
-                | "$recycle.bin" | "system volume information" | "node_modules" | ".git"
-                | ".cargo" | ".rustup" | ".gradle" | ".m2" | ".nuget" | "windowsapps"
+            "windows"
+                | "program files"
+                | "program files (x86)"
+                | "programdata"
+                | "appdata"
+                | "$recycle.bin"
+                | "system volume information"
+                | "recovery"
+                | "perflogs"
+                | "msocache"
+                | "xboxgames"
+                | "steamapps"
+                | "node_modules"
+                | ".git"
+                | ".cargo"
+                | ".rustup"
+                | ".gradle"
+                | ".m2"
+                | ".nuget"
+                | "windowsapps"
                 // Build output: rebuilt copies, which Cleanup handles.
-                | "target" | ".venv" | "__pycache__" | ".next"
+                | "target"
+                | ".venv"
+                | "__pycache__"
+                | ".next"
         )
     })
 }
 
-/// Whether `path` sits inside a project: a folder in a Git repository.
-/// Copies there are usually each project's own (vendored binaries, assets),
-/// and removing one would break that project. Answers are cached by folder.
+/// Whether `path` sits inside a project: a folder in a Git, Mercurial or
+/// Subversion repository. Copies there are usually each project's own
+/// (vendored binaries, assets), and removing one would break that project.
+/// Answers are cached by folder.
 fn in_project(path: &Path, cache: &mut HashMap<PathBuf, bool>) -> bool {
     let mut walked = vec![];
     let mut answer = false;
@@ -585,7 +647,10 @@ fn in_project(path: &Path, cache: &mut HashMap<PathBuf, bool>) -> bool {
             break;
         }
         walked.push(dir.to_path_buf());
-        if std::fs::symlink_metadata(dir.join(".git")).is_ok() {
+        if std::fs::symlink_metadata(dir.join(".git")).is_ok()
+            || std::fs::symlink_metadata(dir.join(".hg")).is_ok()
+            || std::fs::symlink_metadata(dir.join(".svn")).is_ok()
+        {
             answer = true;
             break;
         }

@@ -8,17 +8,21 @@ pub(super) struct Capacity {
 }
 pub(super) struct State {
     key: Option<(Vec<PathBuf>, u64)>,
+    capacity_gen: u64,
     pub capacity: BTreeMap<PathBuf, Capacity>,
     pub recent: Vec<PathBuf>,
     task: Task<()>,
+    capacity_task: Task<()>,
 }
 impl State {
     pub fn new() -> Self {
         Self {
             key: None,
+            capacity_gen: 0,
             capacity: BTreeMap::new(),
             recent: vec![],
             task: Task::ready(()),
+            capacity_task: Task::ready(()),
         }
     }
 }
@@ -31,8 +35,8 @@ fn capacity(path: &std::path::Path) -> Option<Capacity> {
         .encode_wide()
         .chain(Some(0))
         .collect::<Vec<_>>();
-    // Fixed/removable local volumes only. Unavailable/remote roots stay unknown.
-    if !matches!(unsafe { GetDriveTypeW(wide.as_ptr()) }, 2 | 3) {
+    // Fixed, removable, and network volumes (matching Storage's drive picker).
+    if !matches!(unsafe { GetDriveTypeW(wide.as_ptr()) }, 2..=4) {
         return None;
     }
     let mut free = 0;
@@ -80,20 +84,57 @@ fn recent(data: &std::path::Path) -> Vec<PathBuf> {
         .collect()
 }
 impl Seek {
+    fn capacity_targets(&self) -> Vec<PathBuf> {
+        let mut paths = self.roots.clone();
+        if let Some(page) = &self.storage_page
+            && !paths
+                .iter()
+                .any(|p| p.as_os_str().eq_ignore_ascii_case(page.drive.as_os_str()))
+        {
+            paths.push(page.drive.clone());
+        }
+        paths
+    }
+
+    /// Immediately refreshes OS drive capacity (`GetDiskFreeSpaceExW`) for all
+    /// roots and the active Storage drive (e.g. after cleanup or Recycle Bin empty).
+    pub(super) fn refresh_capacity(&mut self, cx: &mut Context<Self>) {
+        self.places.capacity_gen += 1;
+        let generation = self.places.capacity_gen;
+        let targets = self.capacity_targets();
+        self.places.capacity_task = cx.spawn(async move |this, cx| {
+            let result: BTreeMap<PathBuf, Capacity> = cx
+                .background_executor()
+                .spawn(async move {
+                    targets
+                        .into_iter()
+                        .filter_map(|path| capacity(&path).map(|value| (path, value)))
+                        .collect()
+                })
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                if this.places.capacity_gen == generation {
+                    this.places.capacity = result;
+                    cx.notify();
+                }
+            });
+        });
+    }
+
     pub(super) fn refresh_places(&mut self, cx: &mut Context<Self>) {
-        let key = (self.roots.clone(), self.cache_epoch);
+        let targets = self.capacity_targets();
+        let key = (targets.clone(), self.cache_epoch);
         if self.places.key.as_ref() == Some(&key) {
             return;
         }
         self.places.key = Some(key.clone());
         let data = self.store.directory.clone();
         self.places.task = cx.spawn(async move |this, cx| {
-            let roots = key.0.clone();
             let result = cx
                 .background_executor()
                 .spawn(async move {
                     (
-                        roots
+                        targets
                             .into_iter()
                             .filter_map(|path| capacity(&path).map(|value| (path, value)))
                             .collect(),

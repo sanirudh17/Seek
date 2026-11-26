@@ -751,9 +751,9 @@ impl Seek {
                             .when_some(capacity.clone(), |view, disk| {
                                 view.child(div().text_size(px(11.)).text_color(p.muted).child(
                                     format!(
-                                        "{:.1} GB free of {:.1} GB",
-                                        disk.free as f64 / 1_000_000_000.,
-                                        disk.total as f64 / 1_000_000_000.
+                                        "{} free of {}",
+                                        super::storage_view::human(disk.free),
+                                        super::storage_view::human(disk.total),
                                     ),
                                 ))
                             }),

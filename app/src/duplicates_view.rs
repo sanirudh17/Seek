@@ -319,9 +319,15 @@ impl Seek {
                     return;
                 }
                 let count = paths.len();
+                let moved_paths = paths.clone();
                 this.run_file_op(crate::file_ops::Operation::Recycle { paths }, window, cx);
                 if this.message.is_none() {
-                    this.duplicates_moved(count);
+                    this.duplicates_moved(count, &moved_paths);
+                    this.refresh_capacity(cx);
+                    if let Some(page) = &this.storage_page {
+                        let scope = page.scope.clone();
+                        this.measure_storage_again(scope, cx);
+                    }
                     if changed > 0 {
                         this.message = Some(format!(
                             "Skipped {changed} that changed since they were compared."
@@ -334,26 +340,42 @@ impl Seek {
         .detach();
     }
 
-    /// After a move: groups and folders that were acted on are done; the
-    /// rest stay to review.
-    fn duplicates_moved(&mut self, count: usize) {
+    /// After a move: remove only the moved files and folders from the report.
+    /// Groups that still have 2+ copies stay for review; groups reduced to
+    /// 0-1 copies and folder pairs touching a moved path are dropped.
+    fn duplicates_moved(&mut self, count: usize, moved: &[PathBuf]) {
         let state = &mut self.duplicates;
+        let lower = |p: &std::path::Path| p.to_string_lossy().to_lowercase();
+        let moved_lower: Vec<String> = moved.iter().map(|p| lower(p)).collect();
+        let gone = |path: &std::path::Path| {
+            let p = lower(path);
+            moved_lower
+                .iter()
+                .any(|m| p == *m || p.starts_with(&format!("{m}\\")))
+        };
         if let Some(report) = state.report.take() {
-            let ticked = std::mem::take(&mut state.ticked);
-            let folder_ticked = std::mem::take(&mut state.folder_ticked);
+            state.ticked.clear();
+            state.folder_ticked.clear();
             let groups: Vec<Group> = report
                 .groups
                 .into_iter()
-                .enumerate()
-                .filter(|(i, g)| !(0..g.copies.len()).any(|c| ticked.contains(&(*i, c))))
-                .map(|(_, g)| g)
+                .filter_map(|mut g| {
+                    g.copies.retain(|c| !gone(&c.path));
+                    (g.copies.len() > 1).then_some(g)
+                })
                 .collect();
             let folders = report
                 .folders
                 .into_iter()
-                .enumerate()
-                .filter(|(i, _)| !folder_ticked.contains_key(i))
-                .map(|(_, f)| f)
+                .filter(|f| {
+                    !gone(&f.a)
+                        && !gone(&f.b)
+                        && !moved_lower.iter().any(|m| {
+                            let a = lower(&f.a);
+                            let b = lower(&f.b);
+                            m.starts_with(&format!("{a}\\")) || m.starts_with(&format!("{b}\\"))
+                        })
+                })
                 .collect();
             state.set_report(Some(Report {
                 groups,
@@ -448,6 +470,7 @@ impl Seek {
             .flex()
             .flex_col()
             .rounded(RADIUS_CARD)
+            .overflow_hidden()
             .border_1()
             .border_color(p.text.opacity(0.1))
             .bg(p.settings_card);
@@ -481,15 +504,18 @@ impl Seek {
                     .child(
                         div()
                             .flex_1()
+                            .min_w_0()
                             .text_size(TEXT_SMALL)
                             .child(format!("Moved {count} to the Recycle Bin.")),
                     )
                     .child(
-                        super::settings_view::control("duplicates-undo", "Undo", p, cx)
-                            .h(BUTTON_HEIGHT)
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                this.undo_duplicates(window, cx)
-                            })),
+                        div().flex_shrink_0().child(
+                            super::settings_view::control("duplicates-undo", "Undo", p, cx)
+                                .h(BUTTON_HEIGHT)
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.undo_duplicates(window, cx)
+                                })),
+                        ),
                     ),
             );
         }
@@ -661,6 +687,7 @@ impl Seek {
             .child(
                 div()
                     .flex_1()
+                    .min_w_0()
                     .text_size(TEXT_SMALL)
                     .text_color(p.muted)
                     .child(if chosen == 0 {
@@ -670,22 +697,24 @@ impl Seek {
                     }),
             )
             .child(
-                Button::new("duplicates-recycle")
-                    .h(BUTTON_HEIGHT)
-                    .px_3()
-                    .rounded(RADIUS_CONTROL)
-                    .bg(p.text)
-                    .text_color(crate::appearance::modal_surface(p))
-                    .font_weight(FontWeight::MEDIUM)
-                    .disabled(chosen == 0 || self.files_pending != 0 || state.checking)
-                    .child(super::interface::button_text(if state.checking {
-                        "Checking…".to_string()
-                    } else if chosen == 0 {
-                        "Move to Recycle Bin".to_string()
-                    } else {
-                        format!("Move {chosen} to Recycle Bin · {}", human(chosen_bytes))
-                    }))
-                    .on_click(cx.listener(|this, _, window, cx| this.recycle_duplicates(window, cx))),
+                div().flex_shrink_0().child(
+                    Button::new("duplicates-recycle")
+                        .h(BUTTON_HEIGHT)
+                        .px_3()
+                        .rounded(RADIUS_CONTROL)
+                        .bg(p.text)
+                        .text_color(crate::appearance::modal_surface(p))
+                        .font_weight(FontWeight::MEDIUM)
+                        .disabled(chosen == 0 || self.files_pending != 0 || state.checking)
+                        .child(super::interface::button_text(if state.checking {
+                            "Checking…".to_string()
+                        } else if chosen == 0 {
+                            "Move to Recycle Bin".to_string()
+                        } else {
+                            format!("Move {chosen} to Recycle Bin · {}", human(chosen_bytes))
+                        }))
+                        .on_click(cx.listener(|this, _, window, cx| this.recycle_duplicates(window, cx))),
+                ),
             );
         card.child(toolbar).child(body).child(footer)
     }

@@ -1,4 +1,34 @@
 use super::*;
+fn log_update_error(data: &std::path::Path, action: &str, error: &str) {
+    use std::io::Write;
+    let logs = data.join("logs");
+    let _ = std::fs::create_dir_all(&logs);
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(logs.join("updater.log"))
+    {
+        let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+        let _ = writeln!(file, "[{now}] {action} ({}): {error}", crate::updater::CURRENT);
+    }
+}
+
+fn friendly_download_error(error: &str) -> String {
+    if error.contains("timed out") {
+        "Download timed out. Try again.".into()
+    } else if error.contains("resolve") || error.contains("connect") || error.contains("reset") {
+        "Couldn't connect to GitHub. Try again.".into()
+    } else if error.contains("TLS") {
+        "Secure connection failed. Try again.".into()
+    } else if error.contains("checksum") {
+        "Checksum didn't match. Try again.".into()
+    } else if error.contains("HTTP ") {
+        format!("{error}. Try again.")
+    } else {
+        "Couldn't download. Try again.".into()
+    }
+}
+
 impl Seek {
     /// Opens a prefilled issue in the browser; nothing is sent from here.
     pub(super) fn report_bug(&mut self, cx: &mut Context<Self>) {
@@ -14,7 +44,9 @@ impl Seek {
             return;
         }
         self.app_updates.busy = true;
+        self.app_updates.failed = false;
         self.app_updates.message = "Checking…".into();
+        let data = self.store.directory.clone();
         let work = cx
             .background_executor()
             .spawn(async { crate::updater::check() });
@@ -24,19 +56,24 @@ impl Seek {
                 this.app_updates.busy = false;
                 match result {
                     Ok(crate::updater::Check::Available(release)) => {
+                        this.app_updates.failed = false;
                         this.app_updates.message = format!("{} available", release.version);
                         this.app_updates.available = Some(release);
                     }
                     Ok(crate::updater::Check::Current) => {
+                        this.app_updates.failed = false;
                         this.app_updates.message = "Up to date".to_string();
                         this.app_updates.available = None;
                     }
                     Ok(crate::updater::Check::NoRelease) => {
+                        this.app_updates.failed = false;
                         this.app_updates.message = "No release yet".into();
                         this.app_updates.available = None;
                     }
                     Err(error) => {
                         eprintln!("Could not check for updates: {error}");
+                        log_update_error(&data, "check", &error);
+                        this.app_updates.failed = true;
                         this.app_updates.message = "Couldn't check. Try again.".into()
                     }
                 }
@@ -61,10 +98,12 @@ impl Seek {
         };
         self.app_updates.busy = true;
         self.app_updates.downloading = true;
+        self.app_updates.failed = false;
         self.app_updates
             .progress
             .store(0, std::sync::atomic::Ordering::Relaxed);
         self.app_updates.message = format!("Downloading Seek {}…", release.version);
+        let data = self.store.directory.clone();
         let progress = self.app_updates.progress.clone();
         let executor = cx.background_executor().clone();
         let work = cx.background_executor().spawn(async move {
@@ -90,11 +129,14 @@ impl Seek {
                     Ok(stage) => {
                         this.app_updates.staged = Some(stage);
                         this.app_updates.popover = true;
+                        this.app_updates.failed = false;
                         this.app_updates.message = "Ready to install".into();
                     }
                     Err(error) => {
                         eprintln!("Update was not installed: {error}");
-                        this.app_updates.message = "Couldn't download. Try again.".into();
+                        log_update_error(&data, "download", &error);
+                        this.app_updates.failed = true;
+                        this.app_updates.message = friendly_download_error(&error);
                     }
                 }
                 cx.notify();
@@ -141,6 +183,8 @@ impl Seek {
         match crate::updater::launch(&stage) {
             Ok(()) => cx.quit(),
             Err(error) => {
+                log_update_error(&self.store.directory, "launch", &error);
+                self.app_updates.failed = true;
                 self.app_updates.message = format!("Update was not installed: {error}");
                 cx.notify();
             }
@@ -159,7 +203,7 @@ impl Seek {
         let ready = state.staged.is_some();
         let downloading = state.downloading;
         let fraction = state.fraction();
-        let message = if ready || state.message.starts_with("Couldn't") {
+        let message = if ready || state.failed || state.message.starts_with("Couldn't") {
             state.message.clone()
         } else {
             String::new()

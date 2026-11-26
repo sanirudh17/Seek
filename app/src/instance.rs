@@ -51,6 +51,10 @@ pub fn key(data: &Path) -> Result<String, String> {
 
 /// This Seek's "closing" event, raised when its last window closes.
 static CLOSING: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+/// Raised by a newly launched Seek when it sees the previous Seek closing, so
+/// the closing Seek immediately stops waiting on its shutdown checkpoint and
+/// hands over the single-instance lock without a 10-second delay.
+static RELAUNCH: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
 
 /// Tells a Seek started now that this one is on its way out (it still has its
 /// index to save), so the new one waits and opens its own window instead of
@@ -61,6 +65,13 @@ pub fn mark_closing() {
             SetEvent(*event as HANDLE);
         }
     }
+}
+
+/// Whether another Seek launch is waiting for this closing instance to exit.
+pub fn relaunch_requested() -> bool {
+    RELAUNCH
+        .get()
+        .is_some_and(|event| unsafe { WaitForSingleObject(*event as HANDLE, 0) } == WAIT_OBJECT_0)
 }
 
 pub fn acquire(data: &Path, request: Option<&Path>) -> Result<Option<Instance>, String> {
@@ -83,21 +94,27 @@ pub fn acquire(data: &Path, request: Option<&Path>) -> Result<Option<Instance>, 
     let wide = |s: &str| s.encode_utf16().chain(Some(0)).collect::<Vec<_>>();
     // Manual-reset: once the running Seek starts closing, it stays raised.
     let closing = unsafe { CreateEventW(std::ptr::null(), 1, 0, wide(&format!("{base}-closing")).as_ptr()) };
+    let relaunch = unsafe { CreateEventW(std::ptr::null(), 1, 0, wide(&format!("{base}-relaunch")).as_ptr()) };
     let mut mutex = unsafe { CreateMutexW(std::ptr::null(), 0, wide(&base).as_ptr()) };
     if mutex.is_null() {
         return Err(std::io::Error::last_os_error().to_string());
     }
     let mut exists = unsafe { GetLastError() } == ERROR_ALREADY_EXISTS;
-    // The running Seek is closing (saving its index): wait for it to finish,
-    // then become the running Seek, rather than waking one that is leaving
-    // (which used to make a quick relaunch from the taskbar do nothing).
+    // The running Seek is closing (saving its index): tell it to wrap up
+    // immediately and wait briefly for it to release the mutex, rather than
+    // waking one that is leaving or stalling for 10+ seconds.
     if exists && !closing.is_null() && unsafe { WaitForSingleObject(closing, 0) } == WAIT_OBJECT_0 {
+        if !relaunch.is_null() {
+            unsafe {
+                SetEvent(relaunch);
+            }
+        }
         let started = std::time::Instant::now();
         while exists && started.elapsed() < std::time::Duration::from_secs(20) {
             unsafe {
                 CloseHandle(mutex);
             }
-            std::thread::sleep(std::time::Duration::from_millis(100));
+            std::thread::sleep(std::time::Duration::from_millis(20));
             mutex = unsafe { CreateMutexW(std::ptr::null(), 0, wide(&base).as_ptr()) };
             if mutex.is_null() {
                 return Err(std::io::Error::last_os_error().to_string());
@@ -107,14 +124,35 @@ pub fn acquire(data: &Path, request: Option<&Path>) -> Result<Option<Instance>, 
         if !exists {
             unsafe {
                 ResetEvent(closing);
+                if !relaunch.is_null() {
+                    ResetEvent(relaunch);
+                }
             }
         }
     }
-    if !closing.is_null() && !exists {
-        let _ = CLOSING.set(closing as usize);
-    } else if !closing.is_null() {
-        unsafe {
-            CloseHandle(closing);
+    if !exists {
+        if !closing.is_null() {
+            unsafe {
+                ResetEvent(closing);
+            }
+            let _ = CLOSING.set(closing as usize);
+        }
+        if !relaunch.is_null() {
+            unsafe {
+                ResetEvent(relaunch);
+            }
+            let _ = RELAUNCH.set(relaunch as usize);
+        }
+    } else {
+        if !closing.is_null() {
+            unsafe {
+                CloseHandle(closing);
+            }
+        }
+        if !relaunch.is_null() {
+            unsafe {
+                CloseHandle(relaunch);
+            }
         }
     }
     let event = unsafe {

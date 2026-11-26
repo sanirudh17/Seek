@@ -34,12 +34,13 @@ pub(super) struct Cleanup {
     task: Option<Task<()>>,
 }
 
-/// A deletion of cache folders running in the background.
+/// A deletion of cache folders (or emptying the Recycle Bin) running in the background.
 pub(super) struct Removal {
     progress: Arc<crate::cleanup::Progress>,
     cancel: Arc<AtomicBool>,
     running: bool,
     stopped: bool,
+    recycle_bin: bool,
 }
 
 impl Seek {
@@ -53,6 +54,7 @@ impl Seek {
         self.cleanup.cancel = Some(cancel.clone());
         self.cleanup.stage = stage.clone();
         self.cleanup.looking = true;
+        self.cleanup.confirm_all = false;
         self.cleanup.moved = None;
         self.cleanup.open = None;
         self.cleanup.unticked.clear();
@@ -198,6 +200,7 @@ impl Seek {
             cancel: cancel.clone(),
             running: true,
             stopped: false,
+            recycle_bin: false,
         });
         let job = cx.background_executor().spawn({
             let progress = progress.clone();
@@ -209,7 +212,8 @@ impl Seek {
                 if let Some(removal) = &mut this.cleanup.removal {
                     removal.running = false;
                 }
-                // Storage's numbers include what was just freed.
+                // Storage's numbers and drive capacity include what was just freed.
+                this.refresh_capacity(cx);
                 if let Some(page) = &this.storage_page {
                     let scope = page.scope.clone();
                     this.measure_storage_again(scope, cx);
@@ -285,6 +289,9 @@ impl Seek {
 
     /// Asks before emptying the Recycle Bin, in Seek's own dialog.
     fn ask_empty_recycle_bin(&mut self, bytes: u64, window: &mut Window, cx: &mut Context<Self>) {
+        if self.cleanup.removal.as_ref().is_some_and(|r| r.running) {
+            return;
+        }
         let cancel = cx.focus_handle();
         let delete = cx.focus_handle();
         self.permanent_delete = Some(super::permanent_delete::Confirmation {
@@ -299,32 +306,82 @@ impl Seek {
         cx.notify();
     }
 
-    /// Called from the confirmation once accepted.
+    /// Called from the confirmation once accepted. Shows immediate progress,
+    /// prevents duplicate concurrent runs, and refreshes drive capacity.
     pub(super) fn empty_recycle_bin(&mut self, cx: &mut Context<Self>) {
-        let job = cx
-            .background_executor()
-            .spawn(async move { crate::cleanup::empty_recycle_bin() });
+        if self.cleanup.removal.as_ref().is_some_and(|r| r.running) {
+            return;
+        }
+        let progress = Arc::new(crate::cleanup::Progress::default());
+        let cancel = Arc::new(AtomicBool::new(false));
+        self.cleanup.removal = Some(Removal {
+            progress: progress.clone(),
+            cancel: cancel.clone(),
+            running: true,
+            stopped: false,
+            recycle_bin: true,
+        });
+        self.cleanup.open = None;
+        let job = cx.background_executor().spawn({
+            let progress = progress.clone();
+            let cancel = cancel.clone();
+            async move { crate::cleanup::empty_recycle_bin_with_progress(&cancel, &progress) }
+        });
         cx.spawn(async move |this, cx| {
             let result = job.await;
             let _ = this.update(cx, |this, cx| {
+                let stopped = this.cleanup.removal.as_ref().is_some_and(|r| r.stopped);
+                if let Some(removal) = &mut this.cleanup.removal {
+                    removal.running = false;
+                }
                 match result {
                     Ok(()) => {
-                        if let Some(report) = &mut this.cleanup.report {
+                        if !stopped
+                            && let Some(report) = &mut this.cleanup.report
+                        {
                             report
                                 .suggestions
                                 .retain(|s| s.action != Action::EmptyRecycleBin);
                         }
                         this.cleanup.open = None;
-                        this.message = Some("Emptied the Recycle Bin.".into());
+                        this.message = Some(if stopped {
+                            "Stopped emptying the Recycle Bin.".into()
+                        } else {
+                            "Emptied the Recycle Bin.".into()
+                        });
                     }
                     Err(error) => {
                         this.message = Some(format!("Couldn't empty the Recycle Bin: {error}"))
                     }
                 }
+                this.refresh_capacity(cx);
+                if let Some(page) = &this.storage_page {
+                    let scope = page.scope.clone();
+                    this.measure_storage_again(scope, cx);
+                }
                 cx.notify();
             });
         })
         .detach();
+        // Redraw live Recycle Bin emptying progress ~5 times a second while running.
+        cx.spawn(async move |this, cx| {
+            loop {
+                cx.background_executor()
+                    .timer(std::time::Duration::from_millis(200))
+                    .await;
+                let running = this
+                    .update(cx, |this, cx| {
+                        cx.notify();
+                        this.cleanup.removal.as_ref().is_some_and(|r| r.running)
+                    })
+                    .unwrap_or(false);
+                if !running {
+                    return;
+                }
+            }
+        })
+        .detach();
+        cx.notify();
     }
 
     pub(super) fn cleanup_section(
@@ -405,7 +462,13 @@ impl Seek {
                     cx.notify();
                 }))
         });
-        let action = div().flex().gap_2().children(clean_all).child(action);
+        let action = div()
+            .flex()
+            .items_center()
+            .gap_2()
+            .flex_shrink_0()
+            .children(clean_all)
+            .child(action);
         let header = div()
             .flex()
             .items_center()
@@ -416,15 +479,18 @@ impl Seek {
                     .flex()
                     .items_baseline()
                     .gap_2()
+                    .flex_1()
                     .min_w_0()
                     .child(
                         div()
+                            .flex_shrink_0()
                             .text_size(TEXT_BODY)
                             .font_weight(FontWeight::SEMIBOLD)
                             .child("Cleanup suggestions"),
                     )
                     .children(status.map(|s| {
                         div()
+                            .min_w_0()
                             .truncate()
                             .text_size(TEXT_SMALL)
                             .text_color(p.muted)
@@ -436,6 +502,7 @@ impl Seek {
             .flex()
             .flex_col()
             .rounded(RADIUS_CARD)
+            .overflow_hidden()
             .border_1()
             .border_color(p.text.opacity(0.1))
             .bg(p.settings_card);
@@ -470,17 +537,20 @@ impl Seek {
                     .child(
                         div()
                             .flex_1()
+                            .min_w_0()
                             .text_size(TEXT_SMALL)
                             .child(format!("Moved {count} to the Recycle Bin. Look again to see what's left.")),
                     )
                     .child(
-                        super::settings_view::control("cleanup-undo", "Undo", p, cx)
-                            .h(BUTTON_HEIGHT)
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                this.cleanup.moved = None;
-                                this.file_action(super::daily::Action::UndoRename, None, window, cx);
-                                cx.notify();
-                            })),
+                        div().flex_shrink_0().child(
+                            super::settings_view::control("cleanup-undo", "Undo", p, cx)
+                                .h(BUTTON_HEIGHT)
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.cleanup.moved = None;
+                                    this.file_action(super::daily::Action::UndoRename, None, window, cx);
+                                    cx.notify();
+                                })),
+                        ),
                     ),
             );
         }
@@ -493,18 +563,42 @@ impl Seek {
             let listing = removal.progress.listing.load(Relaxed);
             let fraction = if listed == 0 { 0. } else { (files + skipped) as f32 / listed as f32 };
             let line = if removal.running && listing {
-                format!("Finding files… {}", super::interface::thousands(listed as usize))
+                if removal.recycle_bin {
+                    format!(
+                        "Emptying Recycle Bin… finding items ({})",
+                        super::interface::thousands(listed as usize)
+                    )
+                } else {
+                    format!("Finding files… {}", super::interface::thousands(listed as usize))
+                }
             } else if removal.running {
-                format!(
-                    "Deleting… {} of {} files · {} freed",
-                    super::interface::thousands((files + skipped) as usize),
-                    super::interface::thousands(listed as usize),
-                    human(bytes)
-                )
+                if removal.recycle_bin && listed == 0 {
+                    "Emptying Recycle Bin…".to_string()
+                } else {
+                    format!(
+                        "{} {} of {} files · {} freed",
+                        if removal.recycle_bin {
+                            "Emptying Recycle Bin…"
+                        } else {
+                            "Deleting…"
+                        },
+                        super::interface::thousands((files + skipped) as usize),
+                        super::interface::thousands(listed as usize),
+                        human(bytes)
+                    )
+                }
+            } else if removal.recycle_bin && files == 0 && !removal.stopped {
+                "Emptied the Recycle Bin.".to_string()
             } else {
                 let mut line = format!(
                     "{} {} · {} files deleted",
-                    if removal.stopped { "Stopped. Freed" } else { "Freed" },
+                    if removal.stopped {
+                        "Stopped. Freed"
+                    } else if removal.recycle_bin {
+                        "Emptied Recycle Bin · freed"
+                    } else {
+                        "Freed"
+                    },
                     human(bytes),
                     super::interface::thousands(files as usize)
                 );
@@ -527,12 +621,14 @@ impl Seek {
                             .flex()
                             .items_center()
                             .gap_3()
-                            .child(div().flex_1().text_size(TEXT_SMALL).child(line))
+                            .child(div().flex_1().min_w_0().text_size(TEXT_SMALL).child(line))
                             .when(removal.running, |d| {
                                 d.child(
-                                    super::settings_view::control("cleanup-stop-removal", "Stop", p, cx)
-                                        .h(BUTTON_HEIGHT)
-                                        .on_click(cx.listener(|this, _, _, cx| this.stop_removal(cx))),
+                                    div().flex_shrink_0().child(
+                                        super::settings_view::control("cleanup-stop-removal", "Stop", p, cx)
+                                            .h(BUTTON_HEIGHT)
+                                            .on_click(cx.listener(|this, _, _, cx| this.stop_removal(cx))),
+                                    ),
                                 )
                             }),
                     )
@@ -556,17 +652,18 @@ impl Seek {
                     .py_3()
                     .flex()
                     .items_center()
-                    .gap_3()
+                    .gap_4()
                     .border_b_1()
                     .border_color(p.line)
                     .bg(p.text.opacity(0.03))
                     .child(
                         div()
                             .flex_1()
+                            .min_w_0()
                             .flex()
                             .flex_col()
                             .gap(px(2.))
-                            .child(div().text_size(TEXT_BODY).child(format!(
+                            .child(div().text_size(TEXT_BODY).font_weight(FontWeight::MEDIUM).child(format!(
                                 "Clean up {all_items} items ({})?",
                                 human(all_bytes)
                             )))
@@ -582,24 +679,31 @@ impl Seek {
                             ),
                     )
                     .child(
-                        super::settings_view::control("cleanup-all-cancel", "Cancel", p, cx)
-                            .h(BUTTON_HEIGHT)
-                            .on_click(cx.listener(|this, _, _, cx| {
-                                this.cleanup.confirm_all = false;
-                                cx.notify();
-                            })),
-                    )
-                    .child(
-                        Button::new("cleanup-all-confirm")
-                            .h(BUTTON_HEIGHT)
-                            .px_3()
-                            .rounded(RADIUS_CONTROL)
-                            .bg(p.text)
-                            .text_color(crate::appearance::modal_surface(p))
-                            .font_weight(FontWeight::MEDIUM)
-                            .disabled(self.files_pending != 0 || busy)
-                            .child(super::interface::button_text("Clean up"))
-                            .on_click(cx.listener(|this, _, window, cx| this.clean_selected(window, cx))),
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .flex_shrink_0()
+                            .child(
+                                super::settings_view::control("cleanup-all-cancel", "Cancel", p, cx)
+                                    .h(BUTTON_HEIGHT)
+                                    .on_click(cx.listener(|this, _, _, cx| {
+                                        this.cleanup.confirm_all = false;
+                                        cx.notify();
+                                    })),
+                            )
+                            .child(
+                                Button::new("cleanup-all-confirm")
+                                    .h(BUTTON_HEIGHT)
+                                    .px_3()
+                                    .rounded(RADIUS_CONTROL)
+                                    .bg(p.text)
+                                    .text_color(crate::appearance::modal_surface(p))
+                                    .font_weight(FontWeight::MEDIUM)
+                                    .disabled(self.files_pending != 0 || busy)
+                                    .child(super::interface::button_text("Clean up"))
+                                    .on_click(cx.listener(|this, _, window, cx| this.clean_selected(window, cx))),
+                            ),
                     ),
             );
         }
@@ -679,23 +783,41 @@ impl Seek {
                 .child(text)
                 .child(
                     div()
+                        .flex_shrink_0()
                         .font_family(FONT_MONO)
                         .text_size(TEXT_SMALL)
                         .text_color(p.muted)
                         .child(human(bytes)),
                 );
+            let emptying_bin = state
+                .removal
+                .as_ref()
+                .is_some_and(|r| r.running && r.recycle_bin);
             line = if empties {
                 line.child(
-                    super::settings_view::control("open-recycle-bin", "Open", p, cx)
-                        .h(BUTTON_HEIGHT)
-                        .on_click(|_, _, cx| cx.open_url("shell:RecycleBinFolder")),
-                )
-                .child(
-                    super::settings_view::control("empty-recycle-bin", "Empty…", p, cx)
-                        .h(BUTTON_HEIGHT)
-                        .on_click(cx.listener(move |this, _, window, cx| {
-                            this.ask_empty_recycle_bin(bytes, window, cx)
-                        })),
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap_2()
+                        .flex_shrink_0()
+                        .child(
+                            super::settings_view::control("open-recycle-bin", "Open", p, cx)
+                                .h(BUTTON_HEIGHT)
+                                .on_click(|_, _, cx| cx.open_url("shell:RecycleBinFolder")),
+                        )
+                        .child(
+                            super::settings_view::control(
+                                "empty-recycle-bin",
+                                if emptying_bin { "Emptying…" } else { "Empty…" },
+                                p,
+                                cx,
+                            )
+                            .h(BUTTON_HEIGHT)
+                            .disabled(busy)
+                            .on_click(cx.listener(move |this, _, window, cx| {
+                                this.ask_empty_recycle_bin(bytes, window, cx)
+                            })),
+                        ),
                 )
             } else {
                 line.cursor_pointer()
@@ -782,6 +904,7 @@ impl Seek {
                         .child(
                             div()
                                 .flex_1()
+                                .min_w_0()
                                 .text_size(TEXT_SMALL)
                                 .text_color(p.muted)
                                 .child(if suggestion.action == Action::Delete {
@@ -791,22 +914,24 @@ impl Seek {
                                 }),
                         )
                         .child(
-                            Button::new(("cleanup-recycle", index))
-                                .h(BUTTON_HEIGHT)
-                                .px_3()
-                                .rounded(RADIUS_CONTROL)
-                                .bg(p.text)
-                                .text_color(crate::appearance::modal_surface(p))
-                                .font_weight(FontWeight::MEDIUM)
-                                .disabled(count == 0 || self.files_pending != 0 || busy)
-                                .child(super::interface::button_text(if suggestion.action == Action::Delete {
-                                    format!("Delete {count} · {}", human(chosen))
-                                } else {
-                                    format!("Move {count} to Recycle Bin · {}", human(chosen))
-                                }))
-                                .on_click(cx.listener(move |this, _, window, cx| {
-                                    this.clean_suggestion(index, window, cx)
-                                })),
+                            div().flex_shrink_0().child(
+                                Button::new(("cleanup-recycle", index))
+                                    .h(BUTTON_HEIGHT)
+                                    .px_3()
+                                    .rounded(RADIUS_CONTROL)
+                                    .bg(p.text)
+                                    .text_color(crate::appearance::modal_surface(p))
+                                    .font_weight(FontWeight::MEDIUM)
+                                    .disabled(count == 0 || self.files_pending != 0 || busy)
+                                    .child(super::interface::button_text(if suggestion.action == Action::Delete {
+                                        format!("Delete {count} · {}", human(chosen))
+                                    } else {
+                                        format!("Move {count} to Recycle Bin · {}", human(chosen))
+                                    }))
+                                    .on_click(cx.listener(move |this, _, window, cx| {
+                                        this.clean_suggestion(index, window, cx)
+                                    })),
+                            ),
                         ),
                 );
             }
@@ -820,6 +945,7 @@ impl Seek {
                     .child(
                         div()
                             .flex_1()
+                            .min_w_0()
                             .flex()
                             .flex_col()
                             .gap(px(2.))
@@ -832,9 +958,11 @@ impl Seek {
                             ),
                     )
                     .child(
-                        super::settings_view::control("open-storage-sense", "Open", p, cx)
-                            .h(BUTTON_HEIGHT)
-                            .on_click(|_, _, cx| cx.open_url("ms-settings:storagepolicies")),
+                        div().flex_shrink_0().child(
+                            super::settings_view::control("open-storage-sense", "Open", p, cx)
+                                .h(BUTTON_HEIGHT)
+                                .on_click(|_, _, cx| cx.open_url("ms-settings:storagepolicies")),
+                        ),
                     ),
             );
         }

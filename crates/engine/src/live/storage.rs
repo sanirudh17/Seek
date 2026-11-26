@@ -111,136 +111,185 @@ impl Live {
         while scope.len() > 1 && scope.last() == Some(&b'/') {
             scope.pop();
         }
-        let Some(scope_dir) = self
+        let base_dir = self
             .base
             .lookup(&scope)
             .filter(|e| !self.is_dead(*e))
-            .and_then(|e| self.base.dir_of(e))
-        else {
+            .and_then(|e| self.base.dir_of(e));
+        let mut path = Vec::new();
+        let canonical_scope = if let Some(scope_dir) = base_dir {
+            self.base
+                .path(self.base.dir_entry()[scope_dir as usize] as usize, &mut path);
+            path.clone()
+        } else if self
+            .over
+            .get(&scope)
+            .is_some_and(|e| e.kind & 3 == walk::KIND_DIR)
+        {
+            scope.clone()
+        } else if let Some((found, _)) = self
+            .over
+            .iter()
+            .find(|(p, e)| e.kind & 3 == walk::KIND_DIR && crate::paths::cmp_ci(p, &scope).is_eq())
+        {
+            found.clone()
+        } else {
             out.stopped = Some("This folder isn't in the index yet".into());
             return out;
         };
-        let d_count = self.base.d;
-        let start = self.base.dir_start()[scope_dir as usize] as usize;
-        let end = self.base.dir_end()[scope_dir as usize] as usize;
-        // Folder categories and which direct child of the scope each folder
-        // is under, top-down (a parent folder always comes before its children).
-        let mut category = vec![NONE; d_count];
-        let mut top = vec![u32::MAX; d_count];
-        let mut drive = vec![false; d_count];
-        let mut path = Vec::new();
         // The scope's own ancestry decides its category (C:\Windows\x).
-        self.base.path(self.base.dir_entry()[scope_dir as usize] as usize, &mut path);
         let mut inherited = NONE;
         let mut parent_is_drive = false;
-        for part in path.split(|b| *b == b'/').filter(|p| !p.is_empty()) {
+        for part in canonical_scope.split(|b| *b == b'/').filter(|p| !p.is_empty()) {
             let own = folder_category(part, parent_is_drive);
             if own != NONE {
                 inherited = own;
             }
             parent_is_drive = part.ends_with(b":");
         }
-        category[scope_dir as usize] = inherited;
-        drive[scope_dir as usize] = parent_is_drive;
-        let mut child_bytes: Vec<u64> = vec![0; d_count];
-        for d in 1..d_count {
-            let parent = self.base.dir_parent()[d] as usize;
-            let entry = self.base.dir_entry()[d] as usize;
-            if entry < start || entry >= end {
-                continue;
-            }
-            let name = self.base.name(entry);
-            drive[d] = name.ends_with(b":");
-            let own = folder_category(name, drive[parent]);
-            category[d] = if own != NONE { own } else { category[parent] };
-            top[d] = if parent == scope_dir as usize {
-                d as u32
-            } else {
-                top[parent]
-            };
-        }
-        for (n, i) in (start..end).enumerate() {
-            if n % 65_536 == 0 {
-                if cancel.load(Ordering::Relaxed) {
-                    out.stopped = Some("Stopped".into());
-                    break;
-                }
-                if Instant::now() > deadline {
-                    out.stopped = Some("Took too long; showing what was measured".into());
-                    break;
-                }
-            }
-            let (kind, size, _) = self.attributes(i);
-            if kind & 3 != walk::KIND_FILE || self.is_dead(i as u32) || kind & walk::FLAG_SYNTH != 0
-            {
-                continue;
-            }
-            let dir = self.base.parent()[i] as usize;
-            let mut cat = category[dir];
-            if kind & walk::FLAG_CLOUD != 0 {
-                cat = CLOUD;
-            }
-            if cat == NONE {
-                cat = file_category(self.base.name(i));
-            }
-            out.bytes += size;
-            out.files += 1;
-            out.on_disk += on_disk(size, cluster, kind);
-            out.categories[cat as usize].0 += size;
-            out.categories[cat as usize].1 += 1;
-            if dir == scope_dir as usize {
-                out.here += size;
-            } else if top[dir] != u32::MAX {
-                child_bytes[top[dir] as usize] += size;
-            }
-        }
-        // Recent changes not yet folded into the index.
-        let mut overlay_children = std::collections::HashMap::<Vec<u8>, u64>::new();
-        for (p, e) in &self.over {
-            if e.kind & 3 != walk::KIND_FILE || !p.starts_with(&scope) {
-                continue;
-            }
-            let rest = &p[scope.len()..];
-            if !rest.starts_with(b"/") {
-                continue;
-            }
-            let parts: Vec<&[u8]> = rest.split(|b| *b == b'/').filter(|c| !c.is_empty()).collect();
-            let mut cat = category[scope_dir as usize];
-            let mut above_drive = drive[scope_dir as usize];
-            for part in parts.iter().take(parts.len().saturating_sub(1)) {
-                let own = folder_category(part, above_drive);
-                if own != NONE {
-                    cat = own;
-                }
-                above_drive = part.ends_with(b":");
-            }
-            if e.kind & walk::FLAG_CLOUD != 0 {
-                cat = CLOUD;
-            }
-            if cat == NONE {
-                cat = file_category(parts.last().copied().unwrap_or(b""));
-            }
-            out.bytes += e.size;
-            out.files += 1;
-            out.on_disk += on_disk(e.size, cluster, e.kind);
-            out.categories[cat as usize].0 += e.size;
-            out.categories[cat as usize].1 += 1;
-            if parts.len() > 1 {
-                let mut child = scope.clone();
-                child.push(b'/');
-                child.extend_from_slice(parts[0]);
-                *overlay_children.entry(child).or_default() += e.size;
-            } else {
-                out.here += e.size;
-            }
-        }
         let mut children: Vec<(Vec<u8>, u64)> = vec![];
-        for d in self.base.children(scope_dir) {
-            if let Some(dir) = self.base.dir_of(d as u32)
-                && !self.is_dead(d as u32)
-            {
-                self.base.path(d, &mut path);
-                children.push((path.clone(), child_bytes[dir as usize]));
+        if let Some(scope_dir) = base_dir {
+            let d_count = self.base.d;
+            let start = self.base.dir_start()[scope_dir as usize] as usize;
+            let end = self.base.dir_end()[scope_dir as usize] as usize;
+            // Folder categories and which direct child of the scope each folder
+            // is under, top-down (a parent folder always comes before its children).
+            let mut category = vec![NONE; d_count];
+            let mut top = vec![u32::MAX; d_count];
+            let mut drive = vec![false; d_count];
+            category[scope_dir as usize] = inherited;
+            drive[scope_dir as usize] = parent_is_drive;
+            let mut child_bytes: Vec<u64> = vec![0; d_count];
+            for d in 1..d_count {
+                let parent = self.base.dir_parent()[d] as usize;
+                let entry = self.base.dir_entry()[d] as usize;
+                if entry < start || entry >= end {
+                    continue;
+                }
+                let name = self.base.name(entry);
+                drive[d] = name.ends_with(b":");
+                let own = folder_category(name, drive[parent]);
+                category[d] = if own != NONE { own } else { category[parent] };
+                top[d] = if parent == scope_dir as usize {
+                    d as u32
+                } else {
+                    top[parent]
+                };
+            }
+            for (n, i) in (start..end).enumerate() {
+                if n % 65_536 == 0 {
+                    if cancel.load(Ordering::Relaxed) {
+                        out.stopped = Some("Stopped".into());
+                        break;
+                    }
+                    if Instant::now() > deadline {
+                        out.stopped = Some("Took too long; showing what was measured".into());
+                        break;
+                    }
+                }
+                let (kind, size, _) = self.attributes(i);
+                if kind & 3 != walk::KIND_FILE
+                    || self.is_dead(i as u32)
+                    || kind & walk::FLAG_SYNTH != 0
+                {
+                    continue;
+                }
+                let dir = self.base.parent()[i] as usize;
+                let mut cat = category[dir];
+                if kind & walk::FLAG_CLOUD != 0 {
+                    cat = CLOUD;
+                }
+                if cat == NONE {
+                    cat = file_category(self.base.name(i));
+                }
+                out.bytes += size;
+                out.files += 1;
+                out.on_disk += on_disk(size, cluster, kind);
+                out.categories[cat as usize].0 += size;
+                out.categories[cat as usize].1 += 1;
+                if dir == scope_dir as usize {
+                    out.here += size;
+                } else if top[dir] != u32::MAX {
+                    child_bytes[top[dir] as usize] += size;
+                }
+            }
+            for d in self.base.children(scope_dir) {
+                if let Some(dir) = self.base.dir_of(d as u32)
+                    && !self.is_dead(d as u32)
+                {
+                    self.base.path(d, &mut path);
+                    children.push((path.clone(), child_bytes[dir as usize]));
+                }
+            }
+        }
+        // Recent changes (or a folder / drive whose subtree was moved into the
+        // overlay by a recursive relist or watcher overflow) under this scope.
+        let mut overlay_children = std::collections::HashMap::<Vec<u8>, u64>::new();
+        if out.stopped.is_none() {
+            let (lo, hi) = subtree_bounds(&canonical_scope);
+            let prefix_len = canonical_scope.len();
+            for (n, (p, e)) in self.over.range(lo..hi).enumerate() {
+                if n % 65_536 == 0 {
+                    if cancel.load(Ordering::Relaxed) {
+                        out.stopped = Some("Stopped".into());
+                        break;
+                    }
+                    if Instant::now() > deadline {
+                        out.stopped = Some("Took too long; showing what was measured".into());
+                        break;
+                    }
+                }
+                if e.kind & walk::FLAG_SYNTH != 0 {
+                    continue;
+                }
+                let rest = &p[prefix_len..];
+                if !rest.starts_with(b"/") {
+                    continue;
+                }
+                let parts: Vec<&[u8]> = rest
+                    .split(|b| *b == b'/')
+                    .filter(|c| !c.is_empty())
+                    .collect();
+                if parts.is_empty() {
+                    continue;
+                }
+                if e.kind & 3 == walk::KIND_DIR {
+                    if parts.len() == 1 {
+                        overlay_children.entry(p.clone()).or_default();
+                    }
+                    continue;
+                }
+                if e.kind & 3 != walk::KIND_FILE {
+                    continue;
+                }
+                let mut cat = inherited;
+                let mut above_drive = parent_is_drive;
+                for part in parts.iter().take(parts.len().saturating_sub(1)) {
+                    let own = folder_category(part, above_drive);
+                    if own != NONE {
+                        cat = own;
+                    }
+                    above_drive = part.ends_with(b":");
+                }
+                if e.kind & walk::FLAG_CLOUD != 0 {
+                    cat = CLOUD;
+                }
+                if cat == NONE {
+                    cat = file_category(parts.last().copied().unwrap_or(b""));
+                }
+                out.bytes += e.size;
+                out.files += 1;
+                out.on_disk += on_disk(e.size, cluster, e.kind);
+                out.categories[cat as usize].0 += e.size;
+                out.categories[cat as usize].1 += 1;
+                if parts.len() > 1 {
+                    let mut child = canonical_scope.clone();
+                    child.push(b'/');
+                    child.extend_from_slice(parts[0]);
+                    *overlay_children.entry(child).or_default() += e.size;
+                } else {
+                    out.here += e.size;
+                }
             }
         }
         for (child, bytes) in overlay_children {
@@ -252,7 +301,7 @@ impl Live {
                 None => children.push((child, bytes)),
             }
         }
-        children.sort_by_key(|c| std::cmp::Reverse(c.1));
+        children.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| crate::paths::cmp_ci(&a.0, &b.0)));
         out.children = children
             .into_iter()
             .map(|(p, b)| (crate::paths::native(&p), b))
@@ -344,5 +393,65 @@ mod tests {
         // Bounded: a cancelled pass says so.
         let stopped = live.storage(b"/C:", 4096, never, &AtomicBool::new(true));
         assert_eq!(stopped.stopped.as_deref(), Some("Stopped"));
+    }
+
+    #[test]
+    fn storage_measures_drive_and_subfolders_after_recursive_overlay_replacement() {
+        const N: u32 = crate::walk::NONE;
+        let d = walk::KIND_DIR;
+        let f = walk::KIND_FILE;
+        let mut live = Live::new(crate::index::Index::build(
+            vec![
+                listing(0, &[("C:", d, 0, 1)]),
+                listing(1, &[("Users", d, 0, 2)]),
+                listing(2, &[("old.bin", f, 999, N)]),
+            ],
+            0,
+            0,
+            &[],
+        ));
+        // Simulate a watcher overflow (e.g. after deleting 195k cache files):
+        // `/C:` is killed in `base` and its replacement tree lives in `over`.
+        let replacement = vec![
+            listing(0, &[("Windows", d, 0, 1), ("Users", d, 0, 2), ("Empty", d, 0, 3)]),
+            listing(1, &[("kernel.dll", f, 120, N)]),
+            listing(2, &[("photo.jpg", f, 80, N), ("doc.pdf", f, 40, N)]),
+            listing(3, &[]),
+        ];
+        live.apply(Fetched {
+            path: b"/C:".to_vec(),
+            recursive: true,
+            blocked: false,
+            attrs: Some(OEnt::new(b"/C:", d, 0, 0)),
+            listing: None,
+            scans: [(b"/C:".to_vec(), replacement)].into(),
+        });
+        let never = Instant::now() + std::time::Duration::from_secs(60);
+        let s = live.storage(b"/C:", 4096, never, &AtomicBool::new(false));
+        assert_eq!(s.stopped, None, "overlay drive root must measure without stalling");
+        assert_eq!(s.bytes, 240);
+        assert_eq!(s.files, 3);
+        assert_eq!(s.categories[WINDOWS as usize], (120, 1));
+        assert_eq!(s.categories[PICTURES as usize], (80, 1));
+        assert_eq!(s.categories[DOCUMENTS as usize], (40, 1));
+        let names: Vec<_> = s
+            .children
+            .iter()
+            .map(|(p, b)| (p.file_name().unwrap().to_string_lossy().into_owned(), *b))
+            .collect();
+        assert_eq!(
+            names,
+            [
+                ("Users".into(), 120),
+                ("Windows".into(), 120),
+                ("Empty".into(), 0),
+            ]
+        );
+        // Drilling into an overlay-only subfolder also works (and matches case-insensitively).
+        let windows = live.storage(b"/c:/windows", 4096, never, &AtomicBool::new(false));
+        assert_eq!(windows.stopped, None);
+        assert_eq!(windows.bytes, 120);
+        assert_eq!(windows.here, 120);
+        assert_eq!(windows.categories[WINDOWS as usize], (120, 1));
     }
 }

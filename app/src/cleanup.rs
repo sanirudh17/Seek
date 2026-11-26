@@ -53,7 +53,29 @@ const TEMP_AGE: Duration = Duration::from_secs(24 * 3600);
 const DOWNLOAD_AGE: Duration = Duration::from_secs(30 * 24 * 3600);
 /// A repository untouched this long has its build folders offered.
 pub const STALE_REPO: Duration = Duration::from_secs(90 * 24 * 3600);
-const BUILD_FOLDERS: [&str; 6] = ["node_modules", "target", ".venv", "dist", "build", ".next"];
+const BUILD_FOLDERS: [&str; 21] = [
+    "node_modules",
+    "target",
+    ".venv",
+    "dist",
+    "build",
+    ".next",
+    "__pycache__",
+    ".nuxt",
+    ".svelte-kit",
+    ".turbo",
+    ".parcel-cache",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".dart_tool",
+    "out",
+    "bin",
+    "obj",
+    "coverage",
+    ".angular",
+    "storybook-static",
+];
 /// Items smaller than this aren't worth a line.
 const MIN_ITEM: u64 = 4 << 10;
 /// How long a whole look may take, and how many entries one folder walk reads.
@@ -140,29 +162,108 @@ const SPOTS: &[Spot] = &[
     spot(Developer, Local, r"Microsoft\TypeScript"),
     spot(Developer, Local, r"node\corepack"),
     spot(Developer, Home, r".dotnet\toolResolverCache"),
+    spot(Developer, Local, r"npm-cache\_npx"),
+    spot(Developer, Local, r"Yarn\Berry\cache"),
+    spot(Developer, Local, r"Yarn\Data\cache"),
+    spot(Developer, Local, r"Cypress\Cache"),
+    spot(Developer, Local, r"Pub\Cache"),
+    spot(Developer, Local, r"Vcpkg\archives"),
+    spot(Developer, Local, r"sccache"),
+    spot(Developer, Local, r"Mozilla\sccache"),
+    spot(Developer, Local, r"Zig"),
+    spot(Developer, Local, r"Android\Sdk\temp"),
+    spot(Developer, Home, r".android\cache"),
+    spot(Developer, Home, r".android\build-cache"),
+    spot(Developer, Local, r"SymbolCache"),
+    spot(Developer, Local, r"Microsoft\VisualStudio\*\ComponentModelCache"),
+    spot(Developer, Local, r"Microsoft\VisualStudio\*\Roslyn\Cache"),
+    spot(Developer, Local, r"Ruff\cache"),
+    spot(Developer, Local, r"mypy"),
+    spot(Developer, Local, r"hatch\cache"),
+    spot(Developer, Local, r"pdm\Cache"),
+    spot(Developer, Local, r"pipenv\Cache"),
+    spot(Developer, Local, r"mamba\pkgs"),
+    spot(Developer, Home, r".mamba\pkgs"),
+    spot(Developer, Local, r"Coursier\cache"),
+    spot(Developer, Home, r".ivy2\cache"),
+    spot(Developer, Local, r"esbuild"),
+    spot(Developer, Local, r"turbo"),
+    spot(Developer, Local, r"swc"),
+    spot(Developer, Local, r"tsx"),
+    spot(Developer, Local, r"Biome"),
+    spot(Developer, Local, r"vite"),
+    spot(Developer, Home, r".cache\pip"),
+    spot(Developer, Home, r".cache\uv"),
+    spot(Developer, Home, r".cache\yarn"),
+    spot(Developer, Home, r".cache\node"),
+    spot(Developer, Home, r".cache\ms-playwright"),
+    spot(Developer, Home, r".cache\turbo"),
+    spot(Developer, Home, r".cache\zig"),
+    spot(Developer, Home, r".cache\sccache"),
+    spot(Developer, Home, r".cache\ccache"),
+    spot(Developer, Home, r".cache\go-build"),
+    spot(Developer, Home, r".cache\cypress"),
+    spot(Developer, Home, r".cache\electron"),
+    spot(Developer, Home, r".cache\electron-builder"),
+    spot(Developer, Home, r".cache\prisma"),
     // Downloaded models: large, and slow to download again.
     // The downloaded models only: .cache\huggingface also keeps the sign-in
     // token, which must never go.
     spot(Models, Home, r".cache\huggingface\hub"),
     spot(Models, Home, r".cache\huggingface\xet"),
+    spot(Models, Home, r".cache\huggingface\datasets"),
     spot(Models, Home, r".cache\torch"),
+    spot(Models, Home, r".cache\whisper"),
     // Editors and chat apps rebuild these on the next start.
     spot(Apps, Roaming, r"Code\Cache"),
     spot(Apps, Roaming, r"Code\CachedData"),
     spot(Apps, Roaming, r"Code\CachedExtensionVSIXs"),
     spot(Apps, Roaming, r"Code\Code Cache"),
     spot(Apps, Roaming, r"Code\GPUCache"),
+    spot(Apps, Roaming, r"Code - Insiders\Cache"),
+    spot(Apps, Roaming, r"Code - Insiders\CachedData"),
+    spot(Apps, Roaming, r"Code - Insiders\CachedExtensionVSIXs"),
+    spot(Apps, Roaming, r"Code - Insiders\Code Cache"),
+    spot(Apps, Roaming, r"Code - Insiders\GPUCache"),
     spot(Apps, Roaming, r"Cursor\Cache"),
     spot(Apps, Roaming, r"Cursor\CachedData"),
     spot(Apps, Roaming, r"Cursor\Code Cache"),
+    spot(Apps, Roaming, r"Windsurf\Cache"),
+    spot(Apps, Roaming, r"Windsurf\CachedData"),
+    spot(Apps, Roaming, r"Windsurf\Code Cache"),
+    spot(Apps, Roaming, r"Windsurf\GPUCache"),
+    spot(Apps, Roaming, r"Antigravity\Cache"),
+    spot(Apps, Roaming, r"Antigravity\CachedData"),
+    spot(Apps, Roaming, r"Antigravity\Code Cache"),
+    spot(Apps, Roaming, r"Antigravity\GPUCache"),
     spot(Apps, Roaming, r"discord\Cache"),
     spot(Apps, Roaming, r"discord\Code Cache"),
     spot(Apps, Roaming, r"Slack\Cache"),
     spot(Apps, Roaming, r"Slack\Code Cache"),
     spot(Apps, Roaming, r"Microsoft\Teams\Cache"),
     spot(Apps, Local, r"Spotify\Data"),
+    spot(Apps, Local, r"Spotify\Storage"),
+    spot(Apps, Roaming, r"Adobe\Common\Media Cache Files"),
+    spot(Apps, Roaming, r"Adobe\Common\Media Cache"),
+    spot(Apps, Roaming, r"Adobe\Common\Peak Files"),
+    spot(Apps, Local, r"CapCut\User Data\Cache"),
+    spot(Apps, Local, r"Steam\htmlcache\Cache"),
+    spot(Apps, Local, r"Steam\htmlcache\Code Cache"),
+    spot(Apps, Local, r"Steam\htmlcache\GPUCache"),
+    spot(Apps, Local, r"EpicGamesLauncher\Saved\webcache"),
+    spot(Apps, Local, r"EpicGamesLauncher\Saved\webcache_4430"),
+    spot(Apps, Local, r"Battle.net\Cache"),
+    spot(Apps, Local, r"Riot Games\Riot Client\Data\Cache"),
+    spot(Apps, Local, r"UnrealEngine\Common\DerivedDataCache"),
+    spot(Apps, Local, r"Unity\cache"),
+    spot(Apps, Local, r"Blender Foundation\Blender\*\cache"),
     spot(Apps, Local, r"Packages\*\LocalCache\Microsoft\MSTeams\EBWebView\*\Cache"),
     spot(Apps, Local, r"Packages\*\LocalCache\Microsoft\MSTeams\EBWebView\*\Code Cache"),
+    spot(Apps, Local, r"Packages\*\TempState"),
+    spot(Apps, Local, r"Packages\*\AC\Temp"),
+    spot(Apps, Local, r"Microsoft\EdgeWebView\User Data\*\Cache"),
+    spot(Apps, Local, r"Microsoft\EdgeWebView\User Data\*\Code Cache"),
+    spot(Apps, Local, r"Microsoft\EdgeWebView\User Data\*\GPUCache"),
     // Store apps' web caches and Windows' own internet cache.
     spot(Apps, Local, r"Packages\*\AC\INetCache"),
     spot(Apps, Local, r"Microsoft\Windows\INetCache"),
@@ -171,6 +272,9 @@ const SPOTS: &[Spot] = &[
     spot(Apps, Local, r"NVIDIA Corporation\*\CefCache"),
     // Old update packages an app already installed.
     spot(Leftovers, Roaming, r"Telegram Desktop\tupdates"),
+    spot(Leftovers, Local, r"Microsoft\EdgeUpdate\Download"),
+    spot(Leftovers, Local, r"Google\Update\Download"),
+    spot(Leftovers, Local, r"BraveSoftware\Update\Download"),
     // Browser caches, per profile.
     spot(Browsers, Local, r"Google\Chrome\User Data\*\Cache"),
     spot(Browsers, Local, r"Google\Chrome\User Data\*\Code Cache"),
@@ -179,6 +283,12 @@ const SPOTS: &[Spot] = &[
     spot(Browsers, Local, r"BraveSoftware\Brave-Browser\User Data\*\Cache"),
     spot(Browsers, Local, r"BraveSoftware\Brave-Browser\User Data\*\Code Cache"),
     spot(Browsers, Local, r"Mozilla\Firefox\Profiles\*\cache2"),
+    spot(Browsers, Local, r"Mozilla\Firefox\Profiles\*\startupCache"),
+    spot(Browsers, Local, r"Mozilla\Firefox\Profiles\*\jumpListCache"),
+    spot(Browsers, Local, r"Mozilla\Firefox\Profiles\*\thumbnails"),
+    spot(Browsers, Local, r"Zen\Profiles\*\cache2"),
+    spot(Browsers, Local, r"LibreWolf\Profiles\*\cache2"),
+    spot(Browsers, Local, r"Waterfox\Profiles\*\cache2"),
     spot(Browsers, Local, r"Google\Chrome\User Data\*\Service Worker\CacheStorage"),
     spot(Browsers, Local, r"Google\Chrome\User Data\*\GPUCache"),
     spot(Browsers, Local, r"Google\Chrome\User Data\GrShaderCache"),
@@ -213,6 +323,13 @@ const SPOTS: &[Spot] = &[
     spot(Crashes, Local, r"Microsoft\Windows\WER\ReportQueue"),
     spot(Crashes, Local, r"Microsoft\Windows\WER\Temp"),
     spot(Crashes, Local, r"npm-cache\_logs"),
+    spot(Crashes, Local, r"EpicGamesLauncher\Saved\Crashes"),
+    // Logs apps rotate on their own.
+    spot(Logs, Local, r"Docker\log"),
+    spot(Logs, Local, r"EpicGamesLauncher\Saved\Logs"),
+    spot(Logs, Local, r"Battle.net\Logs"),
+    spot(Logs, Local, r"Riot Games\Riot Client\Logs"),
+    spot(Logs, Home, r".gradle\daemon"),
     // What installers and updaters leave behind.
     spot(Leftovers, Local, r"SquirrelTemp"),
     spot(Leftovers, Local, r"Downloaded Installations"),
@@ -243,13 +360,13 @@ const PROFILE_SKIP: [&str; 8] = [
 /// Under Microsoft: Windows' own folders and Office, OneDrive and WinGet.
 const MICROSOFT_SKIP: [&str; 7] = ["windows", "office", "winget", "windowsapps", "onedrive", "outlook", "credentials"];
 
-/// Browser and app caches found by shape rather than by name, so any
-/// Chromium browser or Electron/WebView2 app is covered: a folder holding
-/// `Code Cache` or `GPUCache` is a profile, and a folder holding a
-/// `Local State` file is a Chromium browser. A folder merely called
-/// "Cache" in some other app is never offered. Each path comes with
-/// whether it belongs to a browser.
-fn profile_caches(home: &Path) -> Vec<(PathBuf, bool)> {
+/// Browser and app caches (plus Chromium/Electron `Crashpad\reports` dumps)
+/// found by shape rather than by name, so any Chromium browser or
+/// Electron/WebView2 app is covered: a folder holding `Code Cache` or
+/// `GPUCache` is a profile, and a folder holding a `Local State` file is a
+/// Chromium browser. A folder merely called "Cache" in some other app is never
+/// offered.
+fn profile_caches(home: &Path) -> Vec<(Group, PathBuf)> {
     let mut out = vec![];
     let mut stack: Vec<(PathBuf, usize)> = ["Local", "LocalLow", "Roaming"]
         .iter()
@@ -264,22 +381,27 @@ fn profile_caches(home: &Path) -> Vec<(PathBuf, bool)> {
             .ancestors()
             .any(|a| a.file_name().is_some_and(|n| n.eq_ignore_ascii_case("User Data")))
             || dir.to_string_lossy().contains("Opera Software");
+        let crashpad = dir.join("Crashpad").join("reports");
+        if depth > 0 && is_plain_dir(&crashpad) {
+            out.push((Crashes, crashpad));
+        }
         if dir.join("Local State").is_file() {
             out.extend(
                 BROWSER_CACHES
                     .iter()
                     .map(|c| dir.join(c))
                     .filter(|p| is_plain_dir(p))
-                    .map(|p| (p, true)),
+                    .map(|p| (Browsers, p)),
             );
         }
         if depth > 0 && (is_plain_dir(&dir.join("Code Cache")) || is_plain_dir(&dir.join("GPUCache"))) {
+            let group = if browser { Browsers } else { Apps };
             out.extend(
                 PROFILE_CACHES
                     .iter()
                     .map(|c| dir.join(c))
                     .filter(|p| is_plain_dir(p))
-                    .map(|p| (p, browser)),
+                    .map(|p| (group, p)),
             );
             continue;
         }
@@ -391,10 +513,24 @@ fn repo_touched(repo: &Path) -> Option<SystemTime> {
         .max()
 }
 
-/// Folders that only ever hold what a tool generated. `target`, `dist` and
-/// `build` are also ordinary folder names some projects keep source in, so
-/// those count only when the repository's .gitignore ignores them.
-const ALWAYS_GENERATED: [&str; 3] = ["node_modules", ".venv", ".next"];
+/// Folders that only ever hold what a tool generated. `target`, `dist`,
+/// `build`, `out`, `bin`, `obj` and similar names may hold source in some
+/// projects, so those count only when the repository's `.gitignore` ignores
+/// them.
+const ALWAYS_GENERATED: [&str; 12] = [
+    "node_modules",
+    ".venv",
+    ".next",
+    "__pycache__",
+    ".nuxt",
+    ".svelte-kit",
+    ".turbo",
+    ".parcel-cache",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".dart_tool",
+];
 
 /// Whether the repository's top-level .gitignore ignores `name` there.
 fn ignored_by_git(repo: &Path, name: &str) -> bool {
@@ -564,11 +700,7 @@ pub fn suggest(
         .iter()
         .flat_map(|spot| expand(home, spot).into_iter().map(move |p| (spot.group, p)))
         .collect();
-    spots.extend(
-        profile_caches(home)
-            .into_iter()
-            .map(|(p, browser)| (if browser { Browsers } else { Apps }, p)),
-    );
+    spots.extend(profile_caches(home));
     spots.extend(app_logs(home).into_iter().map(|p| (Logs, p)));
     let next = std::sync::atomic::AtomicUsize::new(0);
     let sized = std::sync::Mutex::new(Vec::new());
@@ -620,7 +752,11 @@ pub fn suggest(
             if !older_than(&path, TEMP_AGE, now) {
                 continue;
             }
-            let bytes = size(engine, &path, deadline, cancel);
+            let bytes = match std::fs::symlink_metadata(&path) {
+                Ok(m) if !m.is_dir() => m.len(),
+                Ok(_) => size(engine, &path, deadline, cancel),
+                Err(_) => 0,
+            };
             if bytes > 0 {
                 temp_items.push((path, bytes));
             }
@@ -739,7 +875,7 @@ pub fn suggest(
     if !builds.is_empty() {
         out.push(Suggestion {
             title: "Build folders in old projects".into(),
-            detail: "node_modules, target, .venv, dist, build and .next in repositories untouched for 90 days".into(),
+            detail: "Generated build, dependency and cache folders (node_modules, target, .venv, dist, .next, __pycache__ and others) in repositories untouched for 90 days".into(),
             note: Some("Rebuilt the next time you build the project".into()),
             action: Action::Delete,
             items: without_nested(builds),
@@ -859,7 +995,15 @@ pub fn delete(paths: &[PathBuf], cancel: &AtomicBool, progress: &Progress) {
             }
         });
     };
-    match rayon::ThreadPoolBuilder::new().num_threads(8).build() {
+    // Bound concurrency and use low background CPU/I/O QoS so deleting
+    // hundreds of thousands of cache files stays fast without lagging the PC.
+    let workers = std::thread::available_parallelism()
+        .map_or(2, |n| (n.get() / 2).clamp(2, 4));
+    match rayon::ThreadPoolBuilder::new()
+        .num_threads(workers)
+        .start_handler(|_| seek_engine::qos::utility())
+        .build()
+    {
         Ok(pool) => pool.install(work),
         Err(_) => work(),
     }
@@ -881,6 +1025,10 @@ pub fn delete(paths: &[PathBuf], cancel: &AtomicBool, progress: &Progress) {
     }
 }
 
+/// Ensures two Recycle Bin empty calls can never collide and spawn Windows
+/// "Item Not Found" error dialogs.
+static RECYCLE_EMPTYING: AtomicBool = AtomicBool::new(false);
+
 /// Bytes in the Recycle Bin on all drives.
 pub fn recycle_bin_bytes() -> Option<u64> {
     use windows::Win32::UI::Shell::{SHQUERYRBINFO, SHQueryRecycleBinW};
@@ -892,20 +1040,111 @@ pub fn recycle_bin_bytes() -> Option<u64> {
     Some(info.i64Size.max(0) as u64)
 }
 
-/// Empties the Recycle Bin on all drives. Permanent: only after the person
-/// confirmed it in Seek's own dialog.
-pub fn empty_recycle_bin() -> Result<(), String> {
+/// Top-level items inside the current user's `$Recycle.Bin\<SID>` folders across
+/// all fixed and removable drives, never including `desktop.ini`.
+fn user_recycle_bin_items() -> Vec<PathBuf> {
+    use windows_sys::Win32::Storage::FileSystem::{GetDriveTypeW, GetLogicalDrives};
+    let Ok(sid) = seek_engine::helper::user_sid() else {
+        return vec![];
+    };
+    let mask = unsafe { GetLogicalDrives() };
+    let mut items = vec![];
+    for i in 0..26u8 {
+        if mask & (1 << i) == 0 {
+            continue;
+        }
+        let root = format!("{}:\\", (b'A' + i) as char);
+        let wide: Vec<u16> = root.encode_utf16().chain(Some(0)).collect();
+        if !matches!(unsafe { GetDriveTypeW(wide.as_ptr()) }, 2 | 3) {
+            continue;
+        }
+        let bin = PathBuf::from(&root).join("$Recycle.Bin").join(&sid);
+        let Ok(entries) = std::fs::read_dir(&bin) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            if name.eq_ignore_ascii_case("desktop.ini") {
+                continue;
+            }
+            items.push(entry.path());
+        }
+    }
+    items
+}
+
+/// Notifies Windows Shell that the Recycle Bin changed so the Desktop icon
+/// and Explorer views refresh immediately without any Shell dialogs.
+fn notify_recycle_bin_changed() {
+    use windows::Win32::{
+        System::Com::CoTaskMemFree,
+        UI::Shell::{
+            FOLDERID_RecycleBinFolder, KF_FLAG_DEFAULT, SHCNF_IDLIST, SHCNE_UPDATEDIR,
+            SHCNE_UPDATEITEM, SHChangeNotify, SHGetKnownFolderIDList,
+        },
+    };
+    unsafe {
+        if let Ok(pidl) =
+            SHGetKnownFolderIDList(&FOLDERID_RecycleBinFolder, KF_FLAG_DEFAULT.0 as u32, None)
+        {
+            SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_IDLIST, Some(pidl.cast()), None);
+            SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_IDLIST, Some(pidl.cast()), None);
+            CoTaskMemFree(Some(pidl.cast()));
+        }
+    }
+}
+
+/// Empties the Recycle Bin on all drives with live progress, low background
+/// I/O priority, single-flight protection, and no Windows Shell popup dialogs.
+/// Permanent: only call after explicit confirmation.
+pub fn empty_recycle_bin_with_progress(
+    cancel: &AtomicBool,
+    progress: &Progress,
+) -> Result<(), String> {
     use windows::Win32::UI::Shell::{
         SHERB_NOCONFIRMATION, SHERB_NOPROGRESSUI, SHERB_NOSOUND, SHEmptyRecycleBinW,
     };
-    unsafe {
-        SHEmptyRecycleBinW(
-            None,
-            windows::core::PCWSTR::null(),
-            SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND,
-        )
+    if RECYCLE_EMPTYING.swap(true, Ordering::AcqRel) {
+        return Ok(());
     }
-    .map_err(|e| e.message().to_string())
+    struct Guard;
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            RECYCLE_EMPTYING.store(false, Ordering::Release);
+        }
+    }
+    let _guard = Guard;
+
+    // Fast, silent, non-blocking parallel removal of the current user's own
+    // `$Recycle.Bin\<SID>` entries (skipping `desktop.ini`, never following
+    // reparse points, and never showing Windows "Item Not Found" popups).
+    let items = user_recycle_bin_items();
+    if !items.is_empty() {
+        delete(&items, cancel, progress);
+    }
+    notify_recycle_bin_changed();
+    if cancel.load(Ordering::Relaxed) {
+        return Ok(());
+    }
+    // Only fall back to Shell if something remains on a drive we couldn't
+    // address directly (e.g. a redirected/mounted volume), and ignore the
+    // benign E_UNEXPECTED Shell returns when the bin is already empty.
+    if recycle_bin_bytes().unwrap_or(0) > 0 {
+        let res = unsafe {
+            SHEmptyRecycleBinW(
+                None,
+                windows::core::PCWSTR::null(),
+                SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND,
+            )
+        };
+        notify_recycle_bin_changed();
+        if let Err(err) = res
+            && recycle_bin_bytes().unwrap_or(0) > 0
+        {
+            return Err(err.message().to_string());
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

@@ -215,6 +215,15 @@ pub(super) fn initial(
                     let _ = reply.send(result);
                     continue;
                 }
+                Change::ShutdownCheckpoint(reply) => {
+                    let result = if shared.live.read().unwrap().is_some() {
+                        save_shutdown(shared, dir)
+                    } else {
+                        Ok(())
+                    };
+                    let _ = reply.send(result);
+                    continue;
+                }
                 Change::Opened(path) => {
                     record_open(shared, dir, path)?;
                     continue;

@@ -18,6 +18,11 @@ pub(super) struct StoragePage {
     measuring: bool,
     cancel: Arc<AtomicBool>,
     generation: u64,
+    /// Animation keys: only advance when the drive or scope changes (or when
+    /// category data first arrives), never on background refreshes or retries
+    /// (which previously replayed the bar entrance every 2 seconds).
+    drive_anim: u64,
+    bar_anim: u64,
     /// The page's scroll, and whether to bring Find duplicates (at the
     /// bottom) into view once the measurement has laid the page out.
     scroll: ScrollHandle,
@@ -30,19 +35,36 @@ pub(super) struct StoragePage {
 /// How long one measurement may run before it reports what it has.
 const DEADLINE: std::time::Duration = std::time::Duration::from_secs(5);
 
+/// Formats byte sizes to match Windows File Explorer (`StrFormatByteSizeEx`
+/// binary 1024-based units, truncated to three significant digits: e.g.
+/// `475 GB`, `87.8 GB`, `5.00 GB`, `488 KB`, `512 B`).
 pub(super) fn human(bytes: u64) -> String {
-    let b = bytes as f64;
-    if b >= 1e12 {
-        format!("{:.2} TB", b / 1e12)
-    } else if b >= 1e9 {
-        format!("{:.1} GB", b / 1e9)
-    } else if b >= 1e6 {
-        format!("{:.1} MB", b / 1e6)
-    } else if b >= 1e3 {
-        format!("{:.0} KB", b / 1e3)
-    } else {
-        format!("{bytes} B")
+    if bytes < 1024 {
+        return format!("{bytes} B");
     }
+    const UNITS: &[(u64, &str)] = &[
+        (1u64 << 40, "TB"),
+        (1u64 << 30, "GB"),
+        (1u64 << 20, "MB"),
+        (1u64 << 10, "KB"),
+    ];
+    for &(unit, suffix) in UNITS {
+        // Promote at 1000 of the previous unit (e.g. 1023 MB -> 0.99 GB),
+        // matching Windows Explorer's three-significant-digit display.
+        if bytes >= (unit / 1024) * 1000 {
+            let whole = bytes / unit;
+            return if whole >= 100 {
+                format!("{whole} {suffix}")
+            } else if whole >= 10 {
+                let tenths = ((bytes as u128 * 10) / unit as u128) as u64;
+                format!("{}.{} {suffix}", tenths / 10, tenths % 10)
+            } else {
+                let hundredths = ((bytes as u128 * 100) / unit as u128) as u64;
+                format!("{}.{:02} {suffix}", hundredths / 100, hundredths % 100)
+            };
+        }
+    }
+    format!("{bytes} B")
 }
 
 fn cluster_size(root: &std::path::Path) -> u64 {
@@ -119,11 +141,14 @@ impl Seek {
             measuring: false,
             cancel: Arc::new(AtomicBool::new(false)),
             generation: 0,
+            drive_anim: 1,
+            bar_anim: 1,
             scroll: ScrollHandle::new(),
             reveal_duplicates: false,
             reveal_results: false,
             _task: Task::ready(()),
         });
+        self.refresh_capacity(cx);
         self.measure_storage(drive, cx);
     }
 
@@ -175,6 +200,14 @@ impl Seek {
         page.cancel.store(true, Ordering::Relaxed);
         let cancel = Arc::new(AtomicBool::new(false));
         page.cancel = cancel.clone();
+        let scope_changed = !page
+            .scope
+            .as_os_str()
+            .eq_ignore_ascii_case(scope.as_os_str());
+        if scope_changed {
+            page.bar_anim += 1;
+            page.report = None;
+        }
         page.scope = scope.clone();
         page.measuring = true;
         page.generation += 1;
@@ -212,7 +245,20 @@ impl Seek {
                         && report.stopped.as_deref().is_some_and(|why| {
                             why == "The index is still loading" || why == "This folder isn't in the index yet"
                         });
-                    page.report = Some(report);
+                    // Keep the previous valid report for the same scope while
+                    // waiting for an index update so the folder list never
+                    // blanks out to "No folders here".
+                    let had_data = page
+                        .report
+                        .as_ref()
+                        .is_some_and(|prev| prev.stopped.is_none() && (prev.files > 0 || !prev.children.is_empty()));
+                    let now_has_data = report.stopped.is_none() && (report.files > 0 || !report.children.is_empty());
+                    if !had_data && now_has_data {
+                        page.bar_anim += 1;
+                    }
+                    if !(waiting && had_data) {
+                        page.report = Some(report);
+                    }
                     page.measuring = false;
                     if std::mem::take(&mut page.reveal_duplicates) {
                         page.scroll.scroll_to_bottom();
@@ -258,7 +304,7 @@ impl Seek {
             }
         }
         let drive_name = page.drive.to_string_lossy().trim_start_matches(r"\\?\").to_string();
-        let picker = super::settings_view::choice_control("storage-drive", drive_name, p, cx)
+        let picker = super::settings_view::choice_control("storage-drive", drive_name.clone(), p, cx)
             .h(BUTTON_HEIGHT)
             .w(px(180.))
             .dropdown_menu(move |menu, window, _| {
@@ -304,7 +350,8 @@ impl Seek {
         let measured: u64 = report.categories.iter().map(|(b, _)| *b).sum();
         let mut order: Vec<usize> = (0..CATEGORIES.len()).collect();
         order.sort_by(|a, b| report.categories[*b].0.cmp(&report.categories[*a].0));
-        let grow = page.generation;
+        let drive_anim = page.drive_anim;
+        let bar_anim = page.bar_anim;
         let motion_on = self.motion_enabled;
         let track = |h: f32| {
             div()
@@ -336,7 +383,7 @@ impl Seek {
         };
         let drive_bar = used.zip(capacity.as_ref()).map(|(used, c)| {
             track(6.).child(segment(
-                format!("storage-drive-{grow}"),
+                format!("storage-drive-{drive_name}-{drive_anim}"),
                 used as f32 / c.total.max(1) as f32,
                 p.text.opacity(0.55),
             ))
@@ -348,7 +395,7 @@ impl Seek {
                 continue;
             }
             bar = bar.child(segment(
-                format!("storage-bar-{grow}-{n}"),
+                format!("storage-bar-{bar_anim}-{n}"),
                 bytes as f32 / measured.max(1) as f32,
                 category_color(*index, p),
             ));
@@ -422,13 +469,17 @@ impl Seek {
             .child(
                 div()
                     .flex()
+                    .flex_wrap()
                     .items_baseline()
                     .justify_between()
+                    .gap_x_4()
+                    .gap_y_1()
                     .child(
                         div()
                             .flex()
                             .items_baseline()
                             .gap_3()
+                            .min_w_0()
                             .child(
                                 div()
                                     .text_size(TEXT_TITLE)
@@ -626,12 +677,27 @@ impl Seek {
                     .border_color(p.text.opacity(0.1))
                     .bg(p.settings_card)
                     .child(if report.children.is_empty() && !page.measuring {
+                        let empty = match report.stopped.as_deref() {
+                            Some("The index is still loading" | "This folder isn't in the index yet") => {
+                                "Updating folder sizes…"
+                            }
+                            Some(reason) => reason,
+                            None => "No folders here",
+                        };
                         div()
                             .py_6()
                             .text_center()
                             .text_size(TEXT_SMALL)
                             .text_color(p.muted)
-                            .child("No folders here")
+                            .child(empty.to_string())
+                            .into_any_element()
+                    } else if report.children.is_empty() && page.measuring {
+                        div()
+                            .py_6()
+                            .text_center()
+                            .text_size(TEXT_SMALL)
+                            .text_color(p.muted)
+                            .child("Measuring folders…")
                             .into_any_element()
                     } else {
                         rows.into_any_element()
@@ -693,4 +759,24 @@ fn drives() -> Vec<PathBuf> {
         })
         .map(PathBuf::from)
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::human;
+
+    #[test]
+    fn human_matches_windows_explorer_binary_sizes() {
+        assert_eq!(human(0), "0 B");
+        assert_eq!(human(512), "512 B");
+        assert_eq!(human(1023), "1023 B");
+        assert_eq!(human(1024), "1.00 KB");
+        assert_eq!(human(500_000), "488 KB");
+        assert_eq!(human(1_072_693_248), "0.99 GB");
+        assert_eq!(human(1_073_741_824), "1.00 GB");
+        assert_eq!(human(5_368_709_120), "5.00 GB");
+        assert_eq!(human(91_176_579_072), "84.9 GB");
+        assert_eq!(human(510_844_203_008), "475 GB");
+        assert_eq!(human(2u64 << 40), "2.00 TB");
+    }
 }

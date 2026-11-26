@@ -17,6 +17,7 @@ pub enum Change {
     Error(Vec<u8>, u32),
     Stop,
     Checkpoint(Sender<Result<(), String>>),
+    ShutdownCheckpoint(Sender<Result<(), String>>),
     Opened(Vec<u8>),
     HelperAvailable,
     /// All work queued before this reconciliation boundary has been applied.

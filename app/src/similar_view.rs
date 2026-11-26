@@ -114,8 +114,9 @@ impl Seek {
             // Very similar by default.
             state.level = 1;
         }
+        let skip_system = folder.is_none();
         let job = cx.background_executor().spawn(async move {
-            crate::similar::scan(&folders, &cancel, true, |done, total, stage| {
+            crate::similar::scan_in(&folders, skip_system, &cancel, true, |done, total, stage| {
                 if let Ok(mut p) = progress.lock() {
                     *p = (done, total, stage);
                 }
@@ -221,6 +222,11 @@ impl Seek {
                     }
                     state.regroup();
                     state.moved = Some(count);
+                    this.refresh_capacity(cx);
+                    if let Some(page) = &this.storage_page {
+                        let scope = page.scope.clone();
+                        this.measure_storage_again(scope, cx);
+                    }
                     if changed > 0 {
                         this.message = Some(format!("Skipped {changed} that changed since they were compared."));
                     }
@@ -295,15 +301,17 @@ impl Seek {
                     .gap_3()
                     .border_b_1()
                     .border_color(p.line)
-                    .child(div().flex_1().text_size(TEXT_SMALL).child(format!("Moved {count} to the Recycle Bin.")))
+                    .child(div().flex_1().min_w_0().text_size(TEXT_SMALL).child(format!("Moved {count} to the Recycle Bin.")))
                     .child(
-                        super::settings_view::control("similar-undo", "Undo", p, cx)
-                            .h(BUTTON_HEIGHT)
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                this.similar.moved = None;
-                                this.file_action(super::daily::Action::UndoRename, None, window, cx);
-                                cx.notify();
-                            })),
+                        div().flex_shrink_0().child(
+                            super::settings_view::control("similar-undo", "Undo", p, cx)
+                                .h(BUTTON_HEIGHT)
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.similar.moved = None;
+                                    this.file_action(super::daily::Action::UndoRename, None, window, cx);
+                                    cx.notify();
+                                })),
+                        ),
                     ),
             );
         }
@@ -498,27 +506,30 @@ impl Seek {
                 .child(
                     div()
                         .flex_1()
+                        .min_w_0()
                         .text_size(TEXT_SMALL)
                         .text_color(p.muted)
                         .child("Similar, not identical: compare before you tick · one picture of each group stays"),
                 )
                 .child(
-                    Button::new("similar-recycle")
-                        .h(BUTTON_HEIGHT)
-                        .px_3()
-                        .rounded(RADIUS_CONTROL)
-                        .bg(p.text)
-                        .text_color(crate::appearance::modal_surface(p))
-                        .font_weight(FontWeight::MEDIUM)
-                        .disabled(chosen == 0 || self.files_pending != 0 || state.checking)
-                        .child(super::interface::button_text(if state.checking {
-                            "Checking…".to_string()
-                        } else if chosen == 0 {
-                            "Move to Recycle Bin".to_string()
-                        } else {
-                            format!("Move {chosen} to Recycle Bin · {}", human(chosen_bytes))
-                        }))
-                        .on_click(cx.listener(|this, _, window, cx| this.recycle_similar(window, cx))),
+                    div().flex_shrink_0().child(
+                        Button::new("similar-recycle")
+                            .h(BUTTON_HEIGHT)
+                            .px_3()
+                            .rounded(RADIUS_CONTROL)
+                            .bg(p.text)
+                            .text_color(crate::appearance::modal_surface(p))
+                            .font_weight(FontWeight::MEDIUM)
+                            .disabled(chosen == 0 || self.files_pending != 0 || state.checking)
+                            .child(super::interface::button_text(if state.checking {
+                                "Checking…".to_string()
+                            } else if chosen == 0 {
+                                "Move to Recycle Bin".to_string()
+                            } else {
+                                format!("Move {chosen} to Recycle Bin · {}", human(chosen_bytes))
+                            }))
+                            .on_click(cx.listener(|this, _, window, cx| this.recycle_similar(window, cx))),
+                    ),
                 ),
         )
     }

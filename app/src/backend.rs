@@ -686,8 +686,10 @@ impl Row {
             format!("{} B", file.size)
         } else if file.size < 1024 * 1024 {
             format!("{:.1} KB", file.size as f64 / 1024.)
-        } else {
+        } else if file.size < 1024 * 1024 * 1024 {
             format!("{:.1} MB", file.size as f64 / (1024. * 1024.))
+        } else {
+            format!("{:.2} GB", file.size as f64 / (1024. * 1024. * 1024.))
         };
         Self {
             file,

@@ -1310,6 +1310,7 @@ impl Seek {
                             this.finish_organize(window,cx);
                             this.columns.invalidate(&reply.refresh);
                             this.refresh_inactive_panes(&reply.refresh,&[],cx);
+                            this.refresh_capacity(cx);
                             let _ = this.backend.tx.send(Command::RefreshParents(reply.refresh));
                         }
                         cx.notify();

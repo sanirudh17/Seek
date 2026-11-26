@@ -48,6 +48,7 @@ pub struct State {
     pub busy: bool,
     pub available: Option<Release>,
     pub message: String,
+    pub failed: bool,
     /// Bytes of the package downloaded so far, while downloading.
     pub progress: std::sync::Arc<std::sync::atomic::AtomicU64>,
     pub downloading: bool,
@@ -416,16 +417,32 @@ impl Drop for Handle {
         }
     }
 }
+fn winhttp_error(err: std::io::Error) -> String {
+    match err.raw_os_error() {
+        Some(12002) => "Update request timed out (WinHTTP 12002)".into(),
+        Some(12007) => "Could not resolve GitHub host name (WinHTTP 12007)".into(),
+        Some(12029) => "Could not connect to GitHub (WinHTTP 12029)".into(),
+        Some(12030) => "Connection to GitHub was reset (WinHTTP 12030)".into(),
+        Some(12031) => "Connection to GitHub was closed unexpectedly (WinHTTP 12031)".into(),
+        Some(12152) => "Invalid HTTP response from GitHub (WinHTTP 12152)".into(),
+        Some(12175) => "Secure TLS connection to GitHub failed (WinHTTP 12175)".into(),
+        Some(12166 | 12167 | 12178 | 12180 | 12184) => {
+            format!("Windows proxy auto-detection failed (WinHTTP {})", err.raw_os_error().unwrap_or(0))
+        }
+        Some(code) if (12000..12200).contains(&code) => format!("WinHTTP network error {code}"),
+        _ => err.to_string(),
+    }
+}
 fn handle(raw: *mut c_void) -> Result<Handle, String> {
     if raw.is_null() {
-        Err(std::io::Error::last_os_error().to_string())
+        Err(winhttp_error(std::io::Error::last_os_error()))
     } else {
         Ok(Handle(raw))
     }
 }
 fn checked(ok: i32) -> Result<(), String> {
     if ok == 0 {
-        Err(std::io::Error::last_os_error().to_string())
+        Err(winhttp_error(std::io::Error::last_os_error()))
     } else {
         Ok(())
     }
@@ -438,14 +455,14 @@ fn url_parts(url: &str) -> Result<(&str, &str), String> {
         .strip_prefix("https://")
         .ok_or("Updates require HTTPS")?;
     let (host, path) = tail.split_once('/').ok_or("Invalid update URL")?;
-    if ![
+    const ALLOWED: &[&str] = &[
         "api.github.com",
         "github.com",
         "release-assets.githubusercontent.com",
         "objects.githubusercontent.com",
         "github-releases.githubusercontent.com",
-    ]
-    .contains(&host)
+    ];
+    if !ALLOWED.iter().any(|allowed| host.eq_ignore_ascii_case(allowed))
         || path.contains(['\r', '\n'])
     {
         return Err("Update redirected outside the allowed GitHub hosts".into());
@@ -460,25 +477,72 @@ fn get_counted(
     limit: usize,
     progress: Option<&std::sync::atomic::AtomicU64>,
 ) -> Result<(u32, Vec<u8>), String> {
+    // Try Windows automatic proxy first, then fall back to direct (no-proxy)
+    // and default proxy if WPAD hangs or a transient timeout/5xx occurs.
+    const MODES: [u32; 3] = [
+        4, // WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY
+        1, // WINHTTP_ACCESS_TYPE_NO_PROXY
+        0, // WINHTTP_ACCESS_TYPE_DEFAULT_PROXY
+    ];
+    let mut last_error = String::new();
+    for (attempt, access) in MODES.iter().copied().enumerate() {
+        if let Some(p) = progress {
+            p.store(0, std::sync::atomic::Ordering::Relaxed);
+        }
+        match get_once(url, limit, progress, access) {
+            Ok((status, _bytes)) if matches!(status, 429 | 500 | 502 | 503 | 504) && attempt + 1 < MODES.len() => {
+                last_error = format!("HTTP {status}");
+                std::thread::sleep(Duration::from_millis(400 * (attempt as u64 + 1)));
+            }
+            Ok(ok) => return Ok(ok),
+            Err(error) => {
+                // Non-retryable validation or size-limit errors fail immediately.
+                if error.contains("allowed GitHub hosts")
+                    || error.contains("require HTTPS")
+                    || error.contains("exceeds its size limit")
+                    || error.contains("Too many update redirects")
+                {
+                    return Err(error);
+                }
+                last_error = error;
+                if attempt + 1 < MODES.len() {
+                    std::thread::sleep(Duration::from_millis(300 * (attempt as u64 + 1)));
+                }
+            }
+        }
+    }
+    Err(last_error)
+}
+
+fn get_once(
+    url: &str,
+    limit: usize,
+    progress: Option<&std::sync::atomic::AtomicU64>,
+    access_type: u32,
+) -> Result<(u32, Vec<u8>), String> {
     let session = handle(unsafe {
         WinHttpOpen(
             wide(&format!("Seek/{CURRENT}")).as_ptr(),
-            4,
+            access_type,
             ptr::null(),
             ptr::null(),
             0,
         )
     })?;
-    checked(unsafe { WinHttpSetTimeouts(session.0, 5000, 5000, 5000, 15000) })?;
+    // Generous per-stage timeouts (15s resolve, 20s connect/TLS, 20s send,
+    // 30s receive) so IPv6 fallback, TLS handshakes, or busy GitHub CDNs
+    // don't abort with ERROR_WINHTTP_TIMEOUT (12002).
+    checked(unsafe { WinHttpSetTimeouts(session.0, 15_000, 20_000, 20_000, 30_000) })?;
     let redirect_policy = 0u32; // WINHTTP_OPTION_REDIRECT_POLICY_NEVER
     checked(unsafe { WinHttpSetOption(session.0, 88, ptr::from_ref(&redirect_policy).cast(), 4) })?;
     let start = Instant::now();
     let mut url = url.to_owned();
     for _ in 0..6 {
-        if start.elapsed() > Duration::from_secs(60) {
+        if start.elapsed() > Duration::from_secs(300) {
             return Err("Update request timed out".into());
         }
         let (host, path) = url_parts(&url)?;
+        let current_host = host.to_owned();
         let connection = handle(unsafe { WinHttpConnect(session.0, wide(host).as_ptr(), 443, 0) })?;
         let request = handle(unsafe {
             WinHttpOpenRequest(
@@ -518,19 +582,28 @@ fn get_counted(
                     ptr::null_mut(),
                 )
             })?;
-            url = String::from_utf16(&location[..(len as usize / 2)])
+            let next = String::from_utf16(&location[..(len as usize / 2)])
                 .map_err(|_| "Invalid redirect")?
                 .trim_end_matches('\0')
+                .trim()
                 .to_owned();
+            url = if next.starts_with('/') {
+                format!("https://{current_host}{next}")
+            } else {
+                next
+            };
             continue;
         }
         if status != 200 {
             return Ok((status, vec![]));
         }
         let mut bytes = Vec::new();
-        let mut buffer = [0u8; 16384];
+        let mut buffer = [0u8; 65536];
+        let mut last_data = Instant::now();
         loop {
-            if start.elapsed() > Duration::from_secs(60) {
+            if start.elapsed() > Duration::from_secs(300)
+                || last_data.elapsed() > Duration::from_secs(45)
+            {
                 return Err("Update request timed out".into());
             }
             let mut read = 0;
@@ -545,6 +618,7 @@ fn get_counted(
             if read == 0 {
                 break;
             }
+            last_data = Instant::now();
             if bytes.len() + read as usize > limit {
                 return Err("Update response exceeds its size limit".into());
             }

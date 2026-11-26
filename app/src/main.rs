@@ -147,14 +147,8 @@ fn main() {
             return;
         }
     };
-    // Add Explorer's Open in Seek entries, and keep them pointing at this
-    // seek.exe in case Seek was moved. Only with the person's own profile: a
-    // copy run with another data folder (a test or a portable copy) leaves
-    // Explorer to the installed Seek.
     let own_profile = PathBuf::from(std::env::var_os("LOCALAPPDATA").unwrap_or_default()).join("Seek");
-    if data.as_os_str().eq_ignore_ascii_case(own_profile.as_os_str()) {
-        explorer_menu::refresh();
-    }
+    let refresh_explorer_menu = data.as_os_str().eq_ignore_ascii_case(own_profile.as_os_str());
     let focus_requests = instance.focus.clone();
     let (open_tx, open_rx) = async_channel::unbounded::<PathBuf>();
     if let Some(folder) = open_folder {
@@ -187,6 +181,11 @@ fn main() {
             let atlas = icons::Atlas::bundled();
             metrics::phase("startup_assets_ready");
             let _ = atlas_tx.send_blocking(atlas.clone());
+            // Refresh Explorer context menu registration off the critical
+            // startup path so registry I/O never delays first window paint.
+            if refresh_explorer_menu {
+                explorer_menu::refresh();
+            }
             let _ = shell_atlas_tx.send_blocking(atlas.with_shell());
         })
         .expect("startup assets");
@@ -286,16 +285,28 @@ fn main() {
                             // A Seek started from now on waits for this one
                             // to finish saving and opens its own window.
                             instance::mark_closing();
-                            // Save the index as it is now, so agent tools that
-                            // read it while Seek is closed see this session's
-                            // files, not the ones from the last full build.
-                            // Bounded: a busy engine never holds up quitting.
+                            // Save the index if it changed, without reloading
+                            // the 200 MB map back into RAM before exit. Cap
+                            // the wait and abort immediately if the user just
+                            // relaunched Seek so reopening is always instant.
                             if let Some(engine) = backend::ENGINE.get() {
                                 let (done, wait) = std::sync::mpsc::channel();
                                 std::thread::spawn(move || {
-                                    let _ = done.send(engine.checkpoint());
+                                    let _ = done.send(engine.checkpoint_for_shutdown());
                                 });
-                                let _ = wait.recv_timeout(std::time::Duration::from_secs(10));
+                                let started = std::time::Instant::now();
+                                while started.elapsed() < std::time::Duration::from_secs(3) {
+                                    if instance::relaunch_requested() {
+                                        engine.abort_shutdown();
+                                        break;
+                                    }
+                                    if wait
+                                        .recv_timeout(std::time::Duration::from_millis(25))
+                                        .is_ok()
+                                    {
+                                        break;
+                                    }
+                                }
                             }
                             backend
                                 .generation

@@ -53,6 +53,7 @@ enum DragAction {
         handle: Handle,
     },
     Crop(CropDrag),
+    Erase { pushed_undo: bool },
 }
 
 struct TextPrompt {
@@ -168,38 +169,55 @@ fn paint_live_marks(marks: &[Step], ibox: ImageBox, window: &mut Window, cx: &mu
                     }
                     let is_hl = matches!(step, Step::Highlighter { .. });
                     let color = ink_hsla(*ink, if is_hl { 0.36 } else { 1.0 });
-                    let stroke_w = (*width * ibox.scale).max(if is_hl { 4.0 } else { 1.5 });
+                    let stroke_w = (*width * ibox.scale).clamp(if is_hl { 4.0 } else { 1.5 }, 96.0);
                     if points.len() == 1 {
                         let c = ibox.image_to_window(points[0]);
                         let r = stroke_w * 0.5;
-                        let mut pb = PathBuilder::fill();
-                        for i in 0..16 {
-                            let a = (i as f32 / 16.0) * std::f32::consts::TAU;
-                            let p = point(c.x + px(r * a.cos()), c.y + px(r * a.sin()));
-                            if i == 0 {
-                                pb.move_to(p);
-                            } else {
-                                pb.line_to(p);
+                        if r.is_finite() && r >= 0.75 {
+                            let mut pb = PathBuilder::fill();
+                            for i in 0..16 {
+                                let a = (i as f32 / 16.0) * std::f32::consts::TAU;
+                                let p = point(c.x + px(r * a.cos()), c.y + px(r * a.sin()));
+                                if i == 0 {
+                                    pb.move_to(p);
+                                } else {
+                                    pb.line_to(p);
+                                }
                             }
-                        }
-                        pb.close();
-                        if let Ok(path) = pb.build() {
-                            window.paint_path(path, color);
+                            pb.close();
+                            if let Ok(path) = pb.build() {
+                                window.paint_path(path, color);
+                            }
                         }
                     } else {
                         let center = mark_frame(step)
                             .map(|f| f.center())
                             .unwrap_or(points[0]);
                         let mut pb = PathBuilder::stroke(px(stroke_w));
-                        for (i, &pt) in points.iter().enumerate() {
+                        let mut prev_wpt: Option<Point<Pixels>> = None;
+                        let mut seg_count = 0usize;
+                        for &pt in points.iter() {
                             let wpt = ibox.image_to_window(rotate_point(pt, center, *rotation));
-                            if i == 0 {
-                                pb.move_to(wpt);
-                            } else {
-                                pb.line_to(wpt);
+                            let (wx, wy) = (f32::from(wpt.x), f32::from(wpt.y));
+                            if !wx.is_finite() || !wy.is_finite() {
+                                continue;
                             }
+                            if let Some(prev) = prev_wpt {
+                                let dx = wx - f32::from(prev.x);
+                                let dy = wy - f32::from(prev.y);
+                                if dx * dx + dy * dy < 2.25 {
+                                    continue;
+                                }
+                                pb.line_to(wpt);
+                                seg_count += 1;
+                            } else {
+                                pb.move_to(wpt);
+                            }
+                            prev_wpt = Some(wpt);
                         }
-                        if let Ok(path) = pb.build() {
+                        if seg_count > 0
+                            && let Ok(path) = pb.build()
+                        {
                             window.paint_path(path, color);
                         }
                     }
@@ -253,8 +271,11 @@ fn paint_live_marks(marks: &[Step], ibox: ImageBox, window: &mut Window, cx: &mu
                     width,
                     rotation,
                 } => {
+                    if rect.w * ibox.scale < 2.0 || rect.h * ibox.scale < 2.0 {
+                        continue;
+                    }
                     let color = ink_hsla(*ink, 1.0);
-                    let stroke_w = (*width * ibox.scale).max(1.5);
+                    let stroke_w = (*width * ibox.scale).clamp(1.5, 96.0);
                     let c = rect.center();
                     let corners = rect.corners().map(|pt| rotate_point(pt, c, *rotation));
                     let mut pb = PathBuilder::stroke(px(stroke_w));
@@ -273,15 +294,25 @@ fn paint_live_marks(marks: &[Step], ibox: ImageBox, window: &mut Window, cx: &mu
                     width,
                     rotation,
                 } => {
+                    let rx = rect.w * 0.5;
+                    let ry = rect.h * 0.5;
+                    // Guard against degenerate tiny ellipses (e.g. 1px on initial
+                    // mouse-down) whose tightly packed vertices cause extreme miter
+                    // spikes in the GPU stroke tessellator.
+                    if !rx.is_finite()
+                        || !ry.is_finite()
+                        || rx * ibox.scale < 2.5
+                        || ry * ibox.scale < 2.5
+                    {
+                        continue;
+                    }
                     let color = ink_hsla(*ink, 1.0);
-                    let stroke_w = (*width * ibox.scale).max(1.5);
+                    let stroke_w = (*width * ibox.scale).clamp(1.5, 96.0);
                     let c = rect.center();
-                    let rx = (rect.w * 0.5).max(1.0);
-                    let ry = (rect.h * 0.5).max(1.0);
+                    let segs = (((rx + ry) * ibox.scale * 0.25).round() as usize).clamp(16, 36);
                     let mut pb = PathBuilder::stroke(px(stroke_w));
-                    const SEGS: usize = 48;
-                    for i in 0..SEGS {
-                        let a = (i as f32 / SEGS as f32) * std::f32::consts::TAU;
+                    for i in 0..segs {
+                        let a = (i as f32 / segs as f32) * std::f32::consts::TAU;
                         let pt = PointF::new(c.x + rx * a.cos(), c.y + ry * a.sin());
                         let wpt = ibox.image_to_window(rotate_point(pt, c, *rotation));
                         if i == 0 {
@@ -901,9 +932,9 @@ impl Seek {
         };
         let pt = ibox.screen_to_image(event.position);
         let (img_w, img_h) = (ed.preview_size.0 as f32, ed.preview_size.1 as f32);
-        let handle_r = 12.0 / ibox.scale;
+        let handle_r = 14.0 / ibox.scale;
         let turn_off = 24.0 / ibox.scale;
-        let tol = 10.0 / ibox.scale;
+        let tol = 18.0 / ibox.scale;
 
         match ed.tool {
             Tool::Crop => {
@@ -1100,6 +1131,17 @@ impl Seek {
                 self.picture_edit_open_text_prompt(clamped, None, window, cx);
                 return;
             }
+            Tool::Eraser => {
+                let mut pushed_undo = false;
+                if let Some(hit) = hit_test_mark(&ed.steps, pt, tol) {
+                    ed.push_undo();
+                    pushed_undo = true;
+                    ed.steps.remove(hit);
+                    ed.selected = None;
+                    ed.dirty = true;
+                }
+                ed.drag = Some(DragAction::Erase { pushed_undo });
+            }
         }
         cx.notify();
     }
@@ -1171,6 +1213,19 @@ impl Seek {
                 if let Some(step) = ed.steps.get_mut(step_index) {
                     resize_mark_handle(step, handle, pt);
                     ed.dirty = true;
+                }
+            }
+            DragAction::Erase { mut pushed_undo } => {
+                let tol = 18.0 / ibox.scale;
+                if let Some(hit) = hit_test_mark(&ed.steps, pt, tol) {
+                    if !pushed_undo {
+                        ed.push_undo();
+                        pushed_undo = true;
+                    }
+                    ed.steps.remove(hit);
+                    ed.selected = None;
+                    ed.dirty = true;
+                    ed.drag = Some(DragAction::Erase { pushed_undo });
                 }
             }
             DragAction::Crop(kind) => {
@@ -1415,24 +1470,56 @@ impl Seek {
         let danger_border = rgba(0xE11D4866);
         let danger_text = rgb(0xFDA4AF);
 
-        // Optically centered compact pill button helper
+        // Optically centered compact pill button helper (quiet at rest, Save-a-Copy hover)
         let pill_btn = |id: &'static str, label: &'static str, active: bool| {
             div()
                 .id(id)
                 .role(Role::Button)
                 .aria_label(label)
                 .h(px(28.))
-                .px(px(9.))
+                .px(px(10.))
                 .rounded(crate::tokens::RADIUS_CONTROL)
                 .flex()
                 .items_center()
                 .justify_center()
                 .cursor_pointer()
                 .text_size(px(12.))
+                .font_weight(FontWeight::MEDIUM)
                 .text_color(if active { p.text } else { p.muted })
-                .when(active, |d| d.bg(p.control_selected))
-                .hover(|s| s.bg(p.control_hover).text_color(p.text))
+                .when(active, |d| d.bg(p.accent.opacity(0.16)))
+                .hover(move |s| s.bg(p.accent.opacity(0.18)).text_color(p.text))
                 .child(super::interface::button_text(label))
+        };
+
+        // Crisp 30x30 icon button (quiet & borderless at rest, Save-a-Copy glass on hover/active)
+        let icon_btn = |id: &'static str, icon_path: &'static str, tip: &'static str, active: bool| {
+            div()
+                .id(id)
+                .role(Role::Button)
+                .aria_label(tip)
+                .size(px(30.))
+                .rounded(crate::tokens::RADIUS_CONTROL)
+                .flex()
+                .items_center()
+                .justify_center()
+                .cursor_pointer()
+                .text_color(if active { p.text } else { p.muted })
+                .border_1()
+                .border_color(if active {
+                    p.accent.opacity(0.32)
+                } else {
+                    rgba(0).into()
+                })
+                .when(active, |d| d.bg(p.accent.opacity(0.16)))
+                .hover(move |s| {
+                    s.bg(p.accent.opacity(0.16))
+                        .border_color(p.accent.opacity(0.36))
+                        .text_color(p.text)
+                })
+                .tooltip(move |window, cx| {
+                    gpui_component::tooltip::Tooltip::new(tip).build(window, cx)
+                })
+                .child(Icon::empty().path(icon_path).size(px(15.)))
         };
 
         let mut toolbar = div()
@@ -1441,15 +1528,15 @@ impl Seek {
             .flex_wrap()
             .items_center()
             .justify_between()
-            .gap_2()
-            .px_3()
+            .gap_3()
+            .px_4()
             .py_2()
             .border_b_1()
             .border_color(p.line)
             .bg(p.chrome);
 
-        // Left group: tools + transforms + 7 inks + S/M/L thickness
-        let mut left = div().flex().flex_wrap().items_center().gap_1();
+        // Left group: icon tools + transforms + 7 inks + S/M/L thickness
+        let mut left = div().flex().flex_wrap().items_center().gap(px(5.));
         for tool in [
             Tool::Select,
             Tool::Crop,
@@ -1460,58 +1547,77 @@ impl Seek {
             Tool::Ellipse,
             Tool::Text,
             Tool::Redact,
+            Tool::Eraser,
         ] {
-            let id: &'static str = match tool {
-                Tool::Select => "pic-tool-select",
-                Tool::Crop => "pic-tool-crop",
-                Tool::Pen => "pic-tool-pen",
-                Tool::Highlighter => "pic-tool-highlight",
-                Tool::Arrow => "pic-tool-arrow",
-                Tool::Rectangle => "pic-tool-rect",
-                Tool::Ellipse => "pic-tool-ellipse",
-                Tool::Text => "pic-tool-text",
-                Tool::Redact => "pic-tool-redact",
+            let (id, icon_path): (&'static str, &'static str) = match tool {
+                Tool::Select => ("pic-tool-select", "seek/edit-select.svg"),
+                Tool::Crop => ("pic-tool-crop", "seek/edit-crop.svg"),
+                Tool::Pen => ("pic-tool-pen", "seek/edit-pen.svg"),
+                Tool::Highlighter => ("pic-tool-highlight", "seek/edit-highlighter.svg"),
+                Tool::Arrow => ("pic-tool-arrow", "seek/edit-arrow.svg"),
+                Tool::Rectangle => ("pic-tool-rect", "seek/edit-rect.svg"),
+                Tool::Ellipse => ("pic-tool-ellipse", "seek/edit-ellipse.svg"),
+                Tool::Text => ("pic-tool-text", "seek/edit-text.svg"),
+                Tool::Redact => ("pic-tool-redact", "seek/edit-redact.svg"),
+                Tool::Eraser => ("pic-tool-eraser", "seek/edit-eraser.svg"),
             };
             left = left.child(
-                pill_btn(id, tool.label(), active_tool == tool)
-                    .when(!exporting, |d| {
-                        d.on_click(cx.listener(move |this, _, window, cx| {
-                            this.picture_edit_select_tool(tool, window, cx);
-                        }))
-                    }),
+                icon_btn(id, icon_path, tool.label(), active_tool == tool).when(!exporting, |d| {
+                    d.on_click(cx.listener(move |this, _, window, cx| {
+                        this.picture_edit_select_tool(tool, window, cx);
+                    }))
+                }),
             );
         }
 
-        // Quick 90° Rotate and Horizontal Flip buttons
+        // Quick 90° Rotate and Horizontal Flip icon buttons
         left = left
-            .child(div().w(px(1.)).h(px(16.)).mx_1().bg(p.line))
+            .child(div().w(px(1.)).h(px(18.)).mx_2().bg(p.line))
             .child(
-                pill_btn("pic-rotate-cw", "Rotate 90°", false)
-                    .when(!exporting, |d| {
-                        d.on_click(cx.listener(|this, _, window, cx| {
-                            this.picture_edit_apply_transform(
-                                Step::Rotate { quarter_turns: 1 },
-                                window,
-                                cx,
-                            );
-                        }))
-                    }),
+                icon_btn(
+                    "pic-rotate-cw",
+                    "seek/edit-rotate-cw.svg",
+                    "Rotate 90° clockwise",
+                    false,
+                )
+                .when(!exporting, |d| {
+                    d.on_click(cx.listener(|this, _, window, cx| {
+                        this.picture_edit_apply_transform(
+                            Step::Rotate { quarter_turns: 1 },
+                            window,
+                            cx,
+                        );
+                    }))
+                }),
             )
             .child(
-                pill_btn("pic-flip-h", "Flip", false)
-                    .when(!exporting, |d| {
-                        d.on_click(cx.listener(|this, _, window, cx| {
-                            this.picture_edit_apply_transform(
-                                Step::Flip { vertical: false },
-                                window,
-                                cx,
-                            );
-                        }))
-                    }),
+                icon_btn(
+                    "pic-flip-h",
+                    "seek/edit-flip-h.svg",
+                    "Flip horizontally",
+                    false,
+                )
+                .when(!exporting, |d| {
+                    d.on_click(cx.listener(|this, _, window, cx| {
+                        this.picture_edit_apply_transform(
+                            Step::Flip { vertical: false },
+                            window,
+                            cx,
+                        );
+                    }))
+                }),
             );
 
-        // 7 curated ink swatches
-        let mut inks = div().flex().items_center().gap(px(2.)).ml_1();
+        // 7 curated ink swatches: 22px outer with 2px border -> 18px inner -> 14px dot
+        // yields an exact integer 2px gap on every side with zero subpixel drift.
+        let mut inks = div()
+            .flex()
+            .items_center()
+            .gap(px(5.))
+            .ml_2()
+            .pl_2()
+            .border_l_1()
+            .border_color(p.line);
         for ink in Ink::ALL {
             let [r, g, b, _] = ink.rgba();
             let swatch_color =
@@ -1526,11 +1632,12 @@ impl Seek {
                 Ink::White => "pic-ink-white",
                 Ink::Black => "pic-ink-black",
             };
+            let ink_name = ink.name();
             inks = inks.child(
                 div()
                     .id(id)
                     .role(Role::Button)
-                    .aria_label(format!("Ink color: {}", ink.name()))
+                    .aria_label(format!("Ink color: {ink_name}"))
                     .size(px(22.))
                     .rounded_full()
                     .flex()
@@ -1539,13 +1646,20 @@ impl Seek {
                     .cursor_pointer()
                     .border_2()
                     .border_color(if is_active { p.text } else { rgba(0).into() })
+                    .tooltip(move |window, cx| {
+                        gpui_component::tooltip::Tooltip::new(ink_name).build(window, cx)
+                    })
                     .child(
                         div()
-                            .size(px(13.))
+                            .size(px(14.))
                             .rounded_full()
                             .bg(swatch_color)
                             .border_1()
-                            .border_color(p.line),
+                            .border_color(if matches!(ink, Ink::Black) {
+                                p.text.opacity(0.32)
+                            } else {
+                                p.line
+                            }),
                     )
                     .on_click(cx.listener(move |this, _, window, cx| {
                         this.picture_edit_pick_ink(ink, window, cx);
@@ -1554,75 +1668,106 @@ impl Seek {
         }
         left = left.child(inks);
 
-        // S / M / L stroke thickness selector
-        let mut sizes = div()
-            .flex()
-            .items_center()
-            .gap(px(1.))
-            .ml_1()
-            .p(px(2.))
-            .rounded(crate::tokens::RADIUS_CONTROL)
-            .bg(p.pane)
-            .border_1()
-            .border_color(p.line);
-        for sz in StrokeSize::ALL {
-            let active = active_stroke == sz;
-            let id: &'static str = match sz {
-                StrokeSize::Small => "pic-stroke-s",
-                StrokeSize::Medium => "pic-stroke-m",
-                StrokeSize::Large => "pic-stroke-l",
-            };
-            sizes = sizes.child(
-                div()
-                    .id(id)
-                    .role(Role::Button)
-                    .aria_label(format!("Stroke size {}", sz.label()))
-                    .w(px(22.))
-                    .h(px(22.))
-                    .rounded(px(4.))
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .cursor_pointer()
-                    .text_size(px(11.))
-                    .font_weight(FontWeight::MEDIUM)
-                    .text_color(if active { p.text } else { p.muted })
-                    .when(active, |d| d.bg(p.control_selected))
-                    .hover(|s| s.text_color(p.text))
-                    .child(super::interface::button_text(sz.label()))
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        if let Some(ed) = this.picture_edit.as_mut() {
-                            ed.stroke_size = sz;
-                            ed.focus.focus(window, cx);
+        // S / M / L stroke thickness sliding segmented control
+        let stroke_idx = match active_stroke {
+            StrokeSize::Small => 0,
+            StrokeSize::Medium => 1,
+            StrokeSize::Large => 2,
+        };
+        let stroke_motion = self.segment_motion.get("pic-stroke-size").copied();
+        left = left.child(div().ml_2().child(super::settings_view::segmented_compact(
+            "pic-stroke-size",
+            &["S", "M", "L"],
+            28.,
+            28.,
+            stroke_idx,
+            stroke_motion,
+            self.motion_enabled,
+            p,
+            cx,
+            |this, idx, window, cx| {
+                let sz = match idx {
+                    0 => StrokeSize::Small,
+                    1 => StrokeSize::Medium,
+                    _ => StrokeSize::Large,
+                };
+                if let Some(ed) = this.picture_edit.as_mut() {
+                    let prev = match ed.stroke_size {
+                        StrokeSize::Small => 0,
+                        StrokeSize::Medium => 1,
+                        StrokeSize::Large => 2,
+                    };
+                    if prev != idx {
+                        ed.stroke_size = sz;
+                        let new_stroke = ed.default_stroke_width();
+                        let new_text = ed.default_text_size();
+                        if let Some(sel) = ed.selected
+                            && sel < ed.steps.len()
+                        {
+                            ed.push_undo();
+                            match &mut ed.steps[sel] {
+                                Step::Pen { width, .. }
+                                | Step::Arrow { width, .. }
+                                | Step::Rectangle { width, .. }
+                                | Step::Ellipse { width, .. } => {
+                                    *width = new_stroke;
+                                    ed.dirty = true;
+                                }
+                                Step::Highlighter { width, .. } => {
+                                    *width = new_stroke * 3.4;
+                                    ed.dirty = true;
+                                }
+                                Step::Text { size, .. } => {
+                                    *size = new_text;
+                                    ed.dirty = true;
+                                }
+                                _ => {}
+                            }
                         }
-                        cx.notify();
-                    })),
-            );
-        }
-        left = left.child(sizes);
+                        if let Some(prompt) = ed.text_prompt.as_mut() {
+                            prompt.size = new_text;
+                        }
+                        this.slide_segment("pic-stroke-size", prev, idx);
+                    }
+                    if let Some(ed) = this.picture_edit.as_mut() {
+                        ed.focus.focus(window, cx);
+                    }
+                }
+                cx.notify();
+            },
+        )));
 
         if let Some(idx) = selected_idx {
             left = left.child(div().w(px(1.)).h(px(16.)).mx_1().bg(p.line));
             if selected_is_text {
                 left = left.child(
-                    pill_btn("pic-edit-text", "Edit text", false).when(!exporting, |d| {
-                        d.on_click(cx.listener(move |this, _, window, cx| {
-                            let at = this
-                                .picture_edit
-                                .as_ref()
-                                .and_then(|e| e.steps.get(idx))
-                                .and_then(|s| match s {
-                                    Step::Text { at, .. } => Some(*at),
-                                    _ => None,
-                                })
-                                .unwrap_or(PointF::new(24.0, 24.0));
-                            this.picture_edit_open_text_prompt(at, Some(idx), window, cx);
-                        }))
-                    }),
+                    icon_btn("pic-edit-text", "icons/pencil.svg", "Edit text", false).when(
+                        !exporting,
+                        |d| {
+                            d.on_click(cx.listener(move |this, _, window, cx| {
+                                let at = this
+                                    .picture_edit
+                                    .as_ref()
+                                    .and_then(|e| e.steps.get(idx))
+                                    .and_then(|s| match s {
+                                        Step::Text { at, .. } => Some(*at),
+                                        _ => None,
+                                    })
+                                    .unwrap_or(PointF::new(24.0, 24.0));
+                                this.picture_edit_open_text_prompt(at, Some(idx), window, cx);
+                            }))
+                        },
+                    ),
                 );
             }
             left = left.child(
-                pill_btn("pic-delete-mark", "Delete", false).when(!exporting, |d| {
+                icon_btn(
+                    "pic-delete-mark",
+                    "icons/trash.svg",
+                    "Delete selected mark (Del)",
+                    false,
+                )
+                .when(!exporting, |d| {
                     d.on_click(cx.listener(|this, _, window, cx| {
                         this.picture_edit_delete_selected(window, cx);
                     }))
@@ -1691,10 +1836,10 @@ impl Seek {
         let right = div()
             .flex()
             .items_center()
-            .gap_1()
+            .gap(px(6.))
             .child(
-                pill_btn("pic-undo", "Undo", false)
-                    .when(!can_undo || exporting, |d| d.opacity(0.45).cursor_default())
+                icon_btn("pic-undo", "seek/edit-undo.svg", "Undo (Ctrl+Z)", false)
+                    .when(!can_undo || exporting, |d| d.opacity(0.4).cursor_default())
                     .when(can_undo && !exporting, |d| {
                         d.on_click(cx.listener(|this, _, window, cx| {
                             this.picture_edit_undo(window, cx);
@@ -1702,13 +1847,18 @@ impl Seek {
                     }),
             )
             .child(
-                pill_btn("pic-redo", "Redo", false)
-                    .when(!can_redo || exporting, |d| d.opacity(0.45).cursor_default())
-                    .when(can_redo && !exporting, |d| {
-                        d.on_click(cx.listener(|this, _, window, cx| {
-                            this.picture_edit_redo(window, cx);
-                        }))
-                    }),
+                icon_btn(
+                    "pic-redo",
+                    "seek/edit-redo.svg",
+                    "Redo (Ctrl+Shift+Z)",
+                    false,
+                )
+                .when(!can_redo || exporting, |d| d.opacity(0.4).cursor_default())
+                .when(can_redo && !exporting, |d| {
+                    d.on_click(cx.listener(|this, _, window, cx| {
+                        this.picture_edit_redo(window, cx);
+                    }))
+                }),
             )
             .child(
                 div()
@@ -1752,11 +1902,11 @@ impl Seek {
                     .child(save_menu_btn),
             )
             .child(
-                pill_btn("pic-done", "Done", false).on_click(cx.listener(
-                    move |this, _, window, cx| {
+                icon_btn("pic-done", "icons/x.svg", "Finish editing (Esc)", false)
+                    .ml_1()
+                    .on_click(cx.listener(move |this, _, window, cx| {
                         this.request_picture_edit_exit(host, window, cx);
-                    },
-                )),
+                    })),
             );
 
         toolbar = toolbar.child(left).child(right);
@@ -1794,31 +1944,40 @@ impl Seek {
                                 .child(format!("{cw} × {ch} px")),
                         )
                         .child(div().w(px(1.)).h(px(14.)).mx_1().bg(p.line))
-                        .children(AspectPreset::ALL.into_iter().map(|preset| {
-                            let active = current_aspect == preset;
-                            let id: &'static str = match preset {
-                                AspectPreset::Free => "pic-crop-free",
-                                AspectPreset::Square => "pic-crop-1-1",
-                                AspectPreset::FourThree => "pic-crop-4-3",
-                                AspectPreset::SixteenNine => "pic-crop-16-9",
+                        .child({
+                            let aspect_idx = match current_aspect {
+                                AspectPreset::Free => 0,
+                                AspectPreset::Square => 1,
+                                AspectPreset::FourThree => 2,
+                                AspectPreset::SixteenNine => 3,
                             };
-                            div()
-                                .id(id)
-                                .role(Role::Button)
-                                .aria_label(preset.label())
-                                .h(px(26.))
-                                .px(px(10.))
-                                .rounded(crate::tokens::RADIUS_CONTROL)
-                                .flex()
-                                .items_center()
-                                .justify_center()
-                                .cursor_pointer()
-                                .text_size(px(12.))
-                                .text_color(if active { p.text } else { p.muted })
-                                .when(active, |d| d.bg(p.control_selected))
-                                .hover(|s| s.bg(p.control_hover).text_color(p.text))
-                                .child(super::interface::button_text(preset.label()))
-                                .on_click(cx.listener(move |this, _, window, cx| {
+                            let aspect_motion = self.segment_motion.get("pic-crop-aspect").copied();
+                            super::settings_view::segmented_compact(
+                                "pic-crop-aspect",
+                                &["Free", "1:1", "4:3", "16:9"],
+                                52.,
+                                28.,
+                                aspect_idx,
+                                aspect_motion,
+                                self.motion_enabled,
+                                p,
+                                cx,
+                                |this, idx, window, cx| {
+                                    let preset = match idx {
+                                        0 => AspectPreset::Free,
+                                        1 => AspectPreset::Square,
+                                        2 => AspectPreset::FourThree,
+                                        _ => AspectPreset::SixteenNine,
+                                    };
+                                    let prev = this.picture_edit.as_ref().map(|ed| match ed.crop_aspect {
+                                        AspectPreset::Free => 0,
+                                        AspectPreset::Square => 1,
+                                        AspectPreset::FourThree => 2,
+                                        AspectPreset::SixteenNine => 3,
+                                    });
+                                    if let Some(prev) = prev {
+                                        this.slide_segment("pic-crop-aspect", prev, idx);
+                                    }
                                     if let Some(ed) = this.picture_edit.as_mut() {
                                         ed.crop_aspect = preset;
                                         if let Some(rect) = ed.crop_rect {
@@ -1832,8 +1991,9 @@ impl Seek {
                                         ed.focus.focus(window, cx);
                                     }
                                     cx.notify();
-                                }))
-                        })),
+                                },
+                            )
+                        }),
                 )
                 .child(
                     div()
@@ -1875,57 +2035,72 @@ impl Seek {
             sub_bars.push(crop_bar.into_any_element());
         }
 
-        if let Some(prompt) = &ed.text_prompt {
-            sub_bars.push(
-                div()
-                    .flex_shrink_0()
-                    .px_4()
-                    .py_2()
-                    .flex()
-                    .items_center()
-                    .gap_2()
-                    .bg(p.pane)
-                    .border_b_1()
-                    .border_color(p.line)
-                    .child(div().flex_1().child(Input::new(&prompt.input).h(px(30.))))
-                    .child(
-                        div()
-                            .id("pic-text-commit")
-                            .role(Role::Button)
-                            .aria_label("Place text")
-                            .h(px(28.))
-                            .px(px(12.))
-                            .rounded(crate::tokens::RADIUS_CONTROL)
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .cursor_pointer()
-                            .bg(p.accent.opacity(0.22))
-                            .border_1()
-                            .border_color(p.accent.opacity(0.45))
-                            .text_size(px(12.))
-                            .font_weight(FontWeight::MEDIUM)
-                            .text_color(p.text)
-                            .hover(|s| s.bg(p.accent.opacity(0.32)))
-                            .child(super::interface::button_text("Place text"))
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                this.picture_edit_commit_text(window, cx);
-                            })),
-                    )
-                    .child(
-                        pill_btn("pic-text-cancel", "Cancel", false).on_click(cx.listener(
-                            |this, _, window, cx| {
-                                if let Some(ed) = this.picture_edit.as_mut() {
-                                    ed.text_prompt = None;
-                                    ed.focus.focus(window, cx);
-                                }
-                                cx.notify();
-                            },
-                        )),
-                    )
-                    .into_any_element(),
-            );
-        }
+        // Floating text prompt anchored over the canvas (never shifts canvas
+        // layout bounds so placed text lands at the exact pixel on frame 1).
+        let floating_text_prompt: Option<AnyElement> = ed.text_prompt.as_ref().map(|prompt| {
+            div()
+                .absolute()
+                .top_3()
+                .left_0()
+                .right_0()
+                .flex()
+                .justify_center()
+                .px_4()
+                .child(
+                    div()
+                        .occlude()
+                        .w(px(460.))
+                        .max_w(relative(0.92))
+                        .px_3()
+                        .py_2()
+                        .flex()
+                        .items_center()
+                        .gap_2()
+                        .rounded(crate::tokens::RADIUS_CARD)
+                        .bg(crate::appearance::modal_surface(p))
+                        .border_1()
+                        .border_color(crate::appearance::modal_border(p))
+                        .shadow_lg()
+                        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                        .child(div().flex_1().child(Input::new(&prompt.input).h(px(30.))))
+                        .child(
+                            div()
+                                .id("pic-text-commit")
+                                .role(Role::Button)
+                                .aria_label("Place text")
+                                .h(px(28.))
+                                .px(px(12.))
+                                .rounded(crate::tokens::RADIUS_CONTROL)
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .cursor_pointer()
+                                .bg(p.accent.opacity(0.22))
+                                .border_1()
+                                .border_color(p.accent.opacity(0.45))
+                                .text_size(px(12.))
+                                .font_weight(FontWeight::MEDIUM)
+                                .text_color(p.text)
+                                .hover(|s| s.bg(p.accent.opacity(0.32)))
+                                .child(super::interface::button_text("Place"))
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.picture_edit_commit_text(window, cx);
+                                })),
+                        )
+                        .child(
+                            pill_btn("pic-text-cancel", "Cancel", false).on_click(cx.listener(
+                                |this, _, window, cx| {
+                                    if let Some(ed) = this.picture_edit.as_mut() {
+                                        ed.text_prompt = None;
+                                        ed.focus.focus(window, cx);
+                                    }
+                                    cx.notify();
+                                },
+                            )),
+                        ),
+                )
+                .into_any_element()
+        });
 
         if ed.confirm_discard {
             sub_bars.push(
@@ -2216,19 +2391,21 @@ impl Seek {
                                 .border_color(accent),
                         );
                     }
-                    let (tx, ty) = ibox.image_to_local(frame.turn_handle(24.0 / ibox.scale));
-                    overlay = overlay.child(
-                        div()
-                            .id("pic-turn-handle")
-                            .absolute()
-                            .left(px(tx - 6.0))
-                            .top(px(ty - 6.0))
-                            .size(px(12.0))
-                            .rounded_full()
-                            .bg(accent)
-                            .border_2()
-                            .border_color(rgb(0xFFFFFF)),
-                    );
+                    if !selected_is_text {
+                        let (tx, ty) = ibox.image_to_local(frame.turn_handle(24.0 / ibox.scale));
+                        overlay = overlay.child(
+                            div()
+                                .id("pic-turn-handle")
+                                .absolute()
+                                .left(px(tx - 6.0))
+                                .top(px(ty - 6.0))
+                                .size(px(12.0))
+                                .rounded_full()
+                                .bg(accent)
+                                .border_2()
+                                .border_color(rgb(0xFFFFFF)),
+                        );
+                    }
                 }
             }
 
@@ -2411,7 +2588,8 @@ impl Seek {
                     .on_mouse_down(MouseButton::Left, cx.listener(Self::picture_edit_mouse_down))
                     .on_mouse_move(cx.listener(Self::picture_edit_mouse_move))
                     .on_mouse_up(MouseButton::Left, cx.listener(Self::picture_edit_mouse_up))
-                    .child(overlay),
+                    .child(overlay)
+                    .children(floating_text_prompt),
             )
             .child(
                 div()
@@ -2435,6 +2613,8 @@ impl Seek {
                         "Drag over sensitive areas to black them out permanently"
                     } else if active_tool == Tool::Text {
                         "Click anywhere on the picture to place text"
+                    } else if active_tool == Tool::Eraser {
+                        "Click or drag across marks to erase · Ctrl+Z undoes"
                     } else {
                         "Drag on the picture · Ctrl+Z undoes · Ctrl+Shift+Z redoes"
                     }),

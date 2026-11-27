@@ -308,6 +308,75 @@ impl Live {
             .collect();
         out
     }
+
+    /// Zero-allocation fast byte total for a folder subtree (used by Worktrees
+    /// and Cleanup sizing without allocating drive-wide directory tables).
+    pub(crate) fn subtree_bytes(&self, scope: &[u8], deadline: Instant, cancel: &AtomicBool) -> u64 {
+        let mut scope = normalize(scope);
+        while scope.len() > 1 && scope.last() == Some(&b'/') {
+            scope.pop();
+        }
+        let base_dir = self
+            .base
+            .lookup(&scope)
+            .filter(|e| !self.is_dead(*e))
+            .and_then(|e| self.base.dir_of(e));
+        let mut path = Vec::new();
+        let canonical_scope = if let Some(scope_dir) = base_dir {
+            self.base
+                .path(self.base.dir_entry()[scope_dir as usize] as usize, &mut path);
+            path.clone()
+        } else if self
+            .over
+            .get(&scope)
+            .is_some_and(|e| e.kind & 3 == walk::KIND_DIR)
+        {
+            scope
+        } else if let Some((found, _)) = self
+            .over
+            .iter()
+            .find(|(p, e)| e.kind & 3 == walk::KIND_DIR && crate::paths::cmp_ci(p, &scope).is_eq())
+        {
+            found.clone()
+        } else {
+            return 0;
+        };
+        let mut total = 0u64;
+        if let Some(scope_dir) = base_dir {
+            let start = self.base.dir_start()[scope_dir as usize] as usize;
+            let end = self.base.dir_end()[scope_dir as usize] as usize;
+            for (n, i) in (start..end).enumerate() {
+                if n.is_multiple_of(65_536)
+                    && (cancel.load(Ordering::Relaxed) || Instant::now() > deadline)
+                {
+                    return total;
+                }
+                let (kind, size, _) = self.attributes(i);
+                if kind & 3 == walk::KIND_FILE
+                    && !self.is_dead(i as u32)
+                    && kind & walk::FLAG_SYNTH == 0
+                {
+                    total = total.saturating_add(size);
+                }
+            }
+        }
+        let (lo, hi) = subtree_bounds(&canonical_scope);
+        let prefix_len = canonical_scope.len();
+        for (n, (p, e)) in self.over.range(lo..hi).enumerate() {
+            if n.is_multiple_of(65_536)
+                && (cancel.load(Ordering::Relaxed) || Instant::now() > deadline)
+            {
+                return total;
+            }
+            if e.kind & walk::FLAG_SYNTH != 0 || !p[prefix_len..].starts_with(b"/") {
+                continue;
+            }
+            if e.kind & 3 == walk::KIND_FILE {
+                total = total.saturating_add(e.size);
+            }
+        }
+        total
+    }
 }
 
 #[cfg(test)]

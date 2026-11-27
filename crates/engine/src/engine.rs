@@ -418,6 +418,21 @@ impl Engine {
             |live| live.storage(&scope, cluster, deadline, cancel),
         )
     }
+    /// Zero-allocation fast byte total for a folder subtree.
+    pub fn subtree_bytes(
+        &self,
+        scope: &Path,
+        deadline: Instant,
+        cancel: &std::sync::atomic::AtomicBool,
+    ) -> u64 {
+        let scope = crate::paths::internal(scope);
+        self.shared
+            .live
+            .read()
+            .unwrap()
+            .as_ref()
+            .map_or(0, |live| live.subtree_bytes(&scope, deadline, cancel))
+    }
     pub fn largest(&self, query: &Query, folders: bool) -> Vec<Found> {
         self.shared
             .live
@@ -1122,17 +1137,18 @@ pub fn search_live(live: &Live, q: &Query, opened: &HashMap<Vec<u8>, u32>) -> Ve
     if q.tokens.is_empty() {
         hits.sort_by(|a, b| b.mtime.cmp(&a.mtime).then(b.score.cmp(&a.score)));
     }
-    let mut positive = q.tokens.iter().filter(|t| !t.negate);
-    let single = match (positive.next(), positive.next()) {
-        (Some(token), None) => Some(String::from_utf8_lossy(&token.text).into_owned()),
-        _ => None,
-    };
-    let tier = |h: &Found| match &single {
-        Some(text) => name_tier(
-            &h.path.file_name().unwrap_or_default().to_string_lossy(),
-            text,
-        ),
-        None => 0,
+    let positive: Vec<String> = q
+        .tokens
+        .iter()
+        .filter(|t| !t.negate)
+        .map(|t| String::from_utf8_lossy(&t.text).into_owned())
+        .collect();
+    let tier = |h: &Found| {
+        if positive.is_empty() {
+            return 0u8;
+        }
+        let name = h.path.file_name().unwrap_or_default().to_string_lossy();
+        query_name_tier(&name, &positive)
     };
     if !q.tokens.is_empty() {
         let now = crate::query::now_secs();
@@ -1213,6 +1229,99 @@ fn name_tier(name: &str, text: &str) -> u8 {
     }) as u8
 }
 
+/// First case-insensitive match position of `needle` in `name` starting at or
+/// after `from` (byte offset). Returns `(pos, at_word_boundary)`.
+fn find_token_in_name(name: &str, needle: &str, from: usize) -> Option<(usize, bool)> {
+    if needle.is_empty() || from >= name.len() {
+        return None;
+    }
+    if name.is_ascii() && needle.is_ascii() {
+        let (n, t) = (name.as_bytes(), needle.as_bytes());
+        if t.len() > n.len() - from {
+            return None;
+        }
+        let mut first: Option<(usize, bool)> = None;
+        for i in from..=n.len() - t.len() {
+            if n[i..i + t.len()].eq_ignore_ascii_case(t) {
+                let boundary = i == 0 || {
+                    let (p, c) = (n[i - 1], n[i]);
+                    !p.is_ascii_alphanumeric()
+                        || (p.is_ascii_lowercase() && c.is_ascii_uppercase())
+                        || (p.is_ascii_digit() != c.is_ascii_digit())
+                };
+                if boundary {
+                    return Some((i, true));
+                }
+                if first.is_none() {
+                    first = Some((i, false));
+                }
+            }
+        }
+        return first;
+    }
+    let lower = name.to_lowercase();
+    let needle_lower = needle.to_lowercase();
+    let slice = lower.get(from..)?;
+    let rel = slice.find(&needle_lower)?;
+    let pos = from + rel;
+    let boundary = pos == 0
+        || lower[..pos]
+            .chars()
+            .next_back()
+            .is_some_and(|ch| !ch.is_alphanumeric());
+    Some((pos, boundary))
+}
+
+/// Rank tier for single-word or multi-word queries based on how completely the
+/// item's own file name matches the query words:
+/// - Single word: exact existing `name_tier` (2 whole/stem, 1 word-start, 0 other).
+/// - Multi-word:
+///   - 5: all query words appear in the file name in query order at word boundaries
+///   - 4: all query words appear in the file name in query order
+///   - 3: all query words appear in the file name (any order)
+///   - 2: multiple (but not all) query words appear in the file name
+///   - 1: one query word appears in the file name (others matched ancestor folders)
+///   - 0: no direct literal match in file name (fuzzy or path-only)
+fn query_name_tier(name: &str, tokens: &[String]) -> u8 {
+    match tokens {
+        [] => 0,
+        [only] => name_tier(name, only),
+        many => {
+            let mut matched_any = 0usize;
+            for tok in many {
+                if find_token_in_name(name, tok, 0).is_some() {
+                    matched_any += 1;
+                }
+            }
+            if matched_any == many.len() {
+                let mut cursor = 0usize;
+                let mut in_order = true;
+                let mut all_boundary = true;
+                for tok in many {
+                    if let Some((pos, boundary)) = find_token_in_name(name, tok, cursor) {
+                        all_boundary &= boundary;
+                        cursor = pos + tok.len();
+                    } else {
+                        in_order = false;
+                        break;
+                    }
+                }
+                if in_order {
+                    if all_boundary { 5 } else { 4 }
+                } else {
+                    3
+                }
+            } else if matched_any >= 2 {
+                2
+            } else if matched_any == 1 {
+                1
+            } else {
+                0
+            }
+        }
+    }
+}
+
 /// `ranking.json` in the data folder replaces the default folder weights
 /// (docs/SEARCH_RANKING.md). The weights are process-wide, and only the main
 /// index's folder has the file: a folder-browsing engine, whose data folder
@@ -1260,7 +1369,7 @@ fn reweighted(index: Index, dir: &Path) -> Index {
 
 #[cfg(test)]
 mod tier_tests {
-    use super::name_tier;
+    use super::{name_tier, query_name_tier};
 
     #[test]
     fn whole_name_then_word_starts_then_the_rest() {
@@ -1275,5 +1384,24 @@ mod tier_tests {
         assert_eq!(name_tier("cnofig.txt", "config"), 0);
         assert_eq!(name_tier("Ärger config.txt", "config"), 1);
         assert_eq!(name_tier("Ärger.txt", "ärger"), 2);
+    }
+
+    #[test]
+    fn multi_word_ranks_both_words_in_filename_above_single_word_filename() {
+        let q = vec!["seek".to_string(), "sample".to_string()];
+        let both_ordered_boundary = query_name_tier("Seek-1.2-Sample-Data", &q);
+        let both_ordered_joined = query_name_tier("myseeksample.txt", &q);
+        let both_reversed = query_name_tier("sample-seek.txt", &q);
+        let single_word = query_name_tier("sample-clip.mp4", &q);
+        let path_only = query_name_tier("notes.txt", &q);
+        assert_eq!(both_ordered_boundary, 5);
+        assert_eq!(both_ordered_joined, 4);
+        assert_eq!(both_reversed, 3);
+        assert_eq!(single_word, 1);
+        assert_eq!(path_only, 0);
+        assert!(both_ordered_boundary > both_ordered_joined);
+        assert!(both_ordered_joined > both_reversed);
+        assert!(both_reversed > single_word);
+        assert!(single_word > path_only);
     }
 }

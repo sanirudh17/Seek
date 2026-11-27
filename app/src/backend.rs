@@ -705,7 +705,7 @@ impl Row {
     }
 }
 
-fn drives() -> Vec<PathBuf> {
+pub(crate) fn drives() -> Vec<PathBuf> {
     let mask = unsafe { GetLogicalDrives() };
     (0..26)
         .filter(|letter| mask & (1 << letter) != 0)

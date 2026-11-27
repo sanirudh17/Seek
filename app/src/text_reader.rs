@@ -1065,6 +1065,13 @@ impl Seek {
                     .flex_shrink_0()
                     .overflow_hidden()
                     .rounded(crate::tokens::RADIUS_CONTROL)
+                    .border_1()
+                    .border_color(p.line)
+                    .on_scroll_wheel(|_, _, cx| {
+                        // Keep trackpad scrolling over the code preview isolated
+                        // so horizontal/vertical swipes never yank the Info panel.
+                        cx.stop_propagation();
+                    })
                     .child(
                         Editor::new(&editor)
                             .aria_label("File preview")
@@ -1080,12 +1087,24 @@ impl Seek {
                 }
                 let path = row.file.path.clone();
                 let mut bar = div()
+                    .w_full()
                     .flex()
                     .items_center()
-                    .justify_between()
+                    .justify_end()
                     .gap_2()
                     .pb_2()
                     .flex_shrink_0();
+                if let Some(note) = pretty_note {
+                    bar = bar.child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .text_size(px(11.))
+                            .text_color(p.muted)
+                            .truncate()
+                            .child(note),
+                    );
+                }
                 if let Some(show_fmt) = pretty_toggle {
                     let selected = if show_fmt { 0 } else { 1 };
                     let motion = self.segment_motion.get("info-pretty-mode").copied();
@@ -1105,15 +1124,6 @@ impl Seek {
                             cx.notify();
                         },
                     ));
-                }
-                if let Some(note) = pretty_note {
-                    bar = bar.child(
-                        div()
-                            .text_size(px(11.))
-                            .text_color(p.muted)
-                            .truncate()
-                            .child(note),
-                    );
                 }
                 return div()
                     .w_full()
@@ -1456,16 +1466,16 @@ impl Seek {
                 )
                 .child(div().w(px(1.)).h(px(16.)).bg(p.line));
         }
-        if !self.text_reader.editing
+        let pretty_switch = (!self.text_reader.editing
             && matches!(
                 self.text_reader.pretty,
                 Some(crate::prettify::Outcome::Formatted { .. })
-            )
-        {
+            ))
+        .then(|| {
             let show_fmt = self.text_reader.show_formatted;
             let selected = if show_fmt { 0 } else { 1 };
             let motion = self.segment_motion.get("text-pretty-mode").copied();
-            let switch = super::settings_view::segmented(
+            super::settings_view::segmented(
                 "text-pretty-mode",
                 &["Formatted", "Raw"],
                 selected,
@@ -1487,11 +1497,8 @@ impl Seek {
                         cx.notify();
                     });
                 },
-            );
-            controls = controls
-                .child(switch)
-                .child(div().w(px(1.)).h(px(16.)).bg(p.line));
-        }
+            )
+        });
         if self.text_reader.editing && crate::prettify::kind(&document.path).is_some() {
             controls = controls.child(
                 reader_control("text-format-document", "Format document", p)
@@ -1736,15 +1743,48 @@ impl Seek {
         } else {
             ""
         };
-        controls = controls.child(div().flex_1()).child(
-            div()
-                .id("text-save-status")
-                .role(Role::Status)
-                .aria_label(status)
-                .text_size(px(11.))
-                .text_color(p.muted)
-                .child(status),
-        );
+        controls = controls.child(div().flex_1());
+        if let Some(reason) = document.read_only {
+            let badge_label = if reason.contains("Mixed line endings") {
+                "Read-only · Mixed EOL"
+            } else {
+                "Read-only"
+            };
+            controls = controls.child(
+                div()
+                    .id("text-readonly-pill")
+                    .h(px(22.))
+                    .px(px(8.))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .rounded(px(999.))
+                    .bg(p.text.opacity(0.055))
+                    .border_1()
+                    .border_color(p.text.opacity(0.08))
+                    .text_size(px(11.))
+                    .line_height(px(12.))
+                    .text_color(p.muted)
+                    .tooltip(move |window, cx| {
+                        gpui_component::tooltip::Tooltip::new(reason.clone()).build(window, cx)
+                    })
+                    .child(badge_label),
+            );
+        }
+        if let Some(switch) = pretty_switch {
+            controls = controls.child(switch);
+        }
+        if !status.is_empty() {
+            controls = controls.child(
+                div()
+                    .id("text-save-status")
+                    .role(Role::Status)
+                    .aria_label(status)
+                    .text_size(px(11.))
+                    .text_color(p.muted)
+                    .child(status),
+            );
+        }
         let task_controls = if self.text_reader.editing
             && markdown(&document.path)
             && !self.text_reader.tasks.is_empty()
@@ -2098,9 +2138,6 @@ impl Seek {
                 );
             view = view.child(notice);
         }
-        if let Some(reason) = document.read_only {
-            view = view.child(div().px_4().py_2().text_color(p.muted).child(reason));
-        }
         if !self.text_reader.editing
             && let Some(crate::prettify::Outcome::Raw { note: Some(note) }) =
                 &self.text_reader.pretty
@@ -2206,13 +2243,19 @@ impl Seek {
         cx: &mut Context<Self>,
     ) {
         self.focus_reader(window, cx);
-        if self.text_reader.saving
-            || self
-                .text_reader
-                .document
-                .as_ref()
-                .is_none_or(|document| document.read_only.is_some())
+        if self.text_reader.saving {
+            return;
+        }
+        if let Some(reason) = self
+            .text_reader
+            .document
+            .as_ref()
+            .and_then(|document| document.read_only.as_deref())
         {
+            self.show_quiet_toast(reason.to_owned(), window, cx);
+            return;
+        }
+        if self.text_reader.document.is_none() {
             return;
         }
         let Some(editor) = self.text_reader.editor.clone() else {
@@ -2303,13 +2346,13 @@ impl Seek {
     ) -> AnyElement {
         let idx = line.line_index();
         let line_no = div()
-            .w(px(28.))
+            .w(px(32.))
             .flex_shrink_0()
             .flex()
             .items_center()
             .justify_center()
             .text_size(px(11.))
-            .text_color(p.muted.opacity(0.6))
+            .text_color(p.muted.opacity(0.58))
             .child(format!("{}", idx + 1));
         match line {
             crate::env_secrets::EnvLine::Plain { text, .. } => {
@@ -2396,11 +2439,14 @@ impl Seek {
                             format!("Reveal value for {key}")
                         })
                         .cursor_pointer()
-                        .h(px(20.))
+                        .h(px(22.))
                         .flex()
                         .items_center()
-                        .rounded(px(4.))
-                        .px(px(6.))
+                        .justify_center()
+                        .line_height(px(14.))
+                        .pb(px(1.))
+                        .rounded(px(5.))
+                        .px(px(7.))
                         .when(!is_revealed, |d| {
                             d.bg(p.text.opacity(0.08))
                                 .border_1()

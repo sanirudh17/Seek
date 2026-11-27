@@ -14,6 +14,9 @@ pub(super) struct StoragePage {
     /// at first).
     pub(super) drive: PathBuf,
     pub(super) scope: PathBuf,
+    /// Cached drive list so scrolling Storage doesn't invoke 26 Win32
+    /// `GetDriveTypeW` syscalls on every render frame.
+    drives: Vec<PathBuf>,
     report: Option<Storage>,
     measuring: bool,
     cancel: Arc<AtomicBool>,
@@ -207,10 +210,12 @@ impl Seek {
             return;
         };
         self.close_worktrees();
+        self.view_motion = self.view_motion.wrapping_add(1);
         let cached = self.storage_cache.get(&cache_key(&drive)).cloned();
         self.storage_page = Some(StoragePage {
             drive: drive.clone(),
             scope: drive.clone(),
+            drives: drives(),
             report: cached,
             measuring: false,
             cancel: Arc::new(AtomicBool::new(false)),
@@ -224,6 +229,7 @@ impl Seek {
         });
         self.refresh_capacity(cx);
         self.measure_storage(drive, cx);
+        self.sync_cleanup_on_storage_open(cx);
     }
 
     /// Storage with Find duplicates in view, already searching the folder in
@@ -328,8 +334,13 @@ impl Seek {
                     let had_data = page.report.as_ref().is_some_and(report_has_data);
                     let now_has_data = report_has_data(&report);
                     if now_has_data {
-                        this.storage_cache
-                            .insert(cache_key(&page.scope), report.clone());
+                        let key = cache_key(&page.scope);
+                        if this.storage_cache.len() >= 32 && !this.storage_cache.contains_key(&key)
+                        {
+                            let drive_key = cache_key(&page.drive);
+                            this.storage_cache.retain(|k, _| k == &drive_key);
+                        }
+                        this.storage_cache.insert(key, report.clone());
                     }
                     if !had_data && now_has_data {
                         page.bar_anim += 1;
@@ -374,8 +385,8 @@ impl Seek {
         let at_drive = page.scope == page.drive;
         // Header: title, the drive picker, and the measuring line.
         let owner = cx.entity().downgrade();
-        // Every drive on the PC, and any other indexed location.
-        let mut roots = drives();
+        // Every drive on the PC (cached when Storage opened), and any other indexed location.
+        let mut roots = page.drives.clone();
         for root in &self.roots {
             if !roots.iter().any(|r| r.as_os_str().eq_ignore_ascii_case(root.as_os_str())) {
                 roots.push(root.clone());
@@ -802,6 +813,7 @@ impl Seek {
                         rows.into_any_element()
                     }),
             );
+        let return_tip = format!("Back to {} (Alt+Left / Esc)", self.return_folder_label());
         div()
             .id("storage-page")
             .track_focus(&self.page_focus)
@@ -815,30 +827,72 @@ impl Seek {
             .bg(p.pane)
             .child(
                 div()
-                    .max_w(px(880.))
-                    .mx_auto()
-                    .px_8()
+                    .w_full()
+                    .px_4()
                     .py_6()
                     .flex()
-                    .flex_col()
-                    .gap_6()
+                    .items_start()
+                    .justify_center()
+                    .gap_3()
                     .child(
                         div()
+                            .id("storage-return")
+                            .role(Role::Button)
+                            .aria_label("Back to previous folder")
+                            .flex_shrink_0()
+                            .size(px(32.))
+                            .rounded(RADIUS_CONTROL)
                             .flex()
                             .items_center()
-                            .justify_between()
+                            .justify_center()
+                            .cursor_pointer()
+                            .border_1()
+                            .border_color(rgba(0))
+                            .text_color(p.muted)
+                            .hover(move |s| {
+                                s.bg(p.accent.opacity(0.16))
+                                    .border_color(p.accent.opacity(0.40))
+                                    .text_color(p.text)
+                            })
+                            .tooltip(move |window, cx| {
+                                gpui_component::tooltip::Tooltip::new(return_tip.clone())
+                                    .build(window, cx)
+                            })
+                            .child(
+                                Icon::new(gpui_component_assets::IconName::ChevronLeft)
+                                    .size(px(16.)),
+                            )
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.close_tool_pages(window, cx);
+                            })),
+                    )
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .max_w(px(880.))
+                            .flex()
+                            .flex_col()
+                            .gap_6()
                             .child(
                                 div()
-                                    .text_size(TEXT_PAGE)
-                                    .font_weight(FontWeight::SEMIBOLD)
-                                    .child("Storage"),
+                                    .flex()
+                                    .items_center()
+                                    .justify_between()
+                                    .child(
+                                        div()
+                                            .text_size(TEXT_PAGE)
+                                            .font_weight(FontWeight::SEMIBOLD)
+                                            .child("Storage"),
+                                    )
+                                    .child(picker),
                             )
-                            .child(picker),
+                            .child(summary)
+                            .child(folders)
+                            .children(self.cleanup_section(p, cx))
+                            .child(self.duplicates_section(p, cx)),
                     )
-                    .child(summary)
-                    .child(folders)
-                        .children(self.cleanup_section(p, cx))
-                    .child(self.duplicates_section(p, cx)),
+                    .child(div().w(px(32.)).flex_shrink_0()),
             )
             .into_any_element()
     }

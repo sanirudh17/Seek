@@ -26,8 +26,11 @@ avoid replacing GPUI menus with Windows shell menus.
 
 ## Seek 1.2 editor preview polish
 
-Slimmer, centered line-number gutter constants in `input/base/element.rs`
-(`LINE_NUMBER_SIDE_PADDING = 6px`, `LINE_NUMBER_RIGHT_MARGIN = 8px`,
-`FOLD_ICON_HITBOX_WIDTH = 12px`), and immediate focus acquisition on
-`on_mouse_down` in `input/base/state.rs` so first-click drag-select,
-double-click word, and triple-click line work in read-only code previews.
+Slim, centered, softly toned line-number gutter in `input/base/element.rs`
+(`LINE_NUMBER_SIDE_PADDING = 5px`, `LINE_NUMBER_RIGHT_MARGIN = 6px`,
+`FOLD_ICON_HITBOX_WIDTH = 12px`, unpadded number formatting, and horizontal
+content-mask clipping to the right of the gutter so scrolled code never
+overlaps line numbers), smooth 120ms fade-in entrance on `PopupMenu`, and
+immediate focus acquisition on `on_mouse_down` in `input/base/state.rs` so
+first-click drag-select, double-click word, and triple-click line work in
+read-only code previews.

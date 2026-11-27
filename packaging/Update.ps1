@@ -3,6 +3,34 @@ param([Parameter(Mandatory=$true)][string]$Request, [switch]$NoRestart)
 $ErrorActionPreference='Stop'
 $ready=$false;$replaced=@();$oldVersion=$null;$key=$null;$manifestBackup=$false
 function QuoteArg([string]$value){'"'+[regex]::Replace($value,'(\\+)$','$1$1')+'"'}
+function VersionMatches([string]$actual,[string]$expected){
+ $a=if($actual){$actual.Trim()}else{''}
+ $e=if($expected){$expected.Trim()}else{''}
+ return ($a -eq $e) -or (($a -replace '\.0$','') -eq $e)
+}
+function CopyWithRetry([string]$source,[string]$destination){
+ for($attempt=0;$attempt -lt 15;$attempt++){
+  try{
+   Copy-Item -LiteralPath $source -Destination $destination -Force
+   return
+  }catch{
+   if($attempt -eq 14){throw}
+   Start-Sleep -Milliseconds 300
+  }
+ }
+}
+function StopLocalHelper([string]$dir){
+ try{
+  $prefix=$dir.TrimEnd('\')+'\'
+  Get-Process -Name 'seek-helper' -ErrorAction SilentlyContinue|ForEach-Object{
+   try{
+    if($_.Path -and $_.Path.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)){
+     Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+    }
+   }catch{}
+  }
+ }catch{}
+}
 function RestartSeek {
  if($NoRestart){return}
  $args=@('--data',(QuoteArg $r.data))
@@ -29,7 +57,7 @@ try{
   $destination=Join-Path $target $name
   if((Test-Path -LiteralPath $destination) -and (Get-Item -LiteralPath $destination).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Program files must not be links'}
  }
- if([Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $payload 'seek.exe')).FileVersion -ne $r.version){throw 'Downloaded executable version does not match the release'}
+ if(-not(VersionMatches ([Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $payload 'seek.exe')).FileVersion) $r.version)){throw 'Downloaded executable version does not match the release'}
  if(Test-Path -LiteralPath $backup){throw 'Refusing to reuse an update backup'}
  $manifest=Join-Path $target 'install-manifest.json'
  $installed=Test-Path -LiteralPath $manifest
@@ -51,15 +79,16 @@ try{
   $parent=Get-Process -Id $r.parent_pid -ErrorAction SilentlyContinue
   if($parent -and -not $parent.WaitForExit(45000)){throw 'Seek did not close; program files were not changed'}
  }
+ StopLocalHelper $target
  New-Item -ItemType Directory -Path $backup|Out-Null
  foreach($name in $files){if(Test-Path -LiteralPath (Join-Path $target $name)){Copy-Item -LiteralPath (Join-Path $target $name) -Destination (Join-Path $backup $name)}}
  if($installed){Copy-Item -LiteralPath $manifest -Destination (Join-Path $backup 'install-manifest.json');$manifestBackup=$true}
  foreach($name in $files){
   # Include the attempted file, since a failed copy could have truncated it.
   $replaced+=,$name
-  Copy-Item -LiteralPath (Join-Path $payload $name) -Destination (Join-Path $target $name) -Force
+  CopyWithRetry (Join-Path $payload $name) (Join-Path $target $name)
  }
- if([Diagnostics.FileVersionInfo]::GetVersionInfo($current).FileVersion -ne $r.version){throw 'Installed executable failed version validation'}
+ if(-not(VersionMatches ([Diagnostics.FileVersionInfo]::GetVersionInfo($current).FileVersion) $r.version)){throw 'Installed executable failed version validation'}
  if($installed){
   $m.version=$r.version
   [IO.File]::WriteAllText($manifest,($m|ConvertTo-Json -Depth 4),[Text.UTF8Encoding]::new($false))

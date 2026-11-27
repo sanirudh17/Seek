@@ -149,12 +149,37 @@ fn expand(text: &str) -> Result<PathBuf, String> {
 /// Complete a typed Windows path prefix against existing disk entries
 /// (directories first, case-insensitive, bounded to 512 entries). Returns the
 /// single match or longest common prefix if multiple match.
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn tab_complete(typed: &str, show_hidden: bool) -> Option<String> {
+    tab_complete_candidates(typed, None, show_hidden).map(|(chosen, _)| chosen)
+}
+
+/// Like [`tab_complete`], also returning the full ordered candidate list so
+/// repeated `Tab` / `Shift+Tab` presses can cycle through matching entries,
+/// and falling back to `base` when `typed` is a plain relative folder prefix.
+pub fn tab_complete_candidates(
+    typed: &str,
+    base: Option<&std::path::Path>,
+    show_hidden: bool,
+) -> Option<(String, Vec<String>)> {
     let trimmed = typed.trim();
     if trimmed.is_empty() {
         return None;
     }
-    let expanded = address(trimmed)?.ok()?;
+    let expanded = if let Some(addr) = address(trimmed) {
+        addr.ok()?
+    } else if let Some(base_dir) = base
+        && !trimmed.contains([':', '*', '?', '"', '<', '>', '|'])
+    {
+        let cleaned = base_dir
+            .to_string_lossy()
+            .trim_start_matches(r"\\?\")
+            .to_owned();
+        let rel = trimmed.replace('/', r"\");
+        PathBuf::from(cleaned).join(rel)
+    } else {
+        return None;
+    };
     let raw = expanded.to_string_lossy().into_owned();
     let (dir, prefix) = if raw.ends_with('\\') || raw.ends_with('/') {
         (PathBuf::from(&raw), String::new())
@@ -187,7 +212,7 @@ pub fn tab_complete(typed: &str, show_hidden: bool) -> Option<String> {
     }
     dirs.sort_by_key(|s| s.to_ascii_lowercase());
     files.sort_by_key(|s| s.to_ascii_lowercase());
-    let mut matches: Vec<(String, bool)> = dirs
+    let matches: Vec<(String, bool)> = dirs
         .into_iter()
         .map(|n| (n, true))
         .chain(files.into_iter().map(|n| (n, false)))
@@ -195,15 +220,20 @@ pub fn tab_complete(typed: &str, show_hidden: bool) -> Option<String> {
     if matches.is_empty() {
         return None;
     }
+    let candidates: Vec<String> = matches
+        .iter()
+        .map(|(name, is_dir)| {
+            let mut out = dir.join(name).to_string_lossy().into_owned();
+            if *is_dir && !out.ends_with('\\') {
+                out.push('\\');
+            }
+            out
+        })
+        .collect();
     let chosen = if matches.len() == 1 {
-        let (name, is_dir) = matches.remove(0);
-        let mut out = dir.join(name).to_string_lossy().into_owned();
-        if is_dir && !out.ends_with('\\') {
-            out.push('\\');
-        }
-        out
+        candidates[0].clone()
     } else {
-        let first = matches[0].0.clone();
+        let first = &matches[0].0;
         let mut lcp_len = first.len();
         for (other, _) in &matches[1..] {
             lcp_len = first
@@ -217,15 +247,10 @@ pub fn tab_complete(typed: &str, show_hidden: bool) -> Option<String> {
         if lcp_len > prefix.len() {
             dir.join(&first[..lcp_len]).to_string_lossy().into_owned()
         } else {
-            let (name, is_dir) = matches.remove(0);
-            let mut out = dir.join(name).to_string_lossy().into_owned();
-            if is_dir && !out.ends_with('\\') {
-                out.push('\\');
-            }
-            out
+            candidates[0].clone()
         }
     };
-    Some(chosen)
+    Some((chosen, candidates))
 }
 
 #[cfg(test)]
@@ -322,5 +347,10 @@ mod tests {
         assert!(u.ends_with("UniqueFolder\\"), "got {u}");
         let p = tab_complete(&format!("{}\\Pro", dir.path().display()), false).unwrap();
         assert!(p.ends_with("Projects"), "got {p}");
+        let (rel, cands) = tab_complete_candidates("Pro", Some(dir.path()), false).unwrap();
+        assert!(rel.ends_with("Projects"), "got {rel}");
+        assert_eq!(cands.len(), 2);
+        assert!(cands[0].ends_with("ProjectsAlpha\\"));
+        assert!(cands[1].ends_with("ProjectsBeta\\"));
     }
 }

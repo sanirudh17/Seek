@@ -1687,6 +1687,15 @@ impl Seek {
                                     )
                                     .child(
                                         Button::new("save-file-edit")
+                                            .custom(
+                                                gpui_component::button::ButtonCustomVariant::new(cx)
+                                                    .color(p.accent.opacity(0.22))
+                                                    .foreground(p.text)
+                                                    .hover(p.accent.opacity(0.32))
+                                                    .active(p.accent.opacity(0.42)),
+                                            )
+                                            .border_1()
+                                            .border_color(p.accent.opacity(0.55))
                                             .track_focus(&edit.save_focus)
                                             .accessibility_label(if edit.batch.is_some() { "Apply renames" } else { "Save" })
                                             .disabled(edit.pending || !self.batch_apply_ready())

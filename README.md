@@ -63,16 +63,17 @@ Get-FileHash .\Seek-<version>-Setup-x64.exe -Algorithm SHA256
 
 ### Search
 
-- **Filename search** over the local index, with type and extension filters (`photo ext:jpg`, `report ext:pdf`) and suggestions as you type.
+- **Filename search** over the local index, with type and extension filters (`photo ext:jpg`, `report ext:pdf`), multi-word ranking that prioritizes names containing every search word together, and suggestions as you type.
 - **Content search** inside text, code, Markdown, Word documents and PDFs in the folders you choose. Results stream in while the scan runs, and skipped or unreadable files are listed.
 - **Largest files and folders** anywhere in the index.
 - **Saved and recent searches**, shown in the sidebar and in Jump.
 
 ### Look inside files
 
-- **Quick Look** (Space) for pictures, videos, PDFs, Word documents and Excel sheets: zoom, pan, actual size, inline picture editing (crop, rotate, flip, annotate, redact), inline video playback and editing (trim, crop, rotate, mute, save frame), and page and file navigation from the keyboard.
-- **Previews** in the information panel and Gallery, loaded only for what you select.
-- **Document panes** open text, code and Markdown beside your files for reading or editing, with find, optional auto-save and optional backups.
+- **Quick Look** (Space) for pictures, videos, PDFs, Word documents and Excel sheets: zoom, pan, actual size, GPU-accelerated inline picture editing (8-handle crop, rotate, flip, pen, highlighter, arrow, shapes, text and permanent pixel-level redaction), smooth inline video playback and editing (scrubbing filmstrip, trim, crop, rotate, mute and save frame), and keyboard navigation across pages and files.
+- **Code, text and config previews** with palette-matched syntax highlighting for 25 languages, selectable read-only text with copy support, formatted and raw views for JSON and XML, optional line wrapping, and automatic `.env` secret masking with click-to-reveal.
+- **Previews** in the information panel and Gallery, loaded only for what you select, with instant multi-select summaries.
+- **Document panes** open text, code, Markdown, pictures and videos beside your files for reading or editing, with find, optional auto-save, optional backups and atomic saves.
 - **Image tools** for common picture tasks from the information panel.
 
 ### Work with files
@@ -89,8 +90,8 @@ Get-FileHash .\Seek-<version>-Setup-x64.exe -Algorithm SHA256
 
 ### Storage
 
-- **Overview** of any drive or folder, picked from a list of all your drives: space used and free, a breakdown by kind, and the largest folders with drill-down.
-- **Cleanup suggestions** for caches apps rebuild on their own (developer tools, browsers, editors, chat apps, graphics drivers), old temporary files, crash dumps, app logs, unfinished downloads, old installers and build folders in long-untouched projects. Sign-in tokens, locally installed packages and tracked source folders are never offered. Tick the groups you want and clean them in one go, with live progress and a Stop button. Caches, temporary files and build folders are deleted in place, since they rebuild on their own; downloaded AI models, unfinished downloads and old installers go to the Recycle Bin and can be undone.
+- **Overview** of any drive or folder, picked from a list of all your drives: space used and free, a breakdown by kind, and the largest folders with drill-down, pre-warmed once the index is ready so Storage opens without waiting.
+- **Cleanup suggestions** for caches apps rebuild on their own (developer tools, browsers, editors, chat apps, graphics drivers), old temporary files, crash dumps, app logs, unfinished downloads, old installers and build folders in long-untouched projects. Sign-in tokens, locally installed packages and tracked source folders are never offered. Tick the groups you want and clean them in one go, with live progress, a Stop button, and automatic Recycle Bin and timestamp updates. Caches, temporary files and build folders are deleted in place, since they rebuild on their own; downloaded AI models, unfinished downloads and old installers go to the Recycle Bin and can be undone.
 - **Find duplicates** confirms identical files by their full contents and checks each file again just before moving it. Hard links, cloud placeholders and system files are left out, and identical folders are found too.
 - **Similar images** finds resized, recompressed or lightly edited copies of a picture at three levels, in one folder or everywhere. Pictures are compared upright and by colour, and shown side by side; nothing is selected for you, and one picture of every group always stays.
 
@@ -98,7 +99,7 @@ Get-FileHash .\Seek-<version>-Setup-x64.exe -Algorithm SHA256
 
 - **Jump** (Ctrl+K) goes to any folder, recent file, saved search, setting, view or command, including Storage, Find duplicates and Find similar images.
 - **Saved commands** run a program of your choice on the selection, with explicit arguments. Saving a command never runs it.
-- **Worktrees** lists Git repositories and their worktrees with their status.
+- **Worktrees** lists Git repositories and their worktrees with branch, status and rebuildable size, with quick open and permanent removal behind an explicit confirmation.
 
 ### Coding agents
 

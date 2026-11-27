@@ -205,8 +205,9 @@ impl Seek {
                 }
                 let count = paths.len();
                 let gone: HashSet<PathBuf> = paths.iter().cloned().collect();
+                let pending_before = this.files_pending;
                 this.run_file_op(crate::file_ops::Operation::Recycle { paths }, window, cx);
-                if this.message.is_none() {
+                if this.files_pending > pending_before {
                     let state = &mut this.similar;
                     if let Some(scan) = state.scan.take() {
                         state.scan = Some(Arc::new(Scan {
@@ -222,6 +223,7 @@ impl Seek {
                     }
                     state.regroup();
                     state.moved = Some(count);
+                    this.refresh_recycle_bin(cx);
                     this.refresh_capacity(cx);
                     if let Some(page) = &this.storage_page {
                         let scope = page.scope.clone();

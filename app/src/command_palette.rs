@@ -1,5 +1,4 @@
 use super::*;
-use gpui_component::ActiveTheme;
 use gpui_component::command::{Command as Palette, CommandGroup, CommandItem, CommandState};
 
 #[derive(Clone)]
@@ -687,8 +686,8 @@ impl Seek {
                     cx.stop_propagation();
                 }),
             )
-            .child(
-                div()
+            .child({
+                let card = div()
                     .id("command-palette")
                     .role(Role::Dialog)
                     .aria_label("Jump and commands")
@@ -698,14 +697,22 @@ impl Seek {
                     .max_h(relative(0.85))
                     .w(px(620.))
                     .rounded(crate::tokens::RADIUS_CARD)
-                    .bg(cx.theme().tokens.popover)
+                    .bg(crate::appearance::modal_surface(p))
                     .border_1()
-                    .border_color(p.line)
+                    .border_color(crate::appearance::modal_border(p))
                     .shadow_lg()
                     .overflow_hidden()
                     .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                    .child(commands),
-            )
+                    .child(commands);
+                if self.motion_enabled {
+                    card.with_animation("command-palette-enter", crate::motion::enter(), |d, t| {
+                        d.opacity(0.4 + 0.6 * t).mt(px((1. - t) * -8.))
+                    })
+                    .into_any_element()
+                } else {
+                    card.into_any_element()
+                }
+            })
             .into_any_element()
     }
 }

@@ -8,7 +8,12 @@ use crate::sidebar_groups::{Item, Layout, Place};
 use gpui_component::menu::{ContextMenuExt, PopupMenuItem};
 use gpui_component_assets::IconName as Glyph;
 
-const ROW: f32 = 30.;
+// Exact multiples of 4 so Windows 125%/150%/175% DPI scaling produces
+// integer physical pixel heights and spacing with zero cumulative drift for
+// the sliding active pill (32px row + 4px gap = 36px stride).
+const ROW: f32 = 32.;
+const ROW_GAP: f32 = 4.;
+const ROW_STRIDE: f32 = ROW + ROW_GAP;
 
 #[derive(Clone)]
 pub(super) struct GroupDrag {
@@ -58,7 +63,23 @@ pub(super) struct State {
     pub(super) edit: Option<GroupEdit>,
     /// Group whose items are animating open (true) or closed (false).
     motion: Option<(u64, bool, Instant, u64)>,
+    /// Favorites section fold animation: `(expanding, started, generation)`.
+    pub(super) favorites_motion: Option<(bool, Instant, u64)>,
+    /// Locations section fold animation: `(expanding, started, generation)`.
+    pub(super) locations_motion: Option<(bool, Instant, u64)>,
     generation: u64,
+}
+
+impl State {
+    pub(super) fn trigger_section_motion(&mut self, favorites: bool, expanding: bool) {
+        self.generation = self.generation.wrapping_add(1);
+        let entry = Some((expanding, Instant::now(), self.generation));
+        if favorites {
+            self.favorites_motion = entry;
+        } else {
+            self.locations_motion = entry;
+        }
+    }
 }
 
 impl Seek {
@@ -429,6 +450,7 @@ impl Seek {
             || self.sidebar_state.drop_row == Some((place, index));
         let over_target = file_target.clone();
         let drop_target = file_target.clone();
+        let use_sliding_pill = matches!(place, Place::Favorites);
         let row = div()
             .id(SharedString::from(format!(
                 "sidebar-item-{place:?}-{index}"
@@ -439,6 +461,7 @@ impl Seek {
                 Item::Search { .. } => format!("Saved search: {label}"),
             })
             .flex()
+            .flex_shrink_0()
             .items_center()
             .gap_2()
             .h(px(ROW))
@@ -448,18 +471,29 @@ impl Seek {
             .cursor_pointer()
             .bg(if moving_into {
                 p.accent.opacity(0.22)
-            } else if selected {
+            } else if selected && !use_sliding_pill {
                 p.hover
             } else {
                 rgba(0).into()
             })
             .text_color(p.text)
-            .hover(move |s| s.bg(p.hover))
+            .when(!selected || !use_sliding_pill, |d| {
+                d.hover(move |s| s.bg(p.hover))
+            })
             .child(icon)
             .child(div().flex_1().min_w_0().truncate().child(label))
-            .on_click(
-                cx.listener(move |this, _, window, cx| this.open_sidebar_item(&open, window, cx)),
-            )
+            .on_click(cx.listener(move |this, _, window, cx| {
+                if matches!(place, Place::Favorites) {
+                    let prev = this.active_favorites_row();
+                    let next = index + 1;
+                    if let Some(from) = prev {
+                        this.slide_segment("sidebar-fav", from, next);
+                    } else {
+                        this.segment_motion.remove("sidebar-fav");
+                    }
+                }
+                this.open_sidebar_item(&open, window, cx);
+            }))
             .on_drag(drag, |drag, offset, _, cx| {
                 super::drag_preview::near_cursor(drag.clone(), offset, cx)
             })
@@ -549,11 +583,11 @@ impl Seek {
                 })
                 .px_2()
                 .h(px(30.))
-                .mb_2()
+                .mb_1()
                 .flex_shrink_0()
                 .flex()
                 .items_center()
-                .gap_1()
+                .gap_2()
                 .rounded(crate::tokens::RADIUS_ROW)
                 .cursor_pointer()
                 .line_height(px(20.))
@@ -562,17 +596,29 @@ impl Seek {
                 .text_color(p.muted)
                 .hover(move |s| s.text_color(p.text).bg(p.hover))
                 .child(
-                    Icon::new(if collapsed {
-                        Glyph::ChevronRight
-                    } else {
-                        Glyph::ChevronDown
-                    })
-                    .size(px(12.))
-                    .text_color(p.muted),
+                    div()
+                        .size(px(16.))
+                        .flex_shrink_0()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .child(
+                            Icon::new(if collapsed {
+                                Glyph::ChevronRight
+                            } else {
+                                Glyph::ChevronDown
+                            })
+                            .size(px(12.))
+                            .text_color(p.muted),
+                        ),
                 )
                 .child("Favorites")
                 .on_click(cx.listener(|this, _, window, cx| {
                     this.preferences.favorites_collapsed = !this.preferences.favorites_collapsed;
+                    if this.motion_enabled {
+                        this.sidebar_state
+                            .trigger_section_motion(true, !this.preferences.favorites_collapsed);
+                    }
                     this.save_preferences(window, cx);
                 }))
                 .drag_over::<PlaceDrag>(move |style, _, _, _| style.text_color(p.text))
@@ -580,6 +626,9 @@ impl Seek {
                     this.sidebar_state.drop = None;
                     if this.preferences.favorites_collapsed {
                         this.preferences.favorites_collapsed = false;
+                        if this.motion_enabled {
+                            this.sidebar_state.trigger_section_motion(true, true);
+                        }
                         this.save_preferences(window, cx);
                     }
                     this.drop_on_place(drag, Place::Favorites, cx)
@@ -587,6 +636,9 @@ impl Seek {
                 .on_drop(cx.listener(|this, drag: &super::daily::FilesDrag, window, cx| {
                     if this.preferences.favorites_collapsed {
                         this.preferences.favorites_collapsed = false;
+                        if this.motion_enabled {
+                            this.sidebar_state.trigger_section_motion(true, true);
+                        }
                         this.save_preferences(window, cx);
                     }
                     this.add_dragged_folders(&drag.paths, Place::Favorites, window, cx)
@@ -601,17 +653,61 @@ impl Seek {
                 })
                 .into_any_element(),
         );
-        if collapsed {
+        let fav_motion = self
+            .sidebar_state
+            .favorites_motion
+            .filter(|(_, at, _)| at.elapsed() < crate::motion::SPRING);
+        if collapsed && fav_motion.is_none() {
             return out;
         }
-        out.push(self.all_locations_row(p, cx));
-        for (index, item) in layout.favorites.iter().enumerate() {
-            out.push(self.sidebar_item(item, Place::Favorites, index, false, p, cx));
+        let mut fav_body = div().flex().flex_col().gap(px(ROW_GAP));
+        let mut est_rows = 1 + layout.favorites.len();
+        let active_fav = self.active_favorites_row();
+        let mut fav_list = div().relative().flex().flex_col().gap(px(ROW_GAP));
+        if let Some(active_idx) = active_fav {
+            let max_idx = layout.favorites.len();
+            let slide = self
+                .segment_motion
+                .get("sidebar-fav")
+                .copied()
+                .filter(|(from, _)| *from <= max_idx && *from != active_idx);
+            let pill = div()
+                .absolute()
+                .left_0()
+                .right_0()
+                .h(px(ROW))
+                .rounded(crate::tokens::RADIUS_ROW)
+                .bg(p.hover);
+            let pill: AnyElement = match slide {
+                Some((from, generation)) if self.motion_enabled => {
+                    let from_y = from as f32 * ROW_STRIDE;
+                    let to_y = active_idx as f32 * ROW_STRIDE;
+                    pill.with_animation(
+                        ("sidebar-fav-pill", generation as usize),
+                        crate::motion::reversible(),
+                        move |d, t| d.top(px(from_y + (to_y - from_y) * t)),
+                    )
+                    .into_any_element()
+                }
+                _ => pill
+                    .top(px(active_idx as f32 * ROW_STRIDE))
+                    .into_any_element(),
+            };
+            fav_list = fav_list.child(pill);
         }
+        fav_list = fav_list.child(self.all_locations_row(p, cx));
+        for (index, item) in layout.favorites.iter().enumerate() {
+            fav_list = fav_list.child(self.sidebar_item(item, Place::Favorites, index, false, p, cx));
+        }
+        fav_body = fav_body.child(fav_list);
         for (position, group) in layout.groups.iter().enumerate() {
+            est_rows += 1;
+            if !group.collapsed {
+                est_rows += group.items.len();
+            }
             let header = self.group_header(group, position, p, cx);
             let place = Place::Group(group.id);
-            let mut items = div().flex().flex_col();
+            let mut items = div().flex().flex_col().gap(px(ROW_GAP));
             for (index, item) in group.items.iter().enumerate() {
                 items = items.child(self.sidebar_item(item, place, index, true, p, cx));
             }
@@ -619,7 +715,7 @@ impl Seek {
             if group.items.is_empty() && !group.collapsed && cx.has_active_drag() {
                 items = items.child(div().h(px(ROW)));
             }
-            let height = (group.items.len().max(1) as f32) * ROW;
+            let height = (group.items.len().max(1) as f32) * ROW_STRIDE - ROW_GAP;
             let motion = self
                 .sidebar_state
                 .motion
@@ -644,7 +740,7 @@ impl Seek {
             // The whole group, heading, items and gaps, accepts dropped folders
             // and sidebar items; a row's own drop (move into, or insert at its
             // edge) is handled first.
-            out.push(
+            fav_body = fav_body.child(
                 div()
                     .id(("group-area", group.id as usize))
                     .flex()
@@ -666,11 +762,43 @@ impl Seek {
                         }),
                     )
                     .child(header)
-                    .children(body)
-                    .into_any_element(),
+                    .children(body),
             );
         }
+        let est_height = (est_rows.max(1) as f32) * ROW_STRIDE;
+        let fav_el = match fav_motion {
+            Some((expanding, _, generation)) => fav_body
+                .overflow_hidden()
+                .with_animation(
+                    ("favorites-fold", generation as usize),
+                    crate::motion::reversible(),
+                    move |d, t| {
+                        let shown = if expanding { t } else { 1. - t };
+                        d.h(px(est_height * shown)).opacity(shown)
+                    },
+                )
+                .into_any_element(),
+            None => fav_body.into_any_element(),
+        };
+        out.push(fav_el);
         out
+    }
+
+    /// Active row index inside the top-level Favorites list (`0` = All locations,
+    /// `1 + i` = `layout.favorites[i]`), used for the sliding active pill.
+    pub(super) fn active_favorites_row(&self) -> Option<usize> {
+        if self.storage_page.is_some() || self.worktrees_page.is_some() {
+            return None;
+        }
+        if self.scope.is_none() {
+            return Some(0);
+        }
+        let layout = self.sidebar_layout();
+        layout
+            .favorites
+            .iter()
+            .position(|item| item.path().is_some_and(|path| self.scope.as_deref() == Some(path)))
+            .map(|i| i + 1)
     }
 
     pub(super) fn storage_row(&self, p: crate::appearance::Palette, cx: &mut Context<Self>) -> AnyElement {
@@ -680,15 +808,15 @@ impl Seek {
             .role(Role::Button)
             .aria_label("Storage")
             .flex()
+            .flex_shrink_0()
             .items_center()
             .gap_2()
             .h(px(ROW))
             .px_2()
             .rounded(crate::tokens::RADIUS_ROW)
             .cursor_pointer()
-            .bg(if open { p.hover } else { rgba(0).into() })
             .text_color(p.text)
-            .hover(move |s| s.bg(p.hover))
+            .when(!open, |d| d.hover(move |s| s.bg(p.hover)))
             .child(
                 Icon::empty()
                     .path("seek/pie-chart.svg")
@@ -696,11 +824,18 @@ impl Seek {
                     .text_color(sidebar_icon(p, open)),
             )
             .child("Storage")
-            .on_click(cx.listener(|this, _, _, cx| {
+            .on_click(cx.listener(|this, _, window, cx| {
                 if this.storage_page.is_none() {
+                    if this.worktrees_page.is_some() {
+                        this.slide_segment("sidebar-tools", 1, 0);
+                    } else {
+                        this.segment_motion.remove("sidebar-tools");
+                    }
                     this.open_storage(this.scope.clone().and_then(|s| {
                         this.roots.iter().find(|r| s.starts_with(r)).cloned()
                     }), cx);
+                } else {
+                    this.close_tool_pages(window, cx);
                 }
             }))
             .into_any_element()
@@ -713,15 +848,15 @@ impl Seek {
             .role(Role::Button)
             .aria_label("Worktrees")
             .flex()
+            .flex_shrink_0()
             .items_center()
             .gap_2()
             .h(px(ROW))
             .px_2()
             .rounded(crate::tokens::RADIUS_ROW)
             .cursor_pointer()
-            .bg(if open { p.hover } else { rgba(0).into() })
             .text_color(p.text)
-            .hover(move |s| s.bg(p.hover))
+            .when(!open, |d| d.hover(move |s| s.bg(p.hover)))
             .child(
                 Icon::empty()
                     .path("seek/git-branch.svg")
@@ -729,9 +864,16 @@ impl Seek {
                     .text_color(sidebar_icon(p, open)),
             )
             .child("Worktrees")
-            .on_click(cx.listener(|this, _, _, cx| {
+            .on_click(cx.listener(|this, _, window, cx| {
                 if this.worktrees_page.is_none() {
+                    if this.storage_page.is_some() {
+                        this.slide_segment("sidebar-tools", 0, 1);
+                    } else {
+                        this.segment_motion.remove("sidebar-tools");
+                    }
                     this.open_worktrees(cx);
+                } else {
+                    this.close_tool_pages(window, cx);
                 }
             }))
             .into_any_element()
@@ -748,22 +890,29 @@ impl Seek {
             .role(Role::Button)
             .aria_label("All locations")
             .flex()
+            .flex_shrink_0()
             .items_center()
             .gap_2()
             .h(px(ROW))
             .px_2()
             .rounded(crate::tokens::RADIUS_ROW)
             .cursor_pointer()
-            .bg(if all { p.hover } else { rgba(0).into() })
             .text_color(p.text)
-            .hover(move |s| s.bg(p.hover))
+            .when(!all, |d| d.hover(move |s| s.bg(p.hover)))
             .child(
                 Icon::new(Glyph::Search)
                     .size(px(16.))
                     .text_color(sidebar_icon(p, all)),
             )
             .child("All locations")
-            .on_click(cx.listener(|this, _, window, cx| this.scope_to(None, window, cx)))
+            .on_click(cx.listener(|this, _, window, cx| {
+                if let Some(from) = this.active_favorites_row() {
+                    this.slide_segment("sidebar-fav", from, 0);
+                } else {
+                    this.segment_motion.remove("sidebar-fav");
+                }
+                this.scope_to(None, window, cx);
+            }))
             .into_any_element()
     }
 

@@ -23,8 +23,8 @@ use std::{
 };
 
 const SAMPLE: u64 = 64 * 1024;
-/// Most files one search looks at.
-pub const MAX_FILES: usize = 2_000_000;
+/// Most files one search looks at (bounded so memory stays lightweight).
+pub const MAX_FILES: usize = 600_000;
 const CLOUD: u32 = 0x400000 | 0x40000 | 0x1000;
 const REPARSE: u32 = 0x400;
 

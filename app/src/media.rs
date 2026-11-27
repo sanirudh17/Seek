@@ -537,15 +537,28 @@ pub(crate) fn thumbnail(key: &Key) -> windows::core::Result<Arc<RenderImage>> {
         .encode_wide()
         .chain(Some(0))
         .collect::<Vec<_>>();
+    let kind = icons::kind(&key.path, key.folder);
+    // For videos, check Windows Explorer's persistent OS thumbnail cache first
+    // (~1–2ms hit, matching File Explorer speed without cold-opening multi-GB MP4s).
+    if key.edge >= 128
+        && kind == Kind::Video
+        && let Ok(factory) = unsafe {
+            SHCreateItemFromParsingName::<_, _, IShellItemImageFactory>(PCWSTR(path.as_ptr()), None)
+        }
+        && let Ok(bitmap) = unsafe {
+            factory.GetImage(
+                SIZE { cx: 256, cy: 256 },
+                SIIGBF_THUMBNAILONLY | SIIGBF_INCACHEONLY | SIIGBF_BIGGERSIZEOK,
+            )
+        }
+        && let Ok(img) = bitmap_image(bitmap, None)
+    {
+        return Ok(img);
+    }
     // Ask the actual provider for undecorated pixels. ImageFactory may return
     // an old, small cached image with Windows' photo border/drop shadow.
     // Providers also handle installed codecs and photo orientation for us.
-    if key.edge >= 128
-        && matches!(
-            icons::kind(&key.path, key.folder),
-            Kind::Image | Kind::Video
-        )
-    {
+    if key.edge >= 128 && matches!(kind, Kind::Image | Kind::Video) {
         let item: IShellItem = unsafe { SHCreateItemFromParsingName(PCWSTR(path.as_ptr()), None) }?;
         if let Ok(provider) =
             unsafe { item.BindToHandler::<_, IThumbnailProvider>(None, &BHID_ThumbnailHandler) }
@@ -566,22 +579,29 @@ pub(crate) fn thumbnail(key: &Key) -> windows::core::Result<Arc<RenderImage>> {
     }
     let factory: IShellItemImageFactory =
         unsafe { SHCreateItemFromParsingName(PCWSTR(path.as_ptr()), None) }?;
-    let kind = icons::kind(&key.path, key.folder);
-    let flags = if matches!(kind, Kind::Image | Kind::Video) {
-        SIIGBF_THUMBNAILONLY
-    } else {
+    let icon_only = !matches!(kind, Kind::Image | Kind::Video);
+    let flags = if icon_only {
         SIIGBF_ICONONLY
+    } else {
+        SIIGBF_THUMBNAILONLY
+    };
+    // Windows native icons top out at 256×256; requesting 768×768 for icons
+    // forces Explorer to stamp tiny 32/48px .exe icons inside a huge gray frame.
+    let req_edge = if icon_only {
+        i32::from(key.edge.min(256))
+    } else {
+        i32::from(key.edge)
     };
     let bitmap = unsafe {
         factory.GetImage(
             SIZE {
-                cx: key.edge as i32,
-                cy: key.edge as i32,
+                cx: req_edge,
+                cy: req_edge,
             },
             flags | SIIGBF_BIGGERSIZEOK,
         )
     }?;
-    bitmap_image(bitmap, None)
+    bitmap_image_with_trim(bitmap, None, icon_only && key.edge >= 128)
 }
 
 /// A real large document thumbnail, never an association icon fallback.
@@ -689,6 +709,105 @@ fn bitmap_image(
     bitmap: windows::Win32::Graphics::Gdi::HBITMAP,
     opaque: Option<bool>,
 ) -> windows::core::Result<Arc<RenderImage>> {
+    bitmap_image_with_trim(bitmap, opaque, false)
+}
+
+/// Detects when Windows Explorer wrapped a small 16–48px icon (common on `.exe`,
+/// `.msi`, `.lnk` files) inside a hollow 256×256 bordered box or large transparent
+/// canvas, and crops tightly to the centered icon so previews render crisp and full-sized.
+fn trim_small_icon_frame(width: u32, height: u32, bytes: Vec<u8>) -> (u32, u32, Vec<u8>) {
+    if width < 96 || height < 96 || (width as usize) * (height as usize) * 4 != bytes.len() {
+        return (width, height, bytes);
+    }
+    let w = width as usize;
+    let h = height as usize;
+    let px_at = |x: usize, y: usize| -> [u8; 4] {
+        let off = (y * w + x) * 4;
+        [bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]
+    };
+    let inset = (w.min(h) / 10).clamp(6, 20);
+    // Sample a moat ring strictly inside any 1–4px Windows Explorer border frame.
+    let ref_px = px_at(inset, inset);
+    let is_moat = |p: [u8; 4]| -> bool {
+        if ref_px[3] < 16 {
+            p[3] < 16
+        } else {
+            p[3] < 16
+                || (p[0].abs_diff(ref_px[0]) <= 6
+                    && p[1].abs_diff(ref_px[1]) <= 6
+                    && p[2].abs_diff(ref_px[2]) <= 6
+                    && p[3].abs_diff(ref_px[3]) <= 8)
+        }
+    };
+    let mut ring_total = 0usize;
+    let mut ring_moat = 0usize;
+    for x in inset..w - inset {
+        ring_total += 2;
+        if is_moat(px_at(x, inset)) {
+            ring_moat += 1;
+        }
+        if is_moat(px_at(x, h - 1 - inset)) {
+            ring_moat += 1;
+        }
+    }
+    for y in inset + 1..h - 1 - inset {
+        ring_total += 2;
+        if is_moat(px_at(inset, y)) {
+            ring_moat += 1;
+        }
+        if is_moat(px_at(w - 1 - inset, y)) {
+            ring_moat += 1;
+        }
+    }
+    if ring_total == 0 || ring_moat * 100 < ring_total * 98 {
+        return (width, height, bytes);
+    }
+    // Moat confirmed: locate the tight bounding box of the actual icon inside the moat.
+    let mut min_x = w;
+    let mut min_y = h;
+    let mut max_x = 0usize;
+    let mut max_y = 0usize;
+    for y in inset..h - inset {
+        for x in inset..w - inset {
+            let p = px_at(x, y);
+            if p[3] >= 16 && !is_moat(p) {
+                min_x = min_x.min(x);
+                min_y = min_y.min(y);
+                max_x = max_x.max(x);
+                max_y = max_y.max(y);
+            }
+        }
+    }
+    if min_x > max_x || min_y > max_y {
+        return (width, height, bytes);
+    }
+    let bw = max_x - min_x + 1;
+    let bh = max_y - min_y + 1;
+    // Only crop when the icon is genuinely small relative to the oversized box.
+    if bw < 10 || bh < 10 || (bw * 100 > w * 72 && bh * 100 > h * 72) {
+        return (width, height, bytes);
+    }
+    let pad = 2usize;
+    let cw = bw + pad * 2;
+    let ch = bh + pad * 2;
+    let mut out = vec![0u8; cw * ch * 4];
+    for y in 0..bh {
+        for x in 0..bw {
+            let p = px_at(min_x + x, min_y + y);
+            if !is_moat(p) {
+                let dst = ((y + pad) * cw + (x + pad)) * 4;
+                out[dst..dst + 4].copy_from_slice(&p);
+            }
+        }
+    }
+    (cw as u32, ch as u32, out)
+}
+
+fn bitmap_image_with_trim(
+    bitmap: windows::Win32::Graphics::Gdi::HBITMAP,
+    opaque: Option<bool>,
+    trim_icon_frame: bool,
+) -> windows::core::Result<Arc<RenderImage>> {
     use windows::Win32::Graphics::Gdi::*;
     // RAII covers every failure after the provider hands ownership to us.
     struct OwnedBitmap(HBITMAP);
@@ -758,6 +877,11 @@ fn bitmap_image(
             p[3] = 255;
         }
     }
+    let (width, height, bytes) = if trim_icon_frame {
+        trim_small_icon_frame(width, height, bytes)
+    } else {
+        (width, height, bytes)
+    };
     let pixels = image::RgbaImage::from_raw(width, height, bytes).unwrap();
     Ok(Arc::new(RenderImage::new(vec![image::Frame::new(pixels)])))
 }
@@ -795,6 +919,48 @@ fn svg_preview(key: &Key) -> Option<Arc<RenderImage>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn small_framed_exe_icon_is_cropped_while_full_icon_is_preserved() {
+        // Case A: Simulated 256×256 Windows Explorer framed 32×32 .exe icon
+        let (w, h) = (256usize, 256usize);
+        let mut framed = vec![0u8; w * h * 4];
+        // Subtle 1px gray Explorer border
+        for x in 0..w {
+            for y in [0, h - 1] {
+                let off = (y * w + x) * 4;
+                framed[off..off + 4].copy_from_slice(&[90, 90, 90, 255]);
+            }
+        }
+        for y in 0..h {
+            for x in [0, w - 1] {
+                let off = (y * w + x) * 4;
+                framed[off..off + 4].copy_from_slice(&[90, 90, 90, 255]);
+            }
+        }
+        // Centered 32×32 bright icon
+        for y in 112..144 {
+            for x in 112..144 {
+                let off = (y * w + x) * 4;
+                framed[off..off + 4].copy_from_slice(&[240, 180, 40, 255]);
+            }
+        }
+        let (cw, ch, out) = trim_small_icon_frame(w as u32, h as u32, framed);
+        assert_eq!((cw, ch), (36, 36));
+        assert_eq!(out.len(), 36 * 36 * 4);
+
+        // Case B: Full 256×256 icon filling canvas should remain untouched
+        let mut full = vec![0u8; w * h * 4];
+        for y in 8..248 {
+            for x in 8..248 {
+                let off = (y * w + x) * 4;
+                full[off..off + 4].copy_from_slice(&[80, 160, 240, 255]);
+            }
+        }
+        let (fw, fh, _) = trim_small_icon_frame(w as u32, h as u32, full);
+        assert_eq!((fw, fh), (256, 256));
+    }
+
     #[test]
     fn original_images_keep_source_pixels_alpha_orientation_and_cache_residency() {
         let temp = tempfile::tempdir().unwrap();

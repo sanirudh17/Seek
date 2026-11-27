@@ -228,6 +228,7 @@ pub struct Palette {
     pub settings_card: Hsla,
     pub control: Hsla,
     pub control_hover: Hsla,
+    #[allow(dead_code)]
     pub control_selected: Hsla,
     /// The window's 1px edge: a highlight on glass, a line otherwise.
     pub edge: Hsla,
@@ -701,13 +702,10 @@ pub fn apply(settings: &Settings, window: Option<&mut Window>, cx: &mut App) {
         t.colors.accent_foreground = p.text;
         t.colors.secondary_hover = p.hover;
         // Menus and popovers sit over busy file lists, so their surface is
-        // opaque even with glass on: text in a popup never shows rows through.
+        // opaque even with glass on and tinted from the active palette so
+        // Jump, dialogs, and menus always harmonize with the window.
         let popover = if glass_enabled(settings, mode.is_dark()) {
-            Hsla::from(if mode.is_dark() {
-                rgb(0x232323)
-            } else {
-                rgb(0xf7f7f7)
-            })
+            modal_surface(p)
         } else {
             p.sheet
         };
@@ -719,13 +717,14 @@ pub fn apply(settings: &Settings, window: Option<&mut Window>, cx: &mut App) {
         t.tokens.selection = p.accent.opacity(0.32).into();
         let mut highlight = (*t.highlight_theme).clone();
         highlight.style.syntax = SyntaxPalette::from_palette(p).to_syntax_colors();
-        // A slightly darker column for line numbers, distinct from the text.
+        // A subtle, airy gutter for line numbers so it stays distinct without
+        // reading as a heavy dark band.
         highlight.style.editor_gutter_background = Some(Hsla::from(if mode.is_dark() {
-            rgba(0x0000001f)
+            rgba(0x0000000b)
         } else {
-            rgba(0x00000008)
+            rgba(0x00000005)
         }));
-        highlight.style.editor_line_number = Some(p.muted.opacity(0.7));
+        highlight.style.editor_line_number = Some(p.muted.opacity(0.6));
         t.highlight_theme = std::sync::Arc::new(highlight);
         t.colors.list = rgba(0).into();
         t.colors.list_even = p.stripe;
@@ -803,12 +802,23 @@ pub fn apply(settings: &Settings, window: Option<&mut Window>, cx: &mut App) {
 /// belong with the window.
 pub fn modal_surface(p: Palette) -> Hsla {
     // The frame's alpha over glass grows with Intensity (0.28 at full).
-    let strength = if p.chrome.a < 1. { (p.chrome.a / 0.28).clamp(0., 1.) } else { 1. };
-    let s = (p.chrome.s * 0.3 * strength).min(0.18);
-    if p.text.l > 0.5 {
-        hsla(p.chrome.h, s, 0.106 + 0.012 * strength, 1.)
+    let strength = if p.chrome.a < 1. {
+        (p.chrome.a / 0.28).clamp(0., 1.)
     } else {
-        hsla(p.chrome.h, s * 0.7, 0.973 - 0.01 * strength, 1.)
+        1.
+    };
+    let (h, base_s) = if p.chrome.s > 0.05 {
+        (p.chrome.h, p.chrome.s)
+    } else if p.accent.s > 0.05 {
+        (p.accent.h, p.accent.s * 0.7)
+    } else {
+        (0., 0.)
+    };
+    let s = (base_s * 0.28 * strength).min(0.18);
+    if p.text.l > 0.5 {
+        hsla(h, s, 0.106 + 0.012 * strength, 1.)
+    } else {
+        hsla(h, s * 0.7, 0.973 - 0.01 * strength, 1.)
     }
 }
 pub fn modal_border(p: Palette) -> Hsla {

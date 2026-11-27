@@ -164,6 +164,9 @@ impl Seek {
         cx.notify();
     }
     pub(super) fn restart_into_update(&mut self, cx: &mut Context<Self>) {
+        if self.app_updates.busy {
+            return;
+        }
         let Some(stage) = self.app_updates.staged.clone() else {
             return;
         };
@@ -180,15 +183,30 @@ impl Seek {
             cx.notify();
             return;
         }
-        match crate::updater::launch(&stage) {
-            Ok(()) => cx.quit(),
-            Err(error) => {
-                log_update_error(&self.store.directory, "launch", &error);
-                self.app_updates.failed = true;
-                self.app_updates.message = format!("Update was not installed: {error}");
-                cx.notify();
-            }
-        }
+        self.app_updates.busy = true;
+        self.app_updates.failed = false;
+        self.app_updates.message = "Installing update…".into();
+        let data = self.store.directory.clone();
+        let work = cx
+            .background_executor()
+            .spawn(async move { crate::updater::launch(&stage) });
+        cx.spawn(async move |this, cx| {
+            let result = work.await;
+            let _ = this.update(cx, |this, cx| {
+                this.app_updates.busy = false;
+                match result {
+                    Ok(()) => cx.quit(),
+                    Err(error) => {
+                        log_update_error(&data, "launch", &error);
+                        this.app_updates.failed = true;
+                        this.app_updates.message = format!("Update was not installed: {error}");
+                        cx.notify();
+                    }
+                }
+            });
+        })
+        .detach();
+        cx.notify();
     }
     /// The update icon at the sidebar's foot, when an update exists; its
     /// popover shows the release notes, the download ring, then Restart.
@@ -202,8 +220,9 @@ impl Seek {
         let state = &self.app_updates;
         let ready = state.staged.is_some();
         let downloading = state.downloading;
+        let installing = state.busy && !downloading && ready;
         let fraction = state.fraction();
-        let message = if ready || state.failed || state.message.starts_with("Couldn't") {
+        let message = if ready || installing || state.failed || state.message.starts_with("Couldn't") {
             state.message.clone()
         } else {
             String::new()
@@ -224,7 +243,7 @@ impl Seek {
                     .into_any_element()
             } else {
                 Icon::empty()
-                    .path("icons/cloud-download.svg")
+                    .path("seek/update-circle.svg")
                     .size(px(14.))
                     .text_color(if ready { p.tints.green } else { p.tints.blue })
                     .into_any_element()
@@ -255,7 +274,13 @@ impl Seek {
                         .collect();
                     let action = super::settings_view::control(
                         "update-action",
-                        if ready { "Restart" } else { "Download" },
+                        if installing {
+                            "Installing…"
+                        } else if ready {
+                            "Restart"
+                        } else {
+                            "Download"
+                        },
                         p,
                         cx,
                     )
@@ -263,6 +288,7 @@ impl Seek {
                     .with_size(px(28.))
                     .px_3()
                     .text_size(px(13.))
+                    .disabled(installing)
                     .on_click(move |_, _, cx| {
                         let _ = owner.update(cx, |this, cx| this.install_app_update(cx));
                     });

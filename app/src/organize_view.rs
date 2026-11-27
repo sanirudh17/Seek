@@ -277,17 +277,13 @@ impl Seek {
         );
     }
     /// Brief non-stacking confirmation toast for quiet actions (11.6),
-    /// respecting the "Show confirmations" preference and auto-dismissing
-    /// after `motion::TOAST_QUIET` (~2.5 s).
+    /// always enabled by default and auto-dismissing after `motion::TOAST_QUIET` (~2.5 s).
     pub(super) fn show_quiet_toast(
         &mut self,
         text: impl Into<String>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if !self.preferences.show_confirmations {
-            return;
-        }
         self.show_toast_for(text.into(), false, crate::motion::TOAST_QUIET, window, cx);
     }
     fn show_toast_for(

@@ -116,7 +116,8 @@ pub struct Settings {
     pub agent_read_secrets: bool,
     /// Global soft-wrap preference for text and code previews (11.5); off by default.
     pub wrap_lines: bool,
-    /// Show brief confirmation toasts for quiet actions (11.6); on by default.
+    /// Retained for settings.json backwards-compatibility; quiet toasts are always enabled.
+    #[allow(dead_code)]
     pub show_confirmations: bool,
     /// Sidebar Favorites and Locations independent fold state (11.8).
     pub favorites_collapsed: bool,

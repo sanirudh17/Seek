@@ -6,8 +6,9 @@ use crate::picture_edit::{
     to_render_image,
 };
 use crate::video_edit::{
-    PlaybackStream, VideoEdit, VideoExportRequest, VideoInfo, export_video, extract_filmstrip,
-    extract_frame, format_precise_time, format_timecode, probe, save_frame_png,
+    HighResPacer, PlaybackStream, VideoEdit, VideoExportRequest, VideoInfo, export_video,
+    extract_filmstrip, extract_frame, extract_frame_bgra, extract_poster_frame,
+    format_precise_time, format_timecode, probe_fast, probe_mp4_header, save_frame_png,
 };
 use gpui_component::menu::{DropdownMenu, PopupMenuItem};
 use gpui_component_assets::IconName as Glyph;
@@ -16,7 +17,7 @@ use std::{
     rc::Rc,
     sync::{
         Arc,
-        atomic::{AtomicBool, AtomicU8, Ordering},
+        atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering},
     },
     time::{Duration, Instant},
 };
@@ -130,7 +131,9 @@ pub(super) struct State {
     pub(super) confirm_discard: bool,
     confirm_replace: bool,
     load_gen: u64,
-    scrub_gen: u64,
+    load_cancel: Arc<AtomicBool>,
+    seek_target_ms: Arc<AtomicU64>,
+    seek_running: Arc<AtomicBool>,
     focus: FocusHandle,
 }
 
@@ -179,7 +182,212 @@ impl State {
     }
 }
 
+/// Bounded cached video metadata, Frame 0, and filmstrip so reopening a video
+/// in Quick Look or Document Pane is instantaneous.
+pub(super) struct CachedVideo {
+    pub path: PathBuf,
+    pub info: VideoInfo,
+    pub frame: Arc<RenderImage>,
+    pub filmstrip: Vec<Arc<RenderImage>>,
+}
+
+const VIDEO_CACHE_CAP: usize = 8;
+
 impl Seek {
+    fn remember_video_cache(
+        &mut self,
+        path: &std::path::Path,
+        info: Option<VideoInfo>,
+        frame: Option<Arc<RenderImage>>,
+        filmstrip: Option<Vec<Arc<RenderImage>>>,
+        window: &mut Window,
+    ) {
+        if let Some(pos) = self.video_cache.iter().position(|c| c.path == path) {
+            let mut entry = self.video_cache.remove(pos);
+            if let Some(i) = info {
+                entry.info = i;
+            }
+            if let Some(f) = frame {
+                if !Arc::ptr_eq(&entry.frame, &f)
+                    && self
+                        .video_edit
+                        .as_ref()
+                        .and_then(|v| v.frame.as_ref())
+                        .is_none_or(|cur| !Arc::ptr_eq(cur, &entry.frame))
+                {
+                    let _ = window.drop_image(entry.frame);
+                }
+                entry.frame = f;
+            }
+            if let Some(s) = filmstrip {
+                let active_thumbs: Vec<*const RenderImage> = self
+                    .video_edit
+                    .as_ref()
+                    .map(|v| v.filmstrip.iter().map(Arc::as_ptr).collect())
+                    .unwrap_or_default();
+                let new_ptrs: Vec<*const RenderImage> = s.iter().map(Arc::as_ptr).collect();
+                for old in entry.filmstrip {
+                    let ptr = Arc::as_ptr(&old);
+                    if !new_ptrs.contains(&ptr) && !active_thumbs.contains(&ptr) {
+                        let _ = window.drop_image(old);
+                    }
+                }
+                entry.filmstrip = s;
+            }
+            self.video_cache.push(entry);
+            return;
+        }
+        let (Some(info), Some(frame)) = (info, frame) else {
+            return;
+        };
+        if self.video_cache.len() >= VIDEO_CACHE_CAP {
+            let evicted = self.video_cache.remove(0);
+            if self
+                .video_edit
+                .as_ref()
+                .and_then(|v| v.frame.as_ref())
+                .is_none_or(|cur| !Arc::ptr_eq(cur, &evicted.frame))
+            {
+                let _ = window.drop_image(evicted.frame);
+            }
+            let active_thumbs: Vec<*const RenderImage> = self
+                .video_edit
+                .as_ref()
+                .map(|v| v.filmstrip.iter().map(Arc::as_ptr).collect())
+                .unwrap_or_default();
+            for thumb in evicted.filmstrip {
+                if !active_thumbs.contains(&Arc::as_ptr(&thumb)) {
+                    let _ = window.drop_image(thumb);
+                }
+            }
+        }
+        self.video_cache.push(CachedVideo {
+            path: path.to_path_buf(),
+            info,
+            frame,
+            filmstrip: filmstrip.unwrap_or_default(),
+        });
+    }
+
+    /// Pre-decode a selected video's metadata, Frame 0, and filmstrip in the
+    /// background so Quick Look opens instantaneously without swapping the
+    /// stable Info panel thumbnail.
+    pub(super) fn prewarm_video_preview(
+        &mut self,
+        path: PathBuf,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self
+            .video_cache
+            .iter()
+            .any(|c| c.path == path && !c.filmstrip.is_empty())
+            || self.video_prewarm_path.as_ref() == Some(&path)
+        {
+            return;
+        }
+        self.video_prewarm_path = Some(path.clone());
+        enum PrewarmMsg {
+            Ready(VideoInfo, Arc<RenderImage>),
+            Filmstrip(Vec<Arc<RenderImage>>),
+        }
+        let (tx, rx) = std::sync::mpsc::channel::<PrewarmMsg>();
+        let path_bg = path.clone();
+        std::thread::Builder::new()
+            .name("seek-video-prewarm".into())
+            .spawn(move || {
+                let Ok(info) = probe_fast(&path_bg) else {
+                    return;
+                };
+                let Ok(first) = extract_poster_frame(&path_bg, &info, 800, 0) else {
+                    return;
+                };
+                let duration = info.duration;
+                // Deliver metadata + consistent poster frame immediately before filmstrip finishes!
+                if tx.send(PrewarmMsg::Ready(info, first)).is_err() {
+                    return;
+                }
+                let cancel = AtomicBool::new(false);
+                let strip = extract_filmstrip(&path_bg, duration, 6, 0, &cancel);
+                if !strip.is_empty() {
+                    let _ = tx.send(PrewarmMsg::Filmstrip(strip));
+                }
+            })
+            .ok();
+
+        let target = path;
+        cx.spawn_in(window, async move |this, cx| {
+            loop {
+                match rx.try_recv() {
+                    Ok(PrewarmMsg::Ready(info, first)) => {
+                        let _ = this.update_in(cx, |this, window, cx| {
+                            this.remember_video_cache(
+                                &target,
+                                Some(info.clone()),
+                                Some(first.clone()),
+                                None,
+                                window,
+                            );
+                            if let Some(v) = this.video_edit.as_mut()
+                                && v.path == target
+                                && v.playback.is_none()
+                                && v.current_secs <= 0.01
+                            {
+                                v.loading = false;
+                                if v.info.is_none() {
+                                    v.edit = VideoEdit::identity(info.duration);
+                                    v.info = Some(info);
+                                }
+                                if let Some(old) = v.frame.replace(first)
+                                    && Arc::strong_count(&old) == 1
+                                {
+                                    let _ = window.drop_image(old);
+                                }
+                                cx.notify();
+                            }
+                        });
+                    }
+                    Ok(PrewarmMsg::Filmstrip(strip)) => {
+                        let _ = this.update_in(cx, |this, window, cx| {
+                            if this.video_prewarm_path.as_ref() == Some(&target) {
+                                this.video_prewarm_path = None;
+                            }
+                            this.remember_video_cache(
+                                &target,
+                                None,
+                                None,
+                                Some(strip.clone()),
+                                window,
+                            );
+                            if let Some(v) = this.video_edit.as_mut()
+                                && v.path == target
+                                && v.filmstrip.is_empty()
+                            {
+                                v.filmstrip = strip;
+                                cx.notify();
+                            }
+                        });
+                        break;
+                    }
+                    Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                        let _ = this.update(cx, |this, _| {
+                            if this.video_prewarm_path.as_ref() == Some(&target) {
+                                this.video_prewarm_path = None;
+                            }
+                        });
+                        break;
+                    }
+                    Err(std::sync::mpsc::TryRecvError::Empty) => {
+                        cx.background_executor()
+                            .timer(Duration::from_millis(20))
+                            .await;
+                    }
+                }
+            }
+        })
+        .detach();
+    }
+
     pub(super) fn video_edit_for(&self, host: VideoHost, path: &std::path::Path) -> bool {
         self.video_edit
             .as_ref()
@@ -198,90 +406,237 @@ impl Seek {
             return;
         }
         if let Some(old) = self.video_edit.take() {
+            old.load_cancel.store(true, Ordering::Relaxed);
+            old.seek_target_ms.store(u64::MAX, Ordering::Relaxed);
             if let Some(job) = old.playback {
                 job.stop.store(true, Ordering::Relaxed);
             }
             if let Some(job) = old.exporting {
                 job.cancel.store(true, Ordering::Relaxed);
             }
-            if let Some(img) = old.frame {
+            // Only drop GPU textures that are NOT shared with `self.video_cache`.
+            let cached_frame_ptrs: Vec<*const RenderImage> = self
+                .video_cache
+                .iter()
+                .map(|c| Arc::as_ptr(&c.frame))
+                .collect();
+            if let Some(img) = old.frame
+                && !cached_frame_ptrs.contains(&Arc::as_ptr(&img))
+            {
                 let _ = window.drop_image(img);
             }
+            let cached_thumb_ptrs: Vec<*const RenderImage> = self
+                .video_cache
+                .iter()
+                .flat_map(|c| c.filmstrip.iter().map(Arc::as_ptr))
+                .collect();
             for thumb in old.filmstrip {
-                let _ = window.drop_image(thumb);
+                if !cached_thumb_ptrs.contains(&Arc::as_ptr(&thumb)) {
+                    let _ = window.drop_image(thumb);
+                }
             }
         }
         let load_gen = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_nanos() as u64)
             .unwrap_or(1);
+        let load_cancel = Arc::new(AtomicBool::new(false));
         let focus = cx.focus_handle();
-        self.video_edit = Some(State {
-            host,
-            path: path.clone(),
-            info: None,
-            loading: true,
-            error: None,
-            frame: None,
-            filmstrip: Vec::new(),
-            current_secs: 0.0,
-            editing: false,
-            edit: VideoEdit::identity(0.0),
-            cropping: false,
-            crop_draft: None,
-            crop_aspect: AspectPreset::Free,
-            crop_drag: None,
-            timeline_drag: None,
-            canvas_bounds: Rc::new(Cell::new(None)),
-            timeline_bounds: Rc::new(Cell::new(None)),
-            playback: None,
-            exporting: None,
-            confirm_discard: false,
-            confirm_replace: false,
-            load_gen,
-            scrub_gen: 0,
-            focus,
-        });
 
-        let (tx, rx) = std::sync::mpsc::channel();
+        // Instant 0ms hit when this video was already decoded recently.
+        if let Some(cached) = self.video_cache.iter().find(|c| c.path == path) {
+            let info = cached.info.clone();
+            let frame = cached.frame.clone();
+            let filmstrip = cached.filmstrip.clone();
+            let needs_strip = filmstrip.is_empty();
+            self.video_edit = Some(State {
+                host,
+                path: path.clone(),
+                info: Some(info.clone()),
+                loading: false,
+                error: None,
+                frame: Some(frame),
+                filmstrip,
+                current_secs: 0.0,
+                editing: false,
+                edit: VideoEdit::identity(info.duration),
+                cropping: false,
+                crop_draft: None,
+                crop_aspect: AspectPreset::Free,
+                crop_drag: None,
+                timeline_drag: None,
+                canvas_bounds: Rc::new(Cell::new(None)),
+                timeline_bounds: Rc::new(Cell::new(None)),
+                playback: None,
+                exporting: None,
+                confirm_discard: false,
+                confirm_replace: false,
+                load_gen,
+                load_cancel: load_cancel.clone(),
+                seek_target_ms: Arc::new(AtomicU64::new(u64::MAX)),
+                seek_running: Arc::new(AtomicBool::new(false)),
+                focus,
+            });
+            if !needs_strip {
+                return;
+            }
+        } else {
+            // Instant 0ms seed: combine any already-cached Windows Shell thumbnail
+            // with our 0.1ms in-process MP4 header parser so Quick Look opens with
+            // full controls, duration, and preview frame on Frame 0 (zero wait!).
+            let seed_frame = self
+                .quick_look_row
+                .as_ref()
+                .filter(|r| r.file.path == path)
+                .and_then(|row| {
+                    let mut cache = self.cache.lock().ok()?;
+                    [media::PREVIEW_EDGE, 128u16].into_iter().find_map(|edge| {
+                        match cache.get(&media::Key::new(row, edge, false)) {
+                            Some(media::Value::Image(Some(img))) => Some(img),
+                            _ => None,
+                        }
+                    })
+                });
+            let instant_info = probe_mp4_header(&path);
+            let instant_dur = instant_info.as_ref().map(|i| i.duration).unwrap_or(0.0);
+            self.video_edit = Some(State {
+                host,
+                path: path.clone(),
+                info: instant_info,
+                loading: seed_frame.is_none(),
+                error: None,
+                frame: seed_frame,
+                filmstrip: Vec::new(),
+                current_secs: 0.0,
+                editing: false,
+                edit: VideoEdit::identity(instant_dur),
+                cropping: false,
+                crop_draft: None,
+                crop_aspect: AspectPreset::Free,
+                crop_drag: None,
+                timeline_drag: None,
+                canvas_bounds: Rc::new(Cell::new(None)),
+                timeline_bounds: Rc::new(Cell::new(None)),
+                playback: None,
+                exporting: None,
+                confirm_discard: false,
+                confirm_replace: false,
+                load_gen,
+                load_cancel: load_cancel.clone(),
+                seek_target_ms: Arc::new(AtomicU64::new(u64::MAX)),
+                seek_running: Arc::new(AtomicBool::new(false)),
+                focus,
+            });
+            // If background prewarm is already decoding this exact video, let it
+            // populate `self.video_edit` directly instead of spawning duplicate ffmpeg work.
+            if self.video_prewarm_path.as_ref() == Some(&path) {
+                return;
+            }
+        }
+
+        enum LoadMsg {
+            Ready(VideoInfo, Arc<RenderImage>),
+            Filmstrip(Vec<Arc<RenderImage>>),
+            Failed(String),
+        }
+
+        let (tx, rx) = std::sync::mpsc::channel::<LoadMsg>();
         let path_bg = path.clone();
+        let cancel_bg = load_cancel.clone();
         std::thread::Builder::new()
             .name("seek-video-probe".into())
             .spawn(move || {
-                let result = probe(&path_bg).and_then(|info| {
-                    let first = extract_frame(&path_bg, 0.0, 1280, 0).map(|img| to_render_image(&img))?;
-                    let strip = extract_filmstrip(&path_bg, info.duration, 8, 0);
-                    Ok((info, first, strip))
-                });
-                let _ = tx.send(result);
+                let info = match probe_fast(&path_bg) {
+                    Ok(info) => info,
+                    Err(err) => {
+                        let _ = tx.send(LoadMsg::Failed(err));
+                        return;
+                    }
+                };
+                if cancel_bg.load(Ordering::Relaxed) {
+                    return;
+                }
+                let first = match extract_poster_frame(&path_bg, &info, 800, 0) {
+                    Ok(img) => img,
+                    Err(err) => {
+                        let _ = tx.send(LoadMsg::Failed(err));
+                        return;
+                    }
+                };
+                // Deliver frame 0 immediately so the video opens without waiting for thumbnails!
+                let duration = info.duration;
+                if tx.send(LoadMsg::Ready(info, first)).is_err() {
+                    return;
+                }
+                if cancel_bg.load(Ordering::Relaxed) {
+                    return;
+                }
+                let strip = extract_filmstrip(&path_bg, duration, 6, 0, &cancel_bg);
+                if !cancel_bg.load(Ordering::Relaxed) && !strip.is_empty() {
+                    let _ = tx.send(LoadMsg::Filmstrip(strip));
+                }
             })
             .ok();
 
         cx.spawn_in(window, async move |this, cx| {
             loop {
                 match rx.try_recv() {
-                    Ok(result) => {
+                    Ok(LoadMsg::Ready(info, first)) => {
                         let _ = this.update_in(cx, |this, window, cx| {
                             if let Some(v) = this.video_edit.as_mut()
                                 && v.load_gen == load_gen
                             {
+                                let path = v.path.clone();
                                 v.loading = false;
-                                match result {
-                                    Ok((info, first, strip)) => {
-                                        v.edit = VideoEdit::identity(info.duration);
-                                        v.info = Some(info);
-                                        if let Some(old) = v.frame.replace(first) {
-                                            let _ = window.drop_image(old);
-                                        }
-                                        for old in v.filmstrip.drain(..) {
-                                            let _ = window.drop_image(old);
-                                        }
-                                        v.filmstrip = strip;
-                                    }
-                                    Err(err) => {
-                                        v.error = Some(err);
-                                    }
+                                if v.info.is_none() {
+                                    v.edit = VideoEdit::identity(info.duration);
+                                    v.info = Some(info.clone());
                                 }
+                                if v.playback.is_none()
+                                    && v.current_secs <= 0.01
+                                    && let Some(old) = v.frame.replace(first.clone())
+                                    && Arc::strong_count(&old) == 1
+                                {
+                                    let _ = window.drop_image(old);
+                                }
+                                this.remember_video_cache(
+                                    &path,
+                                    Some(info),
+                                    Some(first),
+                                    None,
+                                    window,
+                                );
+                                cx.notify();
+                            }
+                        });
+                    }
+                    Ok(LoadMsg::Filmstrip(strip)) => {
+                        let _ = this.update_in(cx, |this, window, cx| {
+                            if let Some(v) = this.video_edit.as_mut()
+                                && v.load_gen == load_gen
+                            {
+                                let path = v.path.clone();
+                                for old in v.filmstrip.drain(..) {
+                                    let _ = window.drop_image(old);
+                                }
+                                v.filmstrip = strip.clone();
+                                this.remember_video_cache(&path, None, None, Some(strip), window);
+                                cx.notify();
+                            } else {
+                                for thumb in strip {
+                                    let _ = window.drop_image(thumb);
+                                }
+                            }
+                        });
+                        break;
+                    }
+                    Ok(LoadMsg::Failed(err)) => {
+                        let _ = this.update_in(cx, |this, _, cx| {
+                            if let Some(v) = this.video_edit.as_mut()
+                                && v.load_gen == load_gen
+                            {
+                                v.loading = false;
+                                v.error = Some(err);
                                 cx.notify();
                             }
                         });
@@ -289,7 +644,7 @@ impl Seek {
                     }
                     Err(std::sync::mpsc::TryRecvError::Empty) => {
                         cx.background_executor()
-                            .timer(Duration::from_millis(25))
+                            .timer(Duration::from_millis(20))
                             .await;
                     }
                     Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
@@ -326,15 +681,31 @@ impl Seek {
 
     pub(super) fn close_video_edit_now(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if let Some(mut v) = self.video_edit.take() {
+            v.load_cancel.store(true, Ordering::Relaxed);
+            v.seek_target_ms.store(u64::MAX, Ordering::Relaxed);
             v.stop_playback();
             if let Some(job) = v.exporting.take() {
                 job.cancel.store(true, Ordering::Relaxed);
             }
-            if let Some(img) = v.frame.take() {
+            let cached_frame_ptrs: Vec<*const RenderImage> = self
+                .video_cache
+                .iter()
+                .map(|c| Arc::as_ptr(&c.frame))
+                .collect();
+            if let Some(img) = v.frame.take()
+                && !cached_frame_ptrs.contains(&Arc::as_ptr(&img))
+            {
                 let _ = window.drop_image(img);
             }
+            let cached_thumb_ptrs: Vec<*const RenderImage> = self
+                .video_cache
+                .iter()
+                .flat_map(|c| c.filmstrip.iter().map(Arc::as_ptr))
+                .collect();
             for thumb in v.filmstrip.drain(..) {
-                let _ = window.drop_image(thumb);
+                if !cached_thumb_ptrs.contains(&Arc::as_ptr(&thumb)) {
+                    let _ = window.drop_image(thumb);
+                }
             }
             cx.notify();
         }
@@ -372,16 +743,17 @@ impl Seek {
         let path_bg = v.path.clone();
         let turns = v.edit.quarter_turns;
         let load_gen = v.load_gen;
-        let (tx, rx) = std::sync::mpsc::sync_channel::<(f64, Arc<RenderImage>)>(2);
+        let (tx, rx) = async_channel::bounded::<(f64, Arc<RenderImage>)>(4);
 
         std::thread::Builder::new()
             .name("seek-video-play".into())
             .spawn(move || {
                 let Ok(mut stream) =
-                    PlaybackStream::spawn(&path_bg, start, range_end, &info, turns, 960)
+                    PlaybackStream::spawn(&path_bg, start, range_end, &info, turns, 720)
                 else {
                     return;
                 };
+                let pacer = HighResPacer::new();
                 let frame_dt = Duration::from_secs_f64(1.0 / stream.fps.max(1.0));
                 let origin = Instant::now();
                 let mut frame_idx: u64 = 0;
@@ -394,9 +766,9 @@ impl Seek {
                     let target = origin + frame_dt.saturating_mul(frame_idx as u32);
                     let now = Instant::now();
                     if target > now {
-                        std::thread::sleep(target - now);
+                        pacer.sleep(target - now);
                     }
-                    if stop_bg.load(Ordering::Relaxed) || tx.send((ts, frame)).is_err() {
+                    if stop_bg.load(Ordering::Relaxed) || tx.send_blocking((ts, frame)).is_err() {
                         break;
                     }
                 }
@@ -409,44 +781,60 @@ impl Seek {
                 if stop_ui.load(Ordering::Relaxed) {
                     break;
                 }
-                match rx.try_recv() {
-                    Ok((ts, frame)) => {
-                        let _ = this.update_in(cx, |this, window, cx| {
-                            if let Some(v) = this.video_edit.as_mut()
-                                && v.load_gen == load_gen
-                                && v.playback.is_some()
-                            {
-                                v.current_secs = ts;
-                                if let Some(old) = v.frame.replace(frame) {
-                                    let _ = window.drop_image(old);
-                                }
-                                cx.notify();
-                            }
-                        });
-                    }
-                    Err(std::sync::mpsc::TryRecvError::Empty) => {
-                        cx.background_executor()
-                            .timer(Duration::from_millis(12))
-                            .await;
-                    }
-                    Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                // Event-driven wakeup (0ms polling delay!) for locked 60–120 FPS playback.
+                let first = match rx.recv().await {
+                    Ok(item) => item,
+                    Err(_) => {
                         let _ = this.update(cx, |this, cx| {
                             if let Some(v) = this.video_edit.as_mut()
                                 && v.load_gen == load_gen
                             {
+                                if !stop_ui.load(Ordering::Relaxed) {
+                                    v.current_secs = range_end;
+                                }
                                 v.playback = None;
                                 cx.notify();
                             }
                         });
                         break;
                     }
+                };
+                // Drain to the newest decoded frame if multiple arrived during one paint.
+                let mut latest = first;
+                while let Ok(newer) = rx.try_recv() {
+                    let (_, prev) = std::mem::replace(&mut latest, newer);
+                    let _ = this.update_in(cx, |_, window, _| {
+                        let _ = window.drop_image(prev);
+                    });
                 }
+                let (ts, frame) = latest;
+                let _ = this.update_in(cx, |this, window, cx| {
+                    if let Some(v) = this.video_edit.as_mut()
+                        && v.load_gen == load_gen
+                        && v.playback.is_some()
+                    {
+                        v.current_secs = ts;
+                        if let Some(old) = v.frame.replace(frame)
+                            && !this
+                                .video_cache
+                                .iter()
+                                .any(|c| Arc::ptr_eq(&c.frame, &old))
+                        {
+                            let _ = window.drop_image(old);
+                        }
+                        cx.notify();
+                    } else {
+                        let _ = window.drop_image(frame);
+                    }
+                });
             }
         });
         v.playback = Some(PlaybackJob { stop, _task: task });
         cx.notify();
     }
 
+    /// Single-flight coalesced scrubber: at most ONE `ffmpeg` process runs at a
+    /// time even when dragging rapidly across the timeline, preventing CPU/RAM storms.
     fn video_seek_to(&mut self, secs: f64, window: &mut Window, cx: &mut Context<Self>) {
         let Some(v) = self.video_edit.as_mut() else {
             return;
@@ -455,48 +843,83 @@ impl Seek {
         let clamped = secs.clamp(0.0, duration.max(0.0));
         v.stop_playback();
         v.current_secs = clamped;
-        v.scrub_gen = v.scrub_gen.wrapping_add(1);
-        let scrub_gen = v.scrub_gen;
+        let ms = (clamped * 1000.0).round() as u64;
+        v.seek_target_ms.store(ms, Ordering::Release);
+        cx.notify();
+
+        if v.seek_running.swap(true, Ordering::AcqRel) {
+            return;
+        }
+        let target_ms = v.seek_target_ms.clone();
+        let running = v.seek_running.clone();
+        let cancel = v.load_cancel.clone();
         let load_gen = v.load_gen;
         let path = v.path.clone();
         let turns = v.edit.quarter_turns;
-        let (tx, rx) = std::sync::mpsc::channel();
+        let info_seek = v.info.clone();
+        let (tx, rx) = std::sync::mpsc::sync_channel::<Arc<RenderImage>>(1);
         std::thread::Builder::new()
             .name("seek-video-seek".into())
             .spawn(move || {
-                let res = extract_frame(&path, clamped, 1280, turns).map(|img| to_render_image(&img));
-                let _ = tx.send(res);
+                loop {
+                    let next = target_ms.swap(u64::MAX, Ordering::AcqRel);
+                    if next == u64::MAX || cancel.load(Ordering::Relaxed) {
+                        break;
+                    }
+                    let t = next as f64 / 1000.0;
+                    let decoded = match info_seek.as_ref() {
+                        Some(info) => extract_frame_bgra(&path, t, info, 800, turns)
+                            .ok()
+                            .map(|bgra| Arc::new(RenderImage::new(vec![image::Frame::new(bgra)]))),
+                        None => extract_frame(&path, t, 800, turns)
+                            .ok()
+                            .map(|img| to_render_image(&img)),
+                    };
+                    if let Some(img) = decoded {
+                        if cancel.load(Ordering::Relaxed) {
+                            break;
+                        }
+                        if tx.send(img).is_err() {
+                            break;
+                        }
+                    }
+                }
+                running.store(false, Ordering::Release);
             })
             .ok();
 
         cx.spawn_in(window, async move |this, cx| {
             loop {
                 match rx.try_recv() {
-                    Ok(Ok(img)) => {
+                    Ok(img) => {
                         let _ = this.update_in(cx, |this, window, cx| {
                             if let Some(v) = this.video_edit.as_mut()
                                 && v.load_gen == load_gen
-                                && v.scrub_gen == scrub_gen
                             {
-                                if let Some(old) = v.frame.replace(img) {
+                                if let Some(old) = v.frame.replace(img)
+                                    && !this
+                                        .video_cache
+                                        .iter()
+                                        .any(|c| Arc::ptr_eq(&c.frame, &old))
+                                {
                                     let _ = window.drop_image(old);
                                 }
                                 cx.notify();
+                            } else {
+                                let _ = window.drop_image(img);
                             }
                         });
-                        break;
                     }
-                    Ok(Err(_)) | Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
+                    Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
                     Err(std::sync::mpsc::TryRecvError::Empty) => {
                         cx.background_executor()
-                            .timer(Duration::from_millis(16))
+                            .timer(Duration::from_millis(20))
                             .await;
                     }
                 }
             }
         })
         .detach();
-        cx.notify();
     }
 
     fn video_save_frame(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -669,22 +1092,50 @@ impl Seek {
             return false;
         }
         match key {
+            "q" if !mods.shift && v.host == VideoHost::QuickLook => {
+                self.close_quick_look(window, cx);
+                cx.stop_propagation();
+                true
+            }
             "space" => {
                 self.video_toggle_play(window, cx);
                 cx.stop_propagation();
                 true
             }
             "left" => {
-                let t = (v.current_secs - 1.0).max(0.0);
+                let step = if mods.shift { 0.2 } else { 1.0 };
+                let t = (v.current_secs - step).max(0.0);
                 self.video_seek_to(t, window, cx);
                 cx.stop_propagation();
                 true
             }
             "right" => {
                 let dur = v.info.as_ref().map(|i| i.duration).unwrap_or(0.0);
-                let t = (v.current_secs + 1.0).min(dur);
+                let step = if mods.shift { 0.2 } else { 1.0 };
+                let t = (v.current_secs + step).min(dur);
                 self.video_seek_to(t, window, cx);
                 cx.stop_propagation();
+                true
+            }
+            "[" => {
+                if let Some(v) = self.video_edit.as_mut() {
+                    v.editing = true;
+                    let max_start = (v.edit.trim_end - 0.1).max(0.0);
+                    v.edit.trim_start = v.current_secs.clamp(0.0, max_start);
+                }
+                cx.stop_propagation();
+                cx.notify();
+                true
+            }
+            "]" => {
+                if let Some(v) = self.video_edit.as_mut() {
+                    v.editing = true;
+                    let dur = v.info.as_ref().map(|i| i.duration).unwrap_or(v.edit.trim_end);
+                    let min_end = (v.edit.trim_start + 0.1).min(dur);
+                    v.edit.trim_end = v.current_secs.clamp(min_end, dur);
+                }
+                cx.stop_propagation();
+                cx.notify();
                 true
             }
             "escape" => {
@@ -987,10 +1438,41 @@ impl Seek {
                 .justify_center()
                 .cursor_pointer()
                 .text_size(px(12.))
+                .font_weight(FontWeight::MEDIUM)
                 .text_color(if active { p.text } else { p.muted })
-                .when(active, |d| d.bg(p.control_selected))
-                .hover(|s| s.bg(p.control_hover).text_color(p.text))
+                .when(active, |d| d.bg(p.accent.opacity(0.16)))
+                .hover(move |s| s.bg(p.accent.opacity(0.18)).text_color(p.text))
                 .child(super::interface::button_text(label))
+        };
+
+        let icon_btn = |id: &'static str, icon_path: &'static str, tip: &'static str, active: bool| {
+            div()
+                .id(id)
+                .role(Role::Button)
+                .aria_label(tip)
+                .size(px(30.))
+                .rounded(crate::tokens::RADIUS_CONTROL)
+                .flex()
+                .items_center()
+                .justify_center()
+                .cursor_pointer()
+                .text_color(if active { p.text } else { p.muted })
+                .border_1()
+                .border_color(if active {
+                    p.accent.opacity(0.32)
+                } else {
+                    rgba(0).into()
+                })
+                .when(active, |d| d.bg(p.accent.opacity(0.16)))
+                .hover(move |s| {
+                    s.bg(p.accent.opacity(0.16))
+                        .border_color(p.accent.opacity(0.36))
+                        .text_color(p.text)
+                })
+                .tooltip(move |window, cx| {
+                    gpui_component::tooltip::Tooltip::new(tip).build(window, cx)
+                })
+                .child(Icon::empty().path(icon_path).size(px(15.)))
         };
 
         let playing = v.playback.is_some();
@@ -1062,13 +1544,13 @@ impl Seek {
             sub_bars.push(
                 div()
                     .flex_shrink_0()
-                    .px_3()
+                    .px_4()
                     .py_2()
                     .flex()
                     .flex_wrap()
                     .items_center()
                     .justify_between()
-                    .gap_2()
+                    .gap_3()
                     .bg(p.chrome)
                     .border_b_1()
                     .border_color(p.line)
@@ -1077,7 +1559,7 @@ impl Seek {
                             .flex()
                             .flex_wrap()
                             .items_center()
-                            .gap_1()
+                            .gap_2()
                             .child(
                                 div()
                                     .px(px(8.))
@@ -1088,16 +1570,101 @@ impl Seek {
                                     .border_color(p.line)
                                     .flex()
                                     .items_center()
-                                    .font_family(crate::tokens::FONT_MONO)
-                                    .text_size(px(11.))
-                                    .text_color(p.text)
-                                    .child(trim_badge),
+                                    .gap(px(6.))
+                                    .child(
+                                        Icon::empty()
+                                            .path("seek/video-trim.svg")
+                                            .size(px(13.))
+                                            .text_color(p.muted),
+                                    )
+                                    .child(
+                                        div()
+                                            .font_family(crate::tokens::FONT_MONO)
+                                            .text_size(px(11.))
+                                            .text_color(p.text)
+                                            .child(trim_badge),
+                                    ),
                             )
                             .child(
-                                pill(
+                                icon_btn(
+                                    "vid-trim-in",
+                                    "seek/video-trim-in.svg",
+                                    "Cut before playhead (Set start [)",
+                                    v.edit.trim_start > 0.05,
+                                )
+                                .when(!exporting, |d| {
+                                    d.on_click(cx.listener(|this, _, _, cx| {
+                                        if let Some(v) = this.video_edit.as_mut() {
+                                            v.stop_playback();
+                                            let max_start = (v.edit.trim_end - 0.1).max(0.0);
+                                            v.edit.trim_start =
+                                                v.current_secs.clamp(0.0, max_start);
+                                        }
+                                        cx.notify();
+                                    }))
+                                }),
+                            )
+                            .child(
+                                icon_btn(
+                                    "vid-trim-out",
+                                    "seek/video-trim-out.svg",
+                                    "Cut after playhead (Set end ])",
+                                    duration > 0.0 && v.edit.trim_end + 0.05 < duration,
+                                )
+                                .when(!exporting, |d| {
+                                    d.on_click(cx.listener(|this, _, _, cx| {
+                                        if let Some(v) = this.video_edit.as_mut() {
+                                            v.stop_playback();
+                                            let dur = v
+                                                .info
+                                                .as_ref()
+                                                .map(|i| i.duration)
+                                                .unwrap_or(v.edit.trim_end);
+                                            let min_end = (v.edit.trim_start + 0.1).min(dur);
+                                            v.edit.trim_end = v.current_secs.clamp(min_end, dur);
+                                        }
+                                        cx.notify();
+                                    }))
+                                }),
+                            )
+                            .when(
+                                v.edit.trim_start > 0.05
+                                    || (duration > 0.0 && v.edit.trim_end + 0.05 < duration),
+                                |d| {
+                                    d.child(
+                                        icon_btn(
+                                            "vid-trim-reset",
+                                            "icons/refresh-cw.svg",
+                                            "Reset trim range",
+                                            false,
+                                        )
+                                        .when(!exporting, |d| {
+                                            d.on_click(cx.listener(|this, _, _, cx| {
+                                                if let Some(v) = this.video_edit.as_mut() {
+                                                    v.edit.trim_start = 0.0;
+                                                    v.edit.trim_end = v
+                                                        .info
+                                                        .as_ref()
+                                                        .map(|i| i.duration)
+                                                        .unwrap_or(v.edit.trim_end);
+                                                }
+                                                cx.notify();
+                                            }))
+                                        }),
+                                    )
+                                },
+                            )
+                            .child(div().w(px(1.)).h(px(16.)).mx_1().bg(p.line))
+                            .child(
+                                icon_btn(
                                     "vid-crop",
-                                    if has_crop { "Crop ✓" } else { "Crop" },
-                                    cropping,
+                                    "seek/edit-crop.svg",
+                                    if has_crop {
+                                        "Crop video (active)"
+                                    } else {
+                                        "Crop video"
+                                    },
+                                    cropping || has_crop,
                                 )
                                 .when(!exporting, |d| {
                                     d.on_click(cx.listener(|this, _, _, cx| {
@@ -1115,7 +1682,13 @@ impl Seek {
                                 }),
                             )
                             .child(
-                                pill("vid-rotate", "Rotate 90°", false).when(!exporting, |d| {
+                                icon_btn(
+                                    "vid-rotate",
+                                    "seek/edit-rotate-cw.svg",
+                                    "Rotate 90° clockwise",
+                                    false,
+                                )
+                                .when(!exporting, |d| {
                                     d.on_click(cx.listener(|this, _, window, cx| {
                                         if let Some(v) = this.video_edit.as_mut() {
                                             v.stop_playback();
@@ -1130,13 +1703,24 @@ impl Seek {
                                 }),
                             )
                             .child(
-                                pill(
+                                icon_btn(
                                     "vid-mute",
-                                    if muted { "Muted" } else { "Mute audio" },
+                                    if muted {
+                                        "seek/video-mute.svg"
+                                    } else {
+                                        "seek/video-volume.svg"
+                                    },
+                                    if !has_audio {
+                                        "No audio track"
+                                    } else if muted {
+                                        "Unmute audio"
+                                    } else {
+                                        "Mute audio"
+                                    },
                                     muted,
                                 )
                                 .when(!has_audio || exporting, |d| {
-                                    d.opacity(0.45).cursor_default()
+                                    d.opacity(0.4).cursor_default()
                                 })
                                 .when(has_audio && !exporting, |d| {
                                     d.on_click(cx.listener(|this, _, _, cx| {
@@ -1148,7 +1732,13 @@ impl Seek {
                                 }),
                             )
                             .child(
-                                pill("vid-save-frame", "Save frame", false).when(!exporting, |d| {
+                                icon_btn(
+                                    "vid-save-frame",
+                                    "seek/video-camera.svg",
+                                    "Save current frame as PNG",
+                                    false,
+                                )
+                                .when(!exporting, |d| {
                                     d.on_click(cx.listener(|this, _, window, cx| {
                                         this.video_save_frame(window, cx);
                                     }))
@@ -1200,20 +1790,21 @@ impl Seek {
                                     .child(div().w(px(1.)).h(px(16.)).bg(p.accent.opacity(0.32)))
                                     .child(save_menu_btn),
                             )
-                            .child(pill("vid-done-edit", "Done", false).on_click(cx.listener(
-                                |this, _, _, cx| {
-                                    if let Some(v) = this.video_edit.as_mut() {
-                                        if v.is_dirty() {
-                                            v.confirm_discard = true;
-                                        } else {
-                                            v.editing = false;
-                                            v.cropping = false;
-                                            v.crop_draft = None;
+                            .child(
+                                icon_btn("vid-done-edit", "icons/x.svg", "Finish editing", false)
+                                    .on_click(cx.listener(|this, _, _, cx| {
+                                        if let Some(v) = this.video_edit.as_mut() {
+                                            if v.is_dirty() {
+                                                v.confirm_discard = true;
+                                            } else {
+                                                v.editing = false;
+                                                v.cropping = false;
+                                                v.crop_draft = None;
+                                            }
                                         }
-                                    }
-                                    cx.notify();
-                                },
-                            ))),
+                                        cx.notify();
+                                    })),
+                            ),
                     )
                     .into_any_element(),
             );
@@ -1248,16 +1839,43 @@ impl Seek {
                                     .text_color(p.text)
                                     .child(format!("{cw} × {ch} px")),
                             )
-                            .children(AspectPreset::ALL.into_iter().map(|preset| {
-                                let active = current_aspect == preset;
-                                let id: &'static str = match preset {
-                                    AspectPreset::Free => "vid-crop-free",
-                                    AspectPreset::Square => "vid-crop-1-1",
-                                    AspectPreset::FourThree => "vid-crop-4-3",
-                                    AspectPreset::SixteenNine => "vid-crop-16-9",
+                            .child(div().w(px(1.)).h(px(14.)).mx_1().bg(p.line))
+                            .child({
+                                let aspect_idx = match current_aspect {
+                                    AspectPreset::Free => 0,
+                                    AspectPreset::Square => 1,
+                                    AspectPreset::FourThree => 2,
+                                    AspectPreset::SixteenNine => 3,
                                 };
-                                pill(id, preset.label(), active).on_click(cx.listener(
-                                    move |this, _, _, cx| {
+                                let aspect_motion =
+                                    self.segment_motion.get("vid-crop-aspect").copied();
+                                super::settings_view::segmented_compact(
+                                    "vid-crop-aspect",
+                                    &["Free", "1:1", "4:3", "16:9"],
+                                    52.,
+                                    28.,
+                                    aspect_idx,
+                                    aspect_motion,
+                                    self.motion_enabled,
+                                    p,
+                                    cx,
+                                    |this, idx, _, cx| {
+                                        let preset = match idx {
+                                            0 => AspectPreset::Free,
+                                            1 => AspectPreset::Square,
+                                            2 => AspectPreset::FourThree,
+                                            _ => AspectPreset::SixteenNine,
+                                        };
+                                        let prev =
+                                            this.video_edit.as_ref().map(|v| match v.crop_aspect {
+                                                AspectPreset::Free => 0,
+                                                AspectPreset::Square => 1,
+                                                AspectPreset::FourThree => 2,
+                                                AspectPreset::SixteenNine => 3,
+                                            });
+                                        if let Some(prev) = prev {
+                                            this.slide_segment("vid-crop-aspect", prev, idx);
+                                        }
                                         if let Some(v) = this.video_edit.as_mut() {
                                             v.crop_aspect = preset;
                                             let (rw, rh) = v.rotated_dims();
@@ -1272,8 +1890,8 @@ impl Seek {
                                         }
                                         cx.notify();
                                     },
-                                ))
-                            })),
+                                )
+                            }),
                     )
                     .child(
                         div()
@@ -1769,26 +2387,34 @@ impl Seek {
                             .border_2()
                             .border_color(p.accent),
                     )
-                    // Left & right trim handles
+                    // Left & right trim handles with crisp grip bars
                     .child(
                         div()
                             .absolute()
-                            .left(px((s_px - 4.0).max(0.0)))
+                            .left(px((s_px - 6.0).max(0.0)))
                             .top(px(0.))
-                            .w(px(8.0))
+                            .w(px(12.0))
                             .h_full()
-                            .rounded_l(px(3.))
-                            .bg(p.accent),
+                            .rounded_l(px(4.))
+                            .bg(p.accent)
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .child(div().w(px(2.0)).h(px(14.0)).rounded_full().bg(rgb(0xFFFFFF))),
                     )
                     .child(
                         div()
                             .absolute()
-                            .left(px((e_px - 4.0).clamp(0.0, (tw - 8.0).max(0.0))))
+                            .left(px((e_px - 6.0).clamp(0.0, (tw - 12.0).max(0.0))))
                             .top(px(0.))
-                            .w(px(8.0))
+                            .w(px(12.0))
                             .h_full()
-                            .rounded_r(px(3.))
-                            .bg(p.accent),
+                            .rounded_r(px(4.))
+                            .bg(p.accent)
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .child(div().w(px(2.0)).h(px(14.0)).rounded_full().bg(rgb(0xFFFFFF))),
                     );
             }
             // Playhead needle
@@ -1842,26 +2468,37 @@ impl Seek {
                         div()
                             .id("vid-play-pause")
                             .role(Role::Button)
-                            .aria_label(if playing { "Pause" } else { "Play" })
-                            .h(px(30.))
-                            .px(px(12.))
+                            .aria_label(if playing { "Pause (Space)" } else { "Play (Space)" })
+                            .size(px(30.))
                             .rounded(crate::tokens::RADIUS_CONTROL)
                             .flex()
                             .items_center()
                             .justify_center()
                             .cursor_pointer()
-                            .bg(p.accent.opacity(0.18))
                             .border_1()
-                            .border_color(p.accent.opacity(0.45))
-                            .text_size(px(12.))
-                            .font_weight(FontWeight::MEDIUM)
+                            .border_color(rgba(0))
                             .text_color(p.text)
-                            .hover(|s| s.bg(p.accent.opacity(0.28)))
-                            .child(super::interface::button_text(if playing {
-                                "Pause"
-                            } else {
-                                "Play"
-                            }))
+                            .hover(move |s| {
+                                s.bg(p.accent.opacity(0.16))
+                                    .border_color(p.accent.opacity(0.36))
+                            })
+                            .tooltip(move |window, cx| {
+                                gpui_component::tooltip::Tooltip::new(if playing {
+                                    "Pause (Space)"
+                                } else {
+                                    "Play (Space)"
+                                })
+                                .build(window, cx)
+                            })
+                            .child(
+                                Icon::empty()
+                                    .path(if playing {
+                                        "seek/video-pause.svg"
+                                    } else {
+                                        "seek/video-play.svg"
+                                    })
+                                    .size(px(15.)),
+                            )
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.video_toggle_play(window, cx);
                             })),
@@ -1879,20 +2516,30 @@ impl Seek {
                     )
                     .child(timeline)
                     .when(!editing, |d| {
-                        d.child(pill("vid-quick-frame", "Save frame", false).on_click(
-                            cx.listener(|this, _, window, cx| {
+                        d.child(
+                            icon_btn(
+                                "vid-quick-frame",
+                                "seek/video-camera.svg",
+                                "Save current frame as PNG",
+                                false,
+                            )
+                            .on_click(cx.listener(|this, _, window, cx| {
                                 this.video_save_frame(window, cx);
-                            }),
-                        ))
+                            })),
+                        )
                         .child(
-                            pill("vid-enter-edit", "Edit", false).on_click(cx.listener(
-                                |this, _, _, cx| {
-                                    if let Some(v) = this.video_edit.as_mut() {
-                                        v.editing = true;
-                                    }
-                                    cx.notify();
-                                },
-                            )),
+                            icon_btn(
+                                "vid-enter-edit",
+                                "icons/pencil.svg",
+                                "Edit video (trim, crop, rotate, mute)",
+                                false,
+                            )
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                if let Some(v) = this.video_edit.as_mut() {
+                                    v.editing = true;
+                                }
+                                cx.notify();
+                            })),
                         )
                     }),
             )
@@ -1901,14 +2548,16 @@ impl Seek {
                     .flex()
                     .items_center()
                     .justify_between()
+                    .gap_4()
+                    .min_w_0()
                     .text_size(px(11.))
                     .text_color(p.muted)
-                    .child(meta_str)
-                    .child(if editing {
-                        "Drag blue timeline handles to trim · Space plays · ←/→ steps 1s"
+                    .child(div().min_w_0().truncate().child(meta_str))
+                    .child(div().flex_shrink_0().child(if editing {
+                        "Drag handles or [ / ] to cut · Space plays · ←/→ steps · Esc / Q closes"
                     } else {
-                        "Space plays/pauses · Click timeline to scrub · Edit to trim, crop, rotate or mute"
-                    }),
+                        "Space plays · ←/→ steps 1s · Esc / Q closes"
+                    })),
             );
 
         div()

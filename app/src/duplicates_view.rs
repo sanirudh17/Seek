@@ -320,9 +320,11 @@ impl Seek {
                 }
                 let count = paths.len();
                 let moved_paths = paths.clone();
+                let pending_before = this.files_pending;
                 this.run_file_op(crate::file_ops::Operation::Recycle { paths }, window, cx);
-                if this.message.is_none() {
+                if this.files_pending > pending_before {
                     this.duplicates_moved(count, &moved_paths);
+                    this.refresh_recycle_bin(cx);
                     this.refresh_capacity(cx);
                     if let Some(page) = &this.storage_page {
                         let scope = page.scope.clone();

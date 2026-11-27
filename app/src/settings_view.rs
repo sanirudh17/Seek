@@ -83,29 +83,24 @@ pub(super) fn control(
     cx: &App,
 ) -> Button {
     let label = label.into();
-    let dark = p.text.l > 0.5;
+    // Pixel-identical idle, hover, active, and border recipe to Picture/Video Editor's "Save a Copy".
     Button::new(id)
         .custom(
             ButtonCustomVariant::new(cx)
-                .color(p.control)
+                .color(p.accent.opacity(0.16))
+                .border(p.accent.opacity(0.45))
                 .foreground(p.text)
-                .hover(p.control_hover)
-                .active(p.control_selected),
+                .hover(p.accent.opacity(0.24))
+                .active(p.accent.opacity(0.32)),
         )
         .with_size(px(32.))
         .h(px(32.))
         .px_3()
         .py_0()
         .line_height(px(16.))
-        .rounded(px(8.))
+        .rounded(crate::tokens::RADIUS_CONTROL)
         .border_1()
-        .border_color(p.line)
-        .bg(if dark {
-            Hsla::from(rgba(0xffffff0a))
-        } else {
-            Hsla::from(rgba(0x0000000a))
-        })
-        .font_weight(FontWeight::NORMAL)
+        .font_weight(FontWeight::MEDIUM)
         .when(!label.is_empty(), |b| {
             b.accessibility_label(label.clone()).child(
                 div()
@@ -312,12 +307,12 @@ pub(super) fn segmented(
         .w(relative(share))
         .rounded(px(7.))
         .bg(if dark {
-            Hsla::from(rgba(0xffffff1f))
+            Hsla::from(rgba(0xffffff20))
         } else {
             Hsla::from(rgba(0xffffffff))
         })
         .border_1()
-        .border_color(p.text.opacity(if dark { 0.14 } else { 0.1 }))
+        .border_color(p.text.opacity(if dark { 0.24 } else { 0.14 }))
         .shadow_sm();
     let start = move |index: f32| relative(index * share);
     let indicator: AnyElement = match motion.filter(|(from, _)| motion_on && *from != selected) {
@@ -394,6 +389,112 @@ pub(super) fn segmented(
         .border_1()
         .border_color(p.text.opacity(0.08))
         .bg(p.text.opacity(if dark { 0.04 } else { 0.05 }))
+        .child(segments)
+        .into_any_element()
+}
+
+/// Compact sliding segmented control for dense toolbars (e.g. `S | M | L`,
+/// `Free | 1:1 | 4:3 | 16:9`). Reuses Seek's critically damped `reversible()`
+/// spring so the active pill glides cleanly across equal-width cells.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn segmented_compact(
+    id: &'static str,
+    labels: &[&'static str],
+    item_width: f32,
+    height: f32,
+    selected: usize,
+    motion: Option<(usize, u64)>,
+    motion_on: bool,
+    p: Palette,
+    cx: &mut Context<Seek>,
+    on_select: impl Fn(&mut Seek, usize, &mut Window, &mut Context<Seek>) + 'static,
+) -> AnyElement {
+    let on_select = std::rc::Rc::new(on_select);
+    let dark = p.text.l > 0.5;
+    let count = labels.len();
+    let share = 1. / count.max(1) as f32;
+    let indicator = div()
+        .absolute()
+        .top_0()
+        .h_full()
+        .w(relative(share))
+        .rounded(px(5.))
+        .bg(if dark {
+            Hsla::from(rgba(0xffffff22))
+        } else {
+            Hsla::from(rgba(0xffffffff))
+        })
+        .border_1()
+        .border_color(p.text.opacity(if dark { 0.14 } else { 0.1 }))
+        .shadow_sm();
+    let start = move |index: f32| relative(index * share);
+    let indicator: AnyElement = match motion.filter(|(from, _)| motion_on && *from != selected) {
+        Some((from, generation)) if from >= count => indicator
+            .left(start(selected as f32))
+            .with_animation(
+                SharedString::from(format!("{id}-appear-{generation}")),
+                crate::motion::reversible(),
+                |d, t| d.opacity(t),
+            )
+            .into_any_element(),
+        Some((from, generation)) => indicator
+            .left(start(selected as f32))
+            .with_animation(
+                SharedString::from(format!("{id}-slide-{generation}")),
+                crate::motion::reversible(),
+                move |d, t| d.left(start(from as f32 + (selected as f32 - from as f32) * t)),
+            )
+            .into_any_element(),
+        None => indicator.left(start(selected as f32)).into_any_element(),
+    };
+    let mut segments = div()
+        .relative()
+        .size_full()
+        .flex()
+        .when(selected < count, |inner| inner.child(indicator));
+    for (index, label) in labels.iter().enumerate() {
+        let on_select = on_select.clone();
+        let chosen = index == selected;
+        segments = segments.child(
+            div()
+                .id((id, index))
+                .role(Role::RadioButton)
+                .aria_label(*label)
+                .aria_selected(chosen)
+                .relative()
+                .flex_1()
+                .flex_basis(px(0.))
+                .min_w_0()
+                .h_full()
+                .flex()
+                .items_center()
+                .justify_center()
+                .cursor_pointer()
+                .text_size(px(12.))
+                .font_weight(if chosen {
+                    FontWeight::MEDIUM
+                } else {
+                    FontWeight::NORMAL
+                })
+                .text_color(if chosen { p.text } else { p.muted })
+                .when(!chosen, |d| d.hover(move |s| s.text_color(p.text)))
+                .child(super::interface::button_text(*label))
+                .on_click(
+                    cx.listener(move |this, _, window, cx| on_select(this, index, window, cx)),
+                ),
+        );
+    }
+    div()
+        .id(id)
+        .role(Role::RadioGroup)
+        .flex_shrink_0()
+        .h(px(height))
+        .w(px(item_width * count as f32 + 6.))
+        .p(px(2.))
+        .rounded(px(7.))
+        .border_1()
+        .border_color(p.text.opacity(0.09))
+        .bg(p.text.opacity(if dark { 0.045 } else { 0.05 }))
         .child(segments)
         .into_any_element()
 }
@@ -993,14 +1094,6 @@ impl Seek {
                 this.preferences.restore_layout = *on;
                 this.save_preferences(window, cx);
             }));
-        let show_confirmations = Switch::new("show-confirmations")
-            .color(p.accent)
-            .checked(self.preferences.show_confirmations)
-            .accessibility_label("Show confirmations")
-            .on_change(cx.listener(|this, on: &bool, window, cx| {
-                this.preferences.show_confirmations = *on;
-                this.save_preferences(window, cx);
-            }));
         let files = section("Files and search")
             .child(card(
                 "Hidden and system files",
@@ -1018,12 +1111,6 @@ impl Seek {
                 "Reopen panes and tabs",
                 "Open Seek with the panes, tabs and folders you had when you closed it. When off, Seek opens with one pane.",
                 restore_layout,
-                p,
-            ))
-            .child(card(
-                "Show confirmations",
-                "Show a brief toast when copying, cutting, pasting, copying a path, undoing, redoing or pinning a folder to the sidebar.",
-                show_confirmations,
                 p,
             ))
             .child(card(
@@ -1251,6 +1338,8 @@ impl Seek {
             .child(card("Report a bug", "Opens a new GitHub issue in your browser with Seek's version, your Windows version and where the diagnostics log is. Nothing is sent until you submit it.",
                 control("report-bug", "Report a bug", p, cx)
                     .on_click(cx.listener(|this, _, _, cx| this.report_bug(cx))), p));
+        let dark = p.text.l > 0.5;
+        let glass_on = crate::appearance::glass_enabled(&self.preferences, dark);
         let mut nav = div()
             .id("settings-navigation")
             .min_h_0()
@@ -1259,65 +1348,122 @@ impl Seek {
             .flex_shrink_0()
             .h_full()
             .p_4()
+            .rounded_l(px(16.))
             .border_r_1()
-            .border_color(p.line)
+            .border_color(p.text.opacity(if glass_on { 0.09 } else { 0.08 }))
+            .when(glass_on, |d| {
+                d.bg(p.text.opacity(if dark { 0.02 } else { 0.04 }))
+            })
             .flex()
-            .flex_col()
-            .gap_1();
+            .flex_col();
         let query = self.settings_search.read(cx).value().to_lowercase();
         nav = nav.child(Input::new(&self.settings_search).h(px(32.)).w_full().mb_4());
-        for (i, label, icon, keywords) in SETTINGS_PAGES {
-            if !query.trim().is_empty()
-                && !format!("{label} {keywords}")
-                    .to_lowercase()
-                    .contains(query.trim())
-            {
-                continue;
-            }
-            nav = nav.child(
-                control(("settings-category", i), "", p, cx)
-                    .border_0()
+        let visible_pages: Vec<(usize, &'static str, Glyph)> = SETTINGS_PAGES
+            .iter()
+            .filter(|(_, label, _, keywords)| {
+                query.trim().is_empty()
+                    || format!("{label} {keywords}")
+                        .to_lowercase()
+                        .contains(query.trim())
+            })
+            .map(|(i, label, icon, _)| (*i, *label, *icon))
+            .collect();
+        let active_row = visible_pages
+            .iter()
+            .position(|(i, _, _)| *i == self.settings_tab);
+        let mut nav_items = div().relative().flex().flex_col().gap(px(4.));
+        if let Some(row_idx) = active_row {
+            // 36px row + 4px gap = 40px stride: exact integer physical pixels at
+            // 100%, 125%, 150%, 175%, and 200% Windows DPI scaling (zero drift).
+            let pill = div()
+                .absolute()
+                .left_0()
+                .right_0()
+                .h(px(36.))
+                .rounded(crate::tokens::RADIUS_CONTROL)
+                .bg(if dark {
+                    Hsla::from(rgba(0xffffff16))
+                } else {
+                    p.text.opacity(0.09)
+                })
+                .border_1()
+                .border_color(p.text.opacity(if dark { 0.20 } else { 0.12 }))
+                .shadow_xs();
+            let stride = 40.0_f32;
+            let pill_el: AnyElement = match self
+                .segment_motion
+                .get("settings-nav")
+                .copied()
+                .filter(|(from, _)| {
+                    self.motion_enabled && *from != row_idx && *from < visible_pages.len()
+                }) {
+                Some((from, generation)) => pill
+                    .top(px(row_idx as f32 * stride))
+                    .with_animation(
+                        SharedString::from(format!("settings-nav-slide-{generation}")),
+                        crate::motion::reversible(),
+                        move |d, t| {
+                            d.top(px((from as f32 + (row_idx as f32 - from as f32) * t) * stride))
+                        },
+                    )
+                    .into_any_element(),
+                None => pill.top(px(row_idx as f32 * stride)).into_any_element(),
+            };
+            nav_items = nav_items.child(pill_el);
+        }
+        let prev_active_row = active_row.unwrap_or(0);
+        for (row_idx, (i, label, icon)) in visible_pages.into_iter().enumerate() {
+            let is_active = self.settings_tab == i;
+            nav_items = nav_items.child(
+                div()
+                    .id(("settings-category", i))
+                    .role(Role::Button)
+                    .aria_label(label)
+                    .relative()
+                    .flex_shrink_0()
                     .w_full()
-                    .h(px(34.))
+                    .h(px(36.))
                     .px_3()
-                    .py_0()
-                    .rounded(px(7.))
-                    .text_color(p.text)
-                    .accessibility_label(label)
-                    .bg(if self.settings_tab == i {
-                        p.control_selected
-                    } else {
-                        rgba(0).into()
+                    .rounded(crate::tokens::RADIUS_CONTROL)
+                    .cursor_pointer()
+                    .flex()
+                    .items_center()
+                    .gap_3()
+                    .text_color(if is_active { p.text } else { p.muted })
+                    .when(!is_active, |d| {
+                        d.hover(move |s| s.bg(p.hover).text_color(p.text))
                     })
                     .child(
                         div()
-                            .w_full()
-                            .h(px(20.))
+                            .size(px(20.))
+                            .flex_shrink_0()
                             .flex()
                             .items_center()
-                            .gap_3()
+                            .justify_center()
                             .child(
-                                div()
-                                    .size(px(20.))
-                                    .flex_shrink_0()
-                                    .flex()
-                                    .items_center()
-                                    .justify_center()
-                                    .child(Icon::new(icon).size(px(16.)).text_color(
-                                        if self.settings_tab == i { p.text } else { p.muted },
-                                    )),
-                            )
-                            .child(
-                                div()
-                                    .h(px(20.))
-                                    .line_height(px(20.))
-                                    .text_size(px(13.))
-                                    .child(label),
+                                if i == 4 {
+                                    Icon::empty()
+                                        .path("seek/update-circle.svg")
+                                        .size(px(16.))
+                                        .text_color(if is_active { p.text } else { p.muted })
+                                } else {
+                                    Icon::new(icon)
+                                        .size(px(16.))
+                                        .text_color(if is_active { p.text } else { p.muted })
+                                },
                             ),
+                    )
+                    .child(
+                        div()
+                            .h(px(20.))
+                            .line_height(px(20.))
+                            .text_size(px(13.))
+                            .child(label),
                     )
                     .on_click(cx.listener(move |this, _, window, cx| {
                         if this.settings_tab != i {
                             this.settings_page_motion = this.settings_page_motion.wrapping_add(1);
+                            this.slide_segment("settings-nav", prev_active_row, row_idx);
                         }
                         this.settings_tab = i;
                         if i == 11 {
@@ -1331,6 +1477,7 @@ impl Seek {
                     })),
             );
         }
+        nav = nav.child(nav_items);
         let content = match self.settings_tab {
             1 => files.into_any_element(),
             2 => locations.into_any_element(),
@@ -1349,8 +1496,8 @@ impl Seek {
                 .child(content)
                 .with_animation(
                     ("settings-page", self.settings_page_motion as usize),
-                    crate::motion::state(),
-                    |d, t| d.opacity(0.88 + 0.12 * t),
+                    crate::motion::enter(),
+                    |d, t| d.opacity(0.35 + 0.65 * t).mt(px((1. - t) * 8.)),
                 )
                 .into_any_element()
         } else {
@@ -1371,6 +1518,15 @@ impl Seek {
                     cx.notify();
                 },
             )));
+        let sheet_bg = if glass_on {
+            if dark {
+                hsla(p.chrome.h, (p.chrome.s * 0.65).min(0.45), 0.14, 0.34)
+            } else {
+                hsla(p.chrome.h, (p.chrome.s * 0.45).min(0.25), 0.97, 0.84)
+            }
+        } else {
+            p.sheet
+        };
         let modal = div()
             .id("settings-sheet")
             .occlude()
@@ -1383,11 +1539,29 @@ impl Seek {
             .flex_col()
             .overflow_hidden()
             .rounded(px(16.))
-            .bg(p.sheet)
+            .bg(sheet_bg)
+            .shadow_2xl()
             .text_color(p.text)
             .border_1()
-            .border_color(p.line)
+            .border_color(if glass_on {
+                p.text.opacity(if dark { 0.16 } else { 0.12 })
+            } else {
+                p.line
+            })
             .relative()
+            .when(glass_on, |d| {
+                d.child(
+                    div()
+                        .absolute()
+                        .inset_0()
+                        .rounded(px(16.))
+                        .bg(linear_gradient(
+                            180.,
+                            linear_color_stop(p.text.opacity(if dark { 0.055 } else { 0.22 }), 0.),
+                            linear_color_stop(rgba(0), 0.24),
+                        )),
+                )
+            })
             .child(
                 div().flex_1().min_h_0().flex().child(nav).child(
                     // Done has its own row, so pages never scroll under it.
@@ -1433,8 +1607,8 @@ impl Seek {
                 modal
                     .with_animation(
                         ("settings-open", self.settings_open_motion as usize),
-                        crate::motion::state(),
-                        |d, t| d.opacity(0.92 + 0.08 * t),
+                        crate::motion::enter(),
+                        |d, t| d.opacity(0.45 + 0.55 * t).mt(px((1. - t) * 10.)),
                     )
                     .into_any_element()
             } else {

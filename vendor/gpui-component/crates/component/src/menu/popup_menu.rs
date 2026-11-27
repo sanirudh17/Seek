@@ -1467,6 +1467,7 @@ struct RenderOptions {
 
 impl Render for PopupMenu {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        use gpui::AnimationExt as _;
         self.update_submenu_menu_anchor(window);
 
         // Submenus attached via the public `item()` + `PopupMenuItem::submenu()`
@@ -1551,6 +1552,14 @@ impl Render for PopupMenu {
             .when(self.scrollable && self.scrollbar_visible, |this| {
                 this.vertical_scrollbar(&self.scroll_handle)
             })
+            .with_animation(
+                "popup-menu-enter",
+                gpui::Animation::new(std::time::Duration::from_millis(120)).with_easing(|t| {
+                    let u = 1. - t.clamp(0., 1.);
+                    1. - u * u * u
+                }),
+                |menu, t| menu.opacity(0.35 + 0.65 * t).mt(px((1. - t) * -4.)),
+            )
     }
 }
 

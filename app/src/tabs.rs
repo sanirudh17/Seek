@@ -720,9 +720,18 @@ impl Seek {
         cx.notify();
     }
     pub(super) fn switch_tab(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {
-        if index == self.active_tab || index >= self.tabs.len() {
+        if index >= self.tabs.len() {
             return;
         }
+        if index == self.active_tab {
+            // Clicking the active tab while viewing Storage or Worktrees returns
+            // straight to that tab's folder without losing its state.
+            let _ = self.close_tool_pages(window, cx);
+            return;
+        }
+        self.close_storage();
+        self.close_worktrees();
+        self.view_motion = self.view_motion.wrapping_add(1);
         self.tabs[self.active_tab] = self.capture_tab(cx);
         self.trim_tab_snapshots();
         self.activate_tab(index, window, cx);
@@ -909,9 +918,11 @@ impl Seek {
             .px_2()
             .border_b_1()
             .border_color(p.line)
-            // Follows the pane's rounded corners; the pane clips only to its
-            // rectangle, so a square bar would show past the curve.
-            .rounded_t(crate::tokens::RADIUS_CARD - px(1.))
+            // Only round top corners inside a rounded split pane; full-width
+            // single-pane tab strip sits flush against the toolbar corners.
+            .when(self.split_mode(), |d| {
+                d.rounded_t(crate::tokens::RADIUS_CARD - px(1.))
+            })
             .bg(p.chrome);
         let mut tabs = div()
             .id("tab-list")

@@ -8,6 +8,7 @@ pub(super) struct Capacity {
 }
 pub(super) struct State {
     key: Option<(Vec<PathBuf>, u64)>,
+    last_refresh: Option<std::time::Instant>,
     capacity_gen: u64,
     pub capacity: BTreeMap<PathBuf, Capacity>,
     pub recent: Vec<PathBuf>,
@@ -18,6 +19,7 @@ impl State {
     pub fn new() -> Self {
         Self {
             key: None,
+            last_refresh: None,
             capacity_gen: 0,
             capacity: BTreeMap::new(),
             recent: vec![],
@@ -124,10 +126,22 @@ impl Seek {
     pub(super) fn refresh_places(&mut self, cx: &mut Context<Self>) {
         let targets = self.capacity_targets();
         let key = (targets.clone(), self.cache_epoch);
-        if self.places.key.as_ref() == Some(&key) {
+        let same_targets = self
+            .places
+            .key
+            .as_ref()
+            .is_some_and(|(old, _)| *old == targets);
+        if self.places.key.as_ref() == Some(&key)
+            || (same_targets
+                && self
+                    .places
+                    .last_refresh
+                    .is_some_and(|t| t.elapsed() < std::time::Duration::from_secs(5)))
+        {
             return;
         }
         self.places.key = Some(key.clone());
+        self.places.last_refresh = Some(std::time::Instant::now());
         let data = self.store.directory.clone();
         self.places.task = cx.spawn(async move |this, cx| {
             let result = cx

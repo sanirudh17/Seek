@@ -241,6 +241,11 @@ struct Rows {
     pending_collapse: Option<usize>,
     owner: WeakEntity<Seek>,
     visible_range: std::ops::Range<usize>,
+    /// Last folder toggled in List view for smooth child row cascade animation.
+    tree_motion: Option<(PathBuf, bool, u64)>,
+    /// Folder currently playing its collapse exit animation before removing children.
+    tree_collapsing: Option<(PathBuf, u64)>,
+    tree_motion_gen: u64,
 }
 impl Rows {
     fn refresh_media(&self) {
@@ -551,7 +556,24 @@ impl TableDelegate for Rows {
         let depth = self.depths.get(row).copied().unwrap_or(0);
         let row = &self.rows[row];
         if column == 0 {
-            div()
+            let toggle_anim = self
+                .tree_motion
+                .as_ref()
+                .filter(|(p, _, _)| p == &row.file.path)
+                .map(|(_, _, g)| *g);
+            let child_anim = self
+                .tree_motion
+                .as_ref()
+                .filter(|(p, expanded, _)| {
+                    *expanded && row.file.path != *p && row.file.path.starts_with(p)
+                })
+                .map(|(_, _, g)| *g);
+            let collapse_anim = self
+                .tree_collapsing
+                .as_ref()
+                .filter(|(p, _)| row.file.path != *p && row.file.path.starts_with(p))
+                .map(|(_, g)| *g);
+            let cell = div()
                 .h_full()
                 .min_w_0()
                 .flex()
@@ -562,7 +584,12 @@ impl TableDelegate for Rows {
                 .child(interface::disclosure(
                     row,
                     depth,
-                    self.expanded.contains(&row.file.path),
+                    self.expanded.contains(&row.file.path)
+                        && self
+                            .tree_collapsing
+                            .as_ref()
+                            .is_none_or(|(p, _)| p != &row.file.path),
+                    toggle_anim,
                     self.owner.clone(),
                 ))
                 .child(interface::file_image(
@@ -583,8 +610,30 @@ impl TableDelegate for Rows {
                         )
                     }),
                 ))
-                .children(interface::cloud_badge(row, p))
+                .children(interface::cloud_badge(row, p));
+            if let Some(generation) = collapse_anim {
+                cell.with_animation(
+                    SharedString::from(format!(
+                        "tree-collapse-{generation}-{}",
+                        row.file.path.display()
+                    )),
+                    crate::motion::exit(),
+                    |d, t| d.opacity(1. - t).mt(px(-6. * t)),
+                )
                 .into_any_element()
+            } else if let Some(generation) = child_anim {
+                cell.with_animation(
+                    SharedString::from(format!(
+                        "tree-child-{generation}-{}",
+                        row.file.path.display()
+                    )),
+                    crate::motion::enter(),
+                    |d, t| d.opacity(0.25 + 0.75 * t).mt(px((1. - t) * -4.)),
+                )
+                .into_any_element()
+            } else {
+                cell.into_any_element()
+            }
         } else {
             div()
                 .id(SharedString::from(format!(
@@ -711,6 +760,9 @@ impl Rows {
             pending_collapse: None,
             owner,
             visible_range: 0..0,
+            tree_motion: None,
+            tree_collapsing: None,
+            tree_motion_gen: 0,
         }
     }
 }
@@ -827,6 +879,10 @@ pub struct Seek {
     picture_edit: Option<picture_edit_view::State>,
     /// Inline video preview & editor in Quick Look or a video Document pane.
     video_edit: Option<video_edit_view::State>,
+    /// Small LRU cache (max 3 entries) of decoded video Frame-0 + filmstrip for 0ms reopen.
+    video_cache: Vec<video_edit_view::CachedVideo>,
+    /// Path currently being prewarmed into `video_cache` in the background.
+    video_prewarm_path: Option<PathBuf>,
     drag_hover: Option<PathBuf>,
     drag_hover_task: Task<()>,
     show_hidden: bool,
@@ -859,6 +915,7 @@ pub struct Seek {
     visible: Arc<Mutex<std::collections::HashSet<media::Key>>>,
     extra: Arc<Mutex<std::collections::HashSet<media::Key>>>,
     view: View,
+    view_motion: u64,
     panel: bool,
     info_motion: usize,
     info_closing: bool,
@@ -884,6 +941,7 @@ pub struct Seek {
     similar: similar_view::Similar,
     /// Git worktrees (Phase 9.4), shown in place of the file list.
     worktrees_page: Option<worktrees_view::WorktreesPage>,
+    worktrees_warm_started: bool,
     /// Settings > Agents (Phase 10.5).
     agents: agents_view::AgentsPage,
     quick_look_motion: usize,
@@ -967,6 +1025,10 @@ pub struct Seek {
     live_folders: live_folders::LiveFolders,
     content_failures: Vec<crate::content::Failure>,
     content_locations_input: Entity<InputState>,
+    /// Active Tab-completion cycle for the location/search bar:
+    /// `(last_applied_value, all_candidates, current_index)`.
+    tab_complete_cycle: Option<(String, Vec<String>, usize)>,
+    tree_collapse_task: Task<()>,
     app_updates: crate::updater::State,
 }
 impl Seek {
@@ -1415,8 +1477,12 @@ impl Seek {
                 ..Default::default()
             },
             scope: None,
-            favorites: vec![],
-            roots: vec![],
+            favorites: crate::backend::favorites(),
+            roots: if preferences.indexed_locations.is_empty() {
+                crate::backend::drives()
+            } else {
+                preferences.indexed_locations.clone()
+            },
             places: places_view::State::new(),
             command_form,
             command_run: None,
@@ -1428,6 +1494,8 @@ impl Seek {
             image_job_focus: cx.focus_handle(),
             picture_edit: None,
             video_edit: None,
+            video_cache: Vec::new(),
+            video_prewarm_path: None,
             drag_hover: None,
             drag_hover_task: Task::ready(()),
             show_hidden: preferences.show_hidden,
@@ -1451,6 +1519,7 @@ impl Seek {
             settings_page_motion: 0,
             helper: crate::backend::HelperState::default(),
             view: preferences.default_view,
+            view_motion: 0,
             preferences,
             store,
             atlas,
@@ -1476,6 +1545,7 @@ impl Seek {
             duplicates: Default::default(),
             similar: Default::default(),
             worktrees_page: None,
+            worktrees_warm_started: false,
             agents: Default::default(),
             quick_look_motion: 0,
             quick_look_zoom: None,
@@ -1545,6 +1615,8 @@ impl Seek {
             live_folders: Default::default(),
             content_failures: vec![],
             content_locations_input,
+            tab_complete_cycle: None,
+            tree_collapse_task: Task::ready(()),
             app_updates: crate::updater::State::default(),
         };
         match session {
@@ -1568,6 +1640,7 @@ impl Seek {
             Err(error) => eprintln!("Pane session preserved without replacement: {error}"),
         }
         this.refresh_background(cx);
+        this.refresh_places(cx);
         #[cfg(debug_assertions)]
         if let Some(release) = crate::updater::preview() {
             this.app_updates.available = Some(release);
@@ -1733,14 +1806,12 @@ impl Seek {
         self.roots = update.roots;
         self.refresh_places(cx);
         self.prewarm_storage(cx);
+        self.prewarm_worktrees(cx);
         self.refresh_command_palette(cx);
         if update.message.is_some() {
             self.message = update.message.clone();
         }
         if update.progress_only {
-            if epoch_changed {
-                self.media.force();
-            }
             cx.notify();
             return;
         }
@@ -2015,6 +2086,9 @@ impl Seek {
         }
     }
     fn scope_to(&mut self, scope: Option<PathBuf>, window: &mut Window, cx: &mut Context<Self>) {
+        if self.scope != scope || self.storage_page.is_some() || self.worktrees_page.is_some() {
+            self.view_motion = self.view_motion.wrapping_add(1);
+        }
         self.close_storage();
         self.close_worktrees();
         // Keep the current search as a history entry before clearing it.
@@ -2150,7 +2224,40 @@ impl Seek {
             _ => false,
         }
     }
+    /// Close Storage / Worktrees tool pages and return seamlessly to the
+    /// active tab's folder without losing directory scope, scroll, or selection.
+    pub(super) fn close_tool_pages(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        if self.storage_page.is_none() && self.worktrees_page.is_none() {
+            return false;
+        }
+        self.close_storage();
+        self.close_worktrees();
+        self.view_motion = self.view_motion.wrapping_add(1);
+        self.table.read(cx).focus_handle(cx).focus(window, cx);
+        cx.notify();
+        true
+    }
+    /// Short label for the active folder that Back from Storage/Worktrees returns to.
+    pub(super) fn return_folder_label(&self) -> String {
+        match &self.scope {
+            Some(path) => path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .filter(|n| !n.is_empty())
+                .unwrap_or_else(|| {
+                    path.to_string_lossy()
+                        .trim_start_matches(r"\\?\")
+                        .to_string()
+                }),
+            None => "All locations".to_string(),
+        }
+    }
     fn history(&mut self, direction: isize, window: &mut Window, cx: &mut Context<Self>) {
+        if direction < 0 && self.close_tool_pages(window, cx) {
+            return;
+        }
+        self.close_storage();
+        self.close_worktrees();
         self.history_position = self
             .history_position
             .saturating_add_signed(direction)
@@ -2181,6 +2288,10 @@ impl Seek {
             self.settings = false;
             self.input.update(cx, |input, cx| input.focus(window, cx));
             cx.notify();
+            return;
+        }
+        if self.close_tool_pages(window, cx) {
+            cx.stop_propagation();
             return;
         }
         if !self.input.read(cx).value().is_empty() {
@@ -2335,6 +2446,97 @@ impl Seek {
         }
         false
     }
+    /// Complete or cycle a typed path or visible file/folder name in the search
+    /// bar on `Tab` / `Shift+Tab`, keeping keyboard focus inside the search box.
+    pub(super) fn handle_search_tab(
+        &mut self,
+        shift: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if !self
+            .input
+            .read(cx)
+            .focus_handle(cx)
+            .contains_focused(window, cx)
+        {
+            return false;
+        }
+        let typed = self.input.read(cx).value().to_string();
+        let trimmed = typed.trim();
+        let completed = if let Some((last, candidates, index)) = &mut self.tab_complete_cycle
+            && *last == typed
+            && candidates.len() > 1
+        {
+            *index = if shift {
+                (*index + candidates.len() - 1) % candidates.len()
+            } else {
+                (*index + 1) % candidates.len()
+            };
+            let next = candidates[*index].clone();
+            *last = next.clone();
+            Some(next)
+        } else if let Some((chosen, candidates)) =
+            crate::location::tab_complete_candidates(&typed, self.scope.as_deref(), self.show_hidden)
+        {
+            if candidates.len() > 1 {
+                let start = candidates.iter().position(|c| c == &chosen).unwrap_or(0);
+                self.tab_complete_cycle = Some((chosen.clone(), candidates, start));
+            } else {
+                self.tab_complete_cycle = None;
+            }
+            Some(chosen)
+        } else if !trimmed.is_empty() {
+            // Fall back to matching visible rows in the active list (works in All
+            // locations and when typing plain filenames/prefixes).
+            let lower = trimmed.to_ascii_lowercase();
+            let mut dirs = Vec::new();
+            let mut files = Vec::new();
+            {
+                let table = self.table.read(cx);
+                for row in table.delegate().rows.iter().take(512) {
+                    if row.name.to_ascii_lowercase().starts_with(&lower) {
+                        let is_dir = row.file.kind & 3 == seek_engine::walk::KIND_DIR;
+                        if is_dir {
+                            dirs.push(row.name.clone());
+                        } else {
+                            files.push(row.name.clone());
+                        }
+                    }
+                }
+            }
+            dirs.sort_by_key(|s| s.to_ascii_lowercase());
+            dirs.dedup_by(|a, b| a.eq_ignore_ascii_case(b));
+            files.sort_by_key(|s| s.to_ascii_lowercase());
+            files.dedup_by(|a, b| a.eq_ignore_ascii_case(b));
+            let candidates: Vec<String> = dirs.into_iter().chain(files).collect();
+            if candidates.is_empty() {
+                self.tab_complete_cycle = None;
+                None
+            } else {
+                let first = candidates[0].clone();
+                if candidates.len() > 1 {
+                    self.tab_complete_cycle = Some((first.clone(), candidates, 0));
+                } else {
+                    self.tab_complete_cycle = None;
+                }
+                Some(first)
+            }
+        } else {
+            self.tab_complete_cycle = None;
+            None
+        };
+        if let Some(completed) = completed {
+            self.input.update(cx, |input, cx| {
+                input.set_value(completed, window, cx);
+                input.focus(window, cx);
+            });
+            return true;
+        }
+        // Keep focus inside the search bar while typing instead of jumping to
+        // toolbar view buttons.
+        !trimmed.is_empty()
+    }
     fn keys(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
         use gpui_component::WindowExt;
         if event.keystroke.key == "escape" && self.escape_action(window, cx) {
@@ -2438,6 +2640,14 @@ impl Seek {
             return;
         }
         if self.preview_enlarged {
+            if self.picture_edit.is_some() && self.picture_edit_handle_key(event, window, cx) {
+                window.prevent_default();
+                return;
+            }
+            if self.video_edit.is_some() && self.video_handle_key(event, window, cx) {
+                window.prevent_default();
+                return;
+            }
             if self.text_reader_key(event, window, cx) {
                 return;
             }
@@ -2647,21 +2857,24 @@ impl Seek {
             cx.stop_propagation();
             return;
         }
-        let input_focused = self.input.read(cx).focus_handle(cx).is_focused(window);
+        let input_focused = self
+            .input
+            .read(cx)
+            .focus_handle(cx)
+            .contains_focused(window, cx);
         let list_focused = self.table.read(cx).focus_handle(cx).is_focused(window);
         if !(input_focused || list_focused || modifiers.control && key == "l") {
             return;
         }
-        if key == "tab" && input_focused && !modifiers.control && !modifiers.alt {
-            let typed = self.input.read(cx).value().to_string();
-            if let Some(completed) = crate::location::tab_complete(&typed, self.show_hidden) {
-                self.input.update(cx, |input, cx| {
-                    input.set_value(completed, window, cx);
-                    input.focus(window, cx);
-                });
-                cx.stop_propagation();
-                return;
-            }
+        if key == "tab"
+            && input_focused
+            && !modifiers.control
+            && !modifiers.alt
+            && self.handle_search_tab(modifiers.shift, window, cx)
+        {
+            window.prevent_default();
+            cx.stop_propagation();
+            return;
         }
         if key == "enter" && input_focused && self.open_address(window, cx) {
             cx.stop_propagation();

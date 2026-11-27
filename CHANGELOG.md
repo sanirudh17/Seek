@@ -1,27 +1,50 @@
 # Changelog
 
-## Unreleased (Seek 1.2 — Phase 11)
+## 1.2.0 - 2026-11-27
 
-#### Previews and editing
+Seek 1.2.0 brings GPU-accelerated inline picture and video editing, syntax-highlighted and selectable code previews with `.env` secret masking, instant previews and 60-120 FPS video playback, improved multi-word search ranking, smoother sidebar and navigation transitions, dynamic Storage Cleanup and Recycle Bin tracking, and a more reliable in-app updater. Saved data from earlier versions is kept.
 
-- Palette-matched syntax highlighting for 25 languages (Rust, TypeScript/JavaScript, Python, JSON, TOML, YAML, Markdown, C/C++, C#, Java, HTML, XML, CSS/SCSS, SQL, Go, Kotlin, Swift, Ruby, PHP, Lua, PowerShell, Shell, Dockerfile, ini/conf, diff/patch, `.env`), visible-range only, across info panel, Quick Look, Document panes and Markdown code blocks.
-- Instant, zero-flicker text, code, `.env`, JSON and XML previews with a slim centered line-number gutter, smooth sliding `Formatted` / `Raw` segmented control (up to 5 MiB), and explicit undoable `Format document` action in the editor.
-- `.env` secret masking in previews, content search snippets and MCP `read_text` (deterministic letter masks that do not leak real length, per-value click-to-reveal, Reveal/Hide all, auto re-hide, pre-edit notice, Settings > Previews and Settings > Agents controls).
-- Selectable read-only text, code and Markdown previews with immediate first-click drag-select, double/triple-click, visible palette-matched selection tint, `Ctrl+A`, `Ctrl+C` and right-click `Copy`.
-- Single global `Wrap long lines` setting in Settings > Previews (default off), keeping preview headers clean and uncluttered.
-- 60 FPS GPU-accelerated inline picture editing in Quick Look and picture Document panes: 8-handle crop (4 corners + 4 edge grab-bars + rule-of-thirds guides + `Free`, `1:1`, `4:3`, `16:9` presets), rotate 90°, flip, pen, highlighter, arrow, rectangle, ellipse, text, and permanent pixel-level redaction (with forced EXIF stripping), 7 curated ink colours, `S`/`M`/`L` stroke widths, editable marks until save, `Ctrl+Z` undo and `Ctrl+Shift+Z` / `Ctrl+Y` redo, cancellable full-resolution export, and `Save a Copy` (default) / `Replace Original` (with confirmation and atomic replacement).
-- Inline video playback and editing in Quick Look and Video Document panes (powered by `ffmpeg`/`ffprobe` with no console window): real-time playback (`Space`), filmstrip scrubbing, draggable trim handles, 8-handle crop, rotate 90°, mute audio, `Save frame` PNG, cancellable export with progress, and `Save a Copy` (default) / `Replace Original` (atomic).
+#### Previews and inline editing
 
-#### Browsing, Storage and refinements
+- Added palette-matched syntax highlighting for 25 languages (Rust, TypeScript/JavaScript, Python, JSON, TOML, YAML, Markdown, C/C++, C#, Java, HTML, XML, CSS/SCSS, SQL, Go, Kotlin, Swift, Ruby, PHP, Lua, PowerShell, Shell, Dockerfile, ini/conf, diff/patch, `.env`), rendered for the visible range only across the info panel, Quick Look, Document panes and Markdown code blocks.
+- Added instant, zero-flicker text, code, `.env`, JSON and XML previews with a slim centered line-number gutter, a smooth sliding `Formatted` / `Raw` segmented control (up to 5 MiB), and an explicit undoable `Format document` action in the editor.
+- Added `.env` secret masking in previews, content search snippets and MCP `read_text` (deterministic masks that never leak real value length, per-value click-to-reveal, Reveal/Hide all, automatic re-hide, pre-edit notice, and controls in Settings > Previews and Settings > Agents).
+- Added selectable read-only text, code and Markdown previews with immediate first-click drag selection, double/triple-click selection, palette-matched selection tint, `Ctrl+A`, `Ctrl+C` and right-click `Copy`.
+- Added a single global `Wrap long lines` setting in Settings > Previews (off by default) to keep preview headers clean.
+- Added 60 FPS GPU-accelerated inline picture editing in Quick Look and picture Document panes: 8-handle crop (4 corners, 4 edge handles, rule-of-thirds guides, and `Free`, `1:1`, `4:3`, `16:9` presets), 90-degree rotate, flip, pen, highlighter, arrow, rectangle, ellipse, text, and permanent pixel-level redaction (with EXIF stripping), 7 curated ink colours, `S`/`M`/`L` stroke widths, editable marks until save, `Ctrl+Z` undo and `Ctrl+Shift+Z` / `Ctrl+Y` redo, cancellable full-resolution export, and `Save a Copy` (default) or atomic `Replace Original` with confirmation.
+- Added inline video playback and editing in Quick Look and Video Document panes (powered by `ffmpeg`/`ffprobe` with no console window): real-time playback (`Space`), scrubbing filmstrip, draggable trim handles, 8-handle crop, 90-degree rotate, mute audio, `Save frame` PNG export, cancellable export with progress, and `Save a Copy` or atomic `Replace Original`.
+- Upgraded video playback to locked 60-120 FPS pacing using a high-resolution Windows timer, pure-Rust ISO BMFF MP4 header probing, raw-BGRA frame extraction, parallel keyframe filmstrips for longer clips, cached shell thumbnails, and background pre-warming so videos open and play back smoothly without stalling or showing stale thumbnails.
+- Made PNG/JPEG previews and Quick Look feel immediate via adjacent-row preview prefetching and instant cached-thumbnail fallback, and fixed `Space` / `Esc` shortcuts so Quick Look can always be dismissed cleanly even when a video is playing or paused.
+- Fixed executable (`.exe`) icons that Windows returned inside an oversized framed tile by trimming the outer frame cleanly.
+- Added instant multi-select summary counts and combined sizes in the information panel.
 
-- `Ctrl+L` pre-fills and selects the current folder path, supports `Tab` live disk path completion, and pressing Enter on a file path reveals it inside its folder.
-- `Show in folder` (`Ctrl+Shift+O`) works globally from anywhere inside Seek (file list, search results, Jump palette, Recent files), opens the parent folder, selects the item and scrolls it into view reliably.
-- Brief centered confirmation toasts (2.5 s, configurable in Settings > Files and search > `Show confirmations`) for Copy path, Copy name, Copy, Cut, Paste, Undo, Redo, Save frame, and pinning folders.
-- Sidebar `Locations` inline `Edit` / `Done` mode (shown when multiple drives or hidden drives exist), full-width Settings > Locations sidebar cards, uniform chevron sizing, and independent persisted folding for `Favorites` and `Locations`.
-- Storage caches and pre-warms drive measurements once the index is ready so opening Storage renders "By kind" and largest folders immediately without a 1-second blank wait.
-- Deeper safe Storage Cleanup scan (more developer, AI/editor, browser, shader, log and installer-leftover caches, deeper Chromium/Electron profile discovery, and large generated build folders in projects untouched for 7+ days).
-- Broader Find Duplicates coverage: `Search everywhere` now compares files down to 64 KB (catching duplicate photos, screenshots, PDFs and documents) with higher file/folder limits and guaranteed home-folder coverage.
-- Worktrees removal permanently deletes the linked worktree folder and Git admin record (then prunes) behind an explicit permanent-delete confirmation dialog instead of moving multi-GB worktrees to the Recycle Bin.
+#### Search, browsing and navigation
+
+- Improved multi-word filename search ranking so items whose filename contains every search word together rank ahead of items matching only one word in the filename and another in a parent path.
+- Upgraded `Ctrl+L` to pre-fill and select the current folder path, support `Tab` live disk path completion, and reveal a file inside its parent folder when pressing Enter on a file path.
+- Made `Show in folder` (`Ctrl+Shift+O`) work consistently across the file list, search results, Jump palette and Recent files, opening the parent folder, selecting the item and scrolling it into view.
+- Added brief centered confirmation toasts (2.5 s, toggleable in Settings > Files and search > `Show confirmations`) for Copy path, Copy name, Copy, Cut, Paste, Undo, Redo, Save frame, and pinning folders.
+- Added inline `Edit` / `Done` reordering and visibility controls to sidebar `Locations`, full-width cards in Settings > Locations, and persisted independent folding for `Favorites` and `Locations`.
+- Added smooth sliding active pill indicators across sidebar Favorites, Tools (`Storage` / `Worktrees`) and Settings navigation with exact 4 px grid heights and 4 px row gaps for zero DPI drift at 125%, 150% and 175% Windows scaling.
+- Added a subtle spring-in content transition when switching sidebar views/folders or toggling hidden files, plus compact back-navigation controls (`<`, `Alt+Left`, `Esc`, or clicking the active tool row) to return seamlessly from Storage and Worktrees to the previous folder.
+- Fixed the toolbar Sort button dropdown so it opens reliably on the first click.
+
+#### Storage, Cleanup, Duplicates and Worktrees
+
+- Aligned Storage byte display with Windows File Explorer binary (1024-based) sizes and cached drive lists and pre-warmed measurements so opening Storage shows "By kind" and largest folders immediately.
+- Deepened safe Storage Cleanup discovery (more developer, AI/editor, browser, shader, log and installer caches, deeper Chromium/Electron profile discovery, and build folders in projects untouched for 7+ days) while keeping sign-in tokens, packages and tracked source folders untouched.
+- Fixed Recycle Bin size updates after moving files from Cleanup, Duplicates or Similar Images: reads both per-drive shell queries and `$I*` Recycle Bin metadata headers, clears stale finished Recycle Bin notices, and updates drive capacity promptly.
+- Made Cleanup suggestions update dynamically when returning to Storage: clears finished banners from earlier visits, shows day-aware timestamps (`Checked today at HH:MM`, `yesterday at HH:MM`, or date), automatically re-checks stale or post-cleanup reports, and syncs Recycle Bin size immediately.
+- Widened Find Duplicates `Search everywhere` coverage down to 64 KB with higher file/folder limits and guaranteed home-folder coverage.
+- Added Worktrees background pre-warming, replaced text row buttons with clean folder-open and red destructive trash icon buttons, and changed worktree removal to permanently delete the linked worktree and prune Git's admin record behind an explicit confirmation dialog.
+
+#### Performance, visual polish and auto-updater
+
+- Eliminated Storage and Worktrees trackpad scroll lag by skipping hidden file-list, breadcrumb, DataTable and info-panel layout work while a tool page fills the window, caching drive enumeration, and adding a persistent scroll handle to Worktrees.
+- Bounded the Storage folder cache and ensured replaced or evicted video cache frames drop GPU textures cleanly.
+- Unified primary action button styling across Settings, Storage, Worktrees, Cleanup and editors, with quiet borderless rest states for toolbar and media controls.
+- Replaced the sidebar and Settings update icon with a distinct circle-with-upward-arrow icon (no longer sharing the cloud icon used by OneDrive placeholders).
+- Hardened the in-app auto-updater with longer WinHTTP timeouts and automatic proxy fallback (`AUTOMATIC_PROXY` -> `NO_PROXY` -> `DEFAULT_PROXY`), moved update launcher startup off the UI thread so Restart never freezes the window, added retry handling for transient post-exit file locks in `Update.ps1`, stopped lingering local `seek-helper.exe` instances before replacing binaries, and normalized 4-part `FileVersion` validation.
 
 ## 1.1.1 - 2026-11-25
 

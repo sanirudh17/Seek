@@ -32,6 +32,7 @@ pub(super) struct WorktreesPage {
     status: HashMap<PathBuf, Result<Status, String>>,
     sizes: HashMap<PathBuf, u64>,
     review: Option<Review>,
+    scroll: ScrollHandle,
     generation: u64,
     cancel: Arc<AtomicBool>,
     _task: Task<()>,
@@ -60,20 +61,105 @@ fn found_git() -> Result<Git, String> {
 
 fn index_size(path: &std::path::Path, cancel: &AtomicBool) -> u64 {
     crate::backend::ENGINE.get().map_or(0, |engine| {
-        engine
-            .storage(
-                path,
-                4096,
-                std::time::Instant::now() + std::time::Duration::from_secs(2),
-                cancel,
-            )
-            .bytes
+        engine.subtree_bytes(
+            path,
+            std::time::Instant::now() + std::time::Duration::from_secs(2),
+            cancel,
+        )
     })
 }
 
 impl Seek {
+    /// Pre-warm Git worktrees in the background once the index is ready so
+    /// opening the Worktrees tab for the very first time renders instantaneously.
+    pub(super) fn prewarm_worktrees(&mut self, cx: &mut Context<Self>) {
+        if self.worktrees_warm_started {
+            return;
+        }
+        if crate::backend::ENGINE.get().is_none() {
+            return;
+        }
+        if REMEMBERED.lock().ok().and_then(|r| r.as_ref().map(|_| ())).is_some() {
+            self.worktrees_warm_started = true;
+            return;
+        }
+        self.worktrees_warm_started = true;
+        let registered = self.preferences.worktree_repos.clone();
+        let job = cx.background_executor().spawn(async move {
+            let git = found_git().ok()?;
+            let cancel = AtomicBool::new(false);
+            let mut dot_gits = vec![];
+            if let Some(engine) = crate::backend::ENGINE.get()
+                && let Ok(mut query) = seek_engine::Query::parse("'.git", "")
+            {
+                query.limit = MAX_GIT_ENTRIES;
+                dot_gits = engine
+                    .search(&query)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|f| f.path)
+                    .filter(|p| p.file_name().is_some_and(|n| n.eq_ignore_ascii_case(".git")))
+                    .collect();
+            }
+            if let Some(home) = std::env::var_os("USERPROFILE") {
+                dot_gits.extend(crate::worktrees::find_on_disk(
+                    std::path::Path::new(&home),
+                    &cancel,
+                ));
+            }
+            let mut commons = crate::worktrees::repositories_from(dot_gits);
+            commons.extend(registered.into_iter().filter(|c| c.is_dir()));
+            let repos = crate::worktrees::scan(&git, commons);
+            use rayon::prelude::*;
+            let worktrees: Vec<_> = repos
+                .iter()
+                .flat_map(|r| r.worktrees.iter())
+                .filter(|w| w.state == State::Ok && !w.bare)
+                .take(MAX_CHECKED)
+                .collect();
+            let checked: Vec<_> = worktrees
+                .par_iter()
+                .map(|w| {
+                    (
+                        w.path.clone(),
+                        crate::worktrees::status(&git, &w.path),
+                        crate::worktrees::reclaimable(&w.path, |p| index_size(p, &cancel)),
+                    )
+                })
+                .collect();
+            let mut status = HashMap::new();
+            let mut sizes = HashMap::new();
+            for (path, s, b) in checked {
+                status.insert(path.clone(), s);
+                sizes.insert(path, b);
+            }
+            Some((repos, status, sizes))
+        });
+        cx.spawn(async move |this, cx| {
+            let Some((repos, status, sizes)) = job.await else {
+                return;
+            };
+            if let Ok(mut remembered) = REMEMBERED.lock() {
+                *remembered = Some((repos.clone(), status.clone(), sizes.clone()));
+            }
+            let _ = this.update(cx, |this, cx| {
+                if let Some(page) = &mut this.worktrees_page
+                    && page.repos.is_none()
+                {
+                    page.repos = Some(repos);
+                    page.status = status;
+                    page.sizes = sizes;
+                    page.scanning = false;
+                    cx.notify();
+                }
+            });
+        })
+        .detach();
+    }
+
     pub(super) fn open_worktrees(&mut self, cx: &mut Context<Self>) {
         self.close_storage();
+        self.view_motion = self.view_motion.wrapping_add(1);
         let cancel = Arc::new(AtomicBool::new(false));
         let remembered = REMEMBERED.lock().ok().and_then(|r| r.clone());
         let (repos, status, sizes) = match remembered {
@@ -87,6 +173,7 @@ impl Seek {
             status,
             sizes,
             review: None,
+            scroll: ScrollHandle::new(),
             generation: 0,
             cancel,
             _task: Task::ready(()),
@@ -406,6 +493,7 @@ impl Seek {
         let Some(page) = &self.worktrees_page else {
             return div().into_any_element();
         };
+        let return_tip = format!("Back to {} (Alt+Left / Esc)", self.return_folder_label());
         let header = div()
             .flex()
             .items_center()
@@ -474,6 +562,7 @@ impl Seek {
         div()
             .id("worktrees-page")
             .track_focus(&self.page_focus)
+            .track_scroll(&page.scroll)
             .role(Role::Region)
             .aria_label("Worktrees")
             .flex_1()
@@ -483,15 +572,57 @@ impl Seek {
             .bg(p.pane)
             .child(
                 div()
-                    .max_w(px(880.))
-                    .mx_auto()
-                    .px_8()
+                    .w_full()
+                    .px_4()
                     .py_6()
                     .flex()
-                    .flex_col()
-                    .gap_6()
-                    .child(header)
-                    .child(body),
+                    .items_start()
+                    .justify_center()
+                    .gap_3()
+                    .child(
+                        div()
+                            .id("worktrees-return")
+                            .role(Role::Button)
+                            .aria_label("Back to previous folder")
+                            .flex_shrink_0()
+                            .size(px(32.))
+                            .rounded(RADIUS_CONTROL)
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .cursor_pointer()
+                            .border_1()
+                            .border_color(rgba(0))
+                            .text_color(p.muted)
+                            .hover(move |s| {
+                                s.bg(p.accent.opacity(0.16))
+                                    .border_color(p.accent.opacity(0.40))
+                                    .text_color(p.text)
+                            })
+                            .tooltip(move |window, cx| {
+                                gpui_component::tooltip::Tooltip::new(return_tip.clone())
+                                    .build(window, cx)
+                            })
+                            .child(
+                                Icon::new(gpui_component_assets::IconName::ChevronLeft)
+                                    .size(px(16.)),
+                            )
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.close_tool_pages(window, cx);
+                            })),
+                    )
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .max_w(px(880.))
+                            .flex()
+                            .flex_col()
+                            .gap_6()
+                            .child(header)
+                            .child(body),
+                    )
+                    .child(div().w(px(32.)).flex_shrink_0()),
             )
             .into_any_element()
     }
@@ -694,8 +825,34 @@ impl Seek {
             )
             .when(w.state != State::Missing, |d| {
                 d.child(
-                    super::settings_view::control(("worktree-open", ri * 1_000 + wi), "Open", p, cx)
-                        .h(BUTTON_HEIGHT)
+                    div()
+                        .id(("worktree-open", ri * 1_000 + wi))
+                        .role(Role::Button)
+                        .aria_label("Open worktree folder")
+                        .flex_shrink_0()
+                        .size(px(30.))
+                        .rounded(RADIUS_CONTROL)
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .cursor_pointer()
+                        .border_1()
+                        .border_color(rgba(0))
+                        .text_color(p.muted)
+                        .hover(move |s| {
+                            s.bg(p.accent.opacity(0.16))
+                                .border_color(p.accent.opacity(0.45))
+                                .text_color(p.text)
+                        })
+                        .tooltip(|window, cx| {
+                            gpui_component::tooltip::Tooltip::new("Open worktree folder")
+                                .build(window, cx)
+                        })
+                        .child(
+                            Icon::empty()
+                                .path("icons/folder-open.svg")
+                                .size(px(15.)),
+                        )
                         .on_click(cx.listener(move |this, _, window, cx| {
                             this.close_worktrees();
                             this.scope_to(Some(reveal.clone()), window, cx);
@@ -703,29 +860,55 @@ impl Seek {
                 )
             })
             .when(removable, |d| {
+                let dark = p.canvas.l < 0.5;
+                let danger: Hsla = if dark { rgb(0xF87171) } else { rgb(0xDC2626) }.into();
+                let danger_bg = danger.opacity(if dark { 0.16 } else { 0.12 });
+                let danger_border = danger.opacity(if dark { 0.45 } else { 0.40 });
+                let remove_tip = if reviewing {
+                    "Close removal review"
+                } else {
+                    "Remove worktree…"
+                };
                 d.child(
-                    super::settings_view::control(
-                        ("worktree-remove", ri * 1_000 + wi),
-                        if reviewing { "Close" } else { "Remove…" },
-                        p,
-                        cx,
-                    )
-                    .h(BUTTON_HEIGHT)
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        let open = this
-                            .worktrees_page
-                            .as_ref()
-                            .and_then(|p| p.review.as_ref())
-                            .is_some_and(|r| (r.repo, r.worktree) == (ri, wi));
-                        if open {
-                            if let Some(page) = &mut this.worktrees_page {
-                                page.review = None;
-                            }
-                            cx.notify();
+                    div()
+                        .id(("worktree-remove", ri * 1_000 + wi))
+                        .role(Role::Button)
+                        .aria_label(remove_tip)
+                        .flex_shrink_0()
+                        .size(px(30.))
+                        .rounded(RADIUS_CONTROL)
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .cursor_pointer()
+                        .border_1()
+                        .bg(if reviewing { danger_bg } else { rgba(0).into() })
+                        .border_color(if reviewing {
+                            danger_border
                         } else {
-                            this.review_worktree(ri, wi, cx);
-                        }
-                    })),
+                            rgba(0).into()
+                        })
+                        .text_color(danger)
+                        .hover(move |s| s.bg(danger_bg).border_color(danger_border))
+                        .tooltip(move |window, cx| {
+                            gpui_component::tooltip::Tooltip::new(remove_tip).build(window, cx)
+                        })
+                        .child(Icon::empty().path("icons/trash.svg").size(px(15.)))
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            let open = this
+                                .worktrees_page
+                                .as_ref()
+                                .and_then(|p| p.review.as_ref())
+                                .is_some_and(|r| (r.repo, r.worktree) == (ri, wi));
+                            if open {
+                                if let Some(page) = &mut this.worktrees_page {
+                                    page.review = None;
+                                }
+                                cx.notify();
+                            } else {
+                                this.review_worktree(ri, wi, cx);
+                            }
+                        })),
                 )
             })
     }

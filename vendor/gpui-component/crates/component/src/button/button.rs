@@ -43,6 +43,7 @@ pub struct ButtonCustomVariant {
     shadow: bool,
     hover: Hsla,
     active: Hsla,
+    border: Option<Hsla>,
 }
 
 pub trait ButtonVariants: Sized {
@@ -106,6 +107,7 @@ impl ButtonCustomVariant {
             foreground: cx.theme().foreground,
             hover: cx.theme().transparent,
             active: cx.theme().transparent,
+            border: None,
             shadow: false,
         }
     }
@@ -131,6 +133,12 @@ impl ButtonCustomVariant {
     /// Set active background color, default is transparent.
     pub fn active(mut self, color: Hsla) -> Self {
         self.active = color;
+        self
+    }
+
+    /// Set explicit border color preserved across normal, hover, and active states.
+    pub fn border(mut self, color: Hsla) -> Self {
+        self.border = Some(color);
         self
     }
 
@@ -1000,7 +1008,7 @@ impl ButtonVariant {
             Self::Success => cx.theme().tokens.button_success.into(),
             Self::Info => cx.theme().tokens.button_info.into(),
             Self::Ghost | Self::Link | Self::Text => cx.theme().transparent.into(),
-            Self::Custom(colors) => colors.color.mix_oklab(cx.theme().transparent, 0.2).into(),
+            Self::Custom(colors) => colors.color.into(),
         }
     }
 
@@ -1091,7 +1099,9 @@ impl ButtonVariant {
             }
             Self::Ghost | Self::Link | Self::Text => cx.theme().transparent,
             Self::Custom(colors) => {
-                if outline {
+                if let Some(border) = colors.border {
+                    border
+                } else if outline {
                     colors.color.mix_oklab(transparent_white(), 0.4)
                 } else {
                     colors.color

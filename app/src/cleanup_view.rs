@@ -9,11 +9,35 @@ use crate::cleanup::{Action, Report, Suggestion};
 use gpui_component::checkbox::Checkbox;
 use std::sync::{Mutex, atomic::AtomicBool};
 
+/// Formats the last Cleanup check time with day context so overnight or
+/// multi-day sessions always show when suggestions were gathered.
+fn format_checked_at(
+    at: chrono::DateTime<chrono::Local>,
+    now: chrono::DateTime<chrono::Local>,
+) -> String {
+    use chrono::Datelike;
+    let time = at.format("%H:%M");
+    let at_date = at.date_naive();
+    let now_date = now.date_naive();
+    if at_date == now_date {
+        format!("today at {time}")
+    } else if at_date + chrono::Days::new(1) == now_date {
+        format!("yesterday at {time}")
+    } else {
+        format!("{} {} at {time}", at.format("%b"), at.day())
+    }
+}
+
 #[derive(Default)]
 pub(super) struct Cleanup {
     report: Option<Report>,
-    /// When the last look finished, for "Checked at".
+    /// When the last look finished, for "Checked today at HH:MM".
     checked_at: Option<chrono::DateTime<chrono::Local>>,
+    /// Monotonic timestamp of the last completed look, for staleness checks.
+    checked_instant: Option<Instant>,
+    /// True once items have been deleted or recycled since the last look, so
+    /// returning to Storage refreshes Cleanup suggestions automatically.
+    dirty_since_look: bool,
     looking: bool,
     /// What is being checked right now.
     stage: Arc<Mutex<String>>,
@@ -81,6 +105,8 @@ impl Seek {
             let _ = this.update(cx, |this, cx| {
                 this.cleanup.report = Some(report);
                 this.cleanup.checked_at = Some(chrono::Local::now());
+                this.cleanup.checked_instant = Some(Instant::now());
+                this.cleanup.dirty_since_look = false;
                 this.cleanup.looking = false;
                 this.cleanup.cancel = None;
                 cx.notify();
@@ -184,15 +210,28 @@ impl Seek {
     fn clean(&mut self, delete: Vec<PathBuf>, recycle: Vec<PathBuf>, window: &mut Window, cx: &mut Context<Self>) {
         if !recycle.is_empty() {
             let count = recycle.len();
+            let pending_before = self.files_pending;
             self.run_file_op(crate::file_ops::Operation::Recycle { paths: recycle }, window, cx);
-            if self.message.is_none() {
+            if self.files_pending > pending_before {
                 self.cleanup.moved = Some(count);
+                self.cleanup.dirty_since_look = true;
+                // Clear any stale finished "Emptied Recycle Bin" notice now that
+                // new items are moving into the Recycle Bin.
+                if self
+                    .cleanup
+                    .removal
+                    .as_ref()
+                    .is_some_and(|r| !r.running && r.recycle_bin)
+                {
+                    self.cleanup.removal = None;
+                }
                 self.refresh_recycle_bin(cx);
             }
         }
         if delete.is_empty() || self.cleanup.removal.as_ref().is_some_and(|r| r.running) {
             return;
         }
+        self.cleanup.dirty_since_look = true;
         let progress = Arc::new(crate::cleanup::Progress::default());
         let cancel = Arc::new(AtomicBool::new(false));
         self.cleanup.removal = Some(Removal {
@@ -249,25 +288,126 @@ impl Seek {
         cx.notify();
     }
 
-    /// The Recycle Bin's size once a move has had time to land, so the
-    /// space waiting there shows with its Empty button.
-    fn refresh_recycle_bin(&mut self, cx: &mut Context<Self>) {
+    /// Called whenever the user navigates back to Storage so Cleanup
+    /// suggestions never stay frozen with stale results or old finished
+    /// deletion banners across tab switches or overnight sessions.
+    pub(super) fn sync_cleanup_on_storage_open(&mut self, cx: &mut Context<Self>) {
+        // Clear finished one-shot result banners from an earlier Storage visit
+        // (never interrupt an in-flight deletion or Recycle Bin empty).
+        if self.cleanup.removal.as_ref().is_some_and(|r| !r.running) {
+            self.cleanup.removal = None;
+        }
+        self.cleanup.moved = None;
+        if self.cleanup.looking || self.cleanup.removal.as_ref().is_some_and(|r| r.running) {
+            return;
+        }
+        let Some(report) = &self.cleanup.report else {
+            return;
+        };
+        let now_local = chrono::Local::now();
+        let day_changed = self
+            .cleanup
+            .checked_at
+            .is_some_and(|at| at.date_naive() != now_local.date_naive());
+        let age = self
+            .cleanup
+            .checked_instant
+            .map_or(std::time::Duration::MAX, |t| t.elapsed());
+        let stale = self.cleanup.dirty_since_look
+            || day_changed
+            || age >= std::time::Duration::from_secs(300)
+            || (report.suggestions.is_empty() && age >= std::time::Duration::from_secs(30));
+        if stale {
+            self.find_cleanup(cx);
+        } else {
+            // Fast (<5ms) Recycle Bin sync so items deleted in other tabs or
+            // Explorer show up immediately without waiting for a full cache scan.
+            self.refresh_recycle_bin_now(cx);
+        }
+    }
+
+    /// Immediate single-shot Recycle Bin size check used when reopening Storage.
+    fn refresh_recycle_bin_now(&mut self, cx: &mut Context<Self>) {
         cx.spawn(async move |this, cx| {
-            for _ in 0..20 {
-                cx.background_executor()
-                    .timer(std::time::Duration::from_millis(1500))
-                    .await;
-                let busy = this.update(cx, |this, _| this.files_pending != 0).unwrap_or(false);
-                if !busy {
-                    break;
-                }
-            }
             let bytes = cx
                 .background_executor()
                 .spawn(async { crate::cleanup::recycle_bin_bytes() })
                 .await
                 .unwrap_or(0);
             let _ = this.update(cx, |this, cx| {
+                if let Some(report) = &mut this.cleanup.report {
+                    let prev = report
+                        .suggestions
+                        .iter()
+                        .find(|s| s.action == Action::EmptyRecycleBin)
+                        .map(Suggestion::bytes)
+                        .unwrap_or(0);
+                    if prev != bytes {
+                        report
+                            .suggestions
+                            .retain(|s| s.action != Action::EmptyRecycleBin);
+                        if bytes > 0 {
+                            report.suggestions.push(Suggestion {
+                                title: "Recycle Bin".into(),
+                                detail: "Everything already moved to the Recycle Bin on all drives; the space is freed when it is emptied".into(),
+                                note: None,
+                                action: Action::EmptyRecycleBin,
+                                items: vec![],
+                                total: Some(bytes),
+                            });
+                            report
+                                .suggestions
+                                .sort_by_key(|s| std::cmp::Reverse(s.bytes()));
+                        }
+                        cx.notify();
+                    }
+                }
+            });
+        })
+        .detach();
+    }
+
+    /// The Recycle Bin's size once a move has had time to land, so the
+    /// space waiting there shows with its Empty button.
+    pub(super) fn refresh_recycle_bin(&mut self, cx: &mut Context<Self>) {
+        cx.spawn(async move |this, cx| {
+            // Wait quickly for the queued Recycle/Undo file op to finish (up to 30s).
+            for _ in 0..120 {
+                cx.background_executor()
+                    .timer(std::time::Duration::from_millis(250))
+                    .await;
+                let busy = this
+                    .update(cx, |this, _| this.files_pending != 0)
+                    .unwrap_or(false);
+                if !busy {
+                    break;
+                }
+            }
+            // Brief settle so Windows finishes flushing `$I*` metadata, with one retry if 0.
+            let mut bytes = 0u64;
+            for wait_ms in [250u64, 750u64] {
+                cx.background_executor()
+                    .timer(std::time::Duration::from_millis(wait_ms))
+                    .await;
+                bytes = cx
+                    .background_executor()
+                    .spawn(async { crate::cleanup::recycle_bin_bytes() })
+                    .await
+                    .unwrap_or(0);
+                if bytes > 0 {
+                    break;
+                }
+            }
+            let _ = this.update(cx, |this, cx| {
+                if bytes > 0
+                    && this
+                        .cleanup
+                        .removal
+                        .as_ref()
+                        .is_some_and(|r| !r.running && r.recycle_bin)
+                {
+                    this.cleanup.removal = None;
+                }
                 if let Some(report) = &mut this.cleanup.report {
                     report.suggestions.retain(|s| s.action != Action::EmptyRecycleBin);
                     if bytes > 0 {
@@ -279,8 +419,12 @@ impl Seek {
                             items: vec![],
                             total: Some(bytes),
                         });
+                        report
+                            .suggestions
+                            .sort_by_key(|s| std::cmp::Reverse(s.bytes()));
                     }
                 }
+                this.refresh_capacity(cx);
                 cx.notify();
             });
         })
@@ -416,18 +560,15 @@ impl Seek {
         } else {
             state.report.as_ref().map(|report| {
                 let total: u64 = report.suggestions.iter().map(Suggestion::bytes).sum();
-                let when = format!(
-                    "{} in {:.1} s",
-                    state
-                        .checked_at
-                        .map(|t| t.format("%H:%M").to_string())
-                        .unwrap_or_default(),
-                    report.elapsed.as_secs_f32()
-                );
+                let when_stamp = state
+                    .checked_at
+                    .map(|t| format_checked_at(t, chrono::Local::now()))
+                    .unwrap_or_default();
+                let when = format!("{when_stamp} in {:.1} s", report.elapsed.as_secs_f32());
                 let mut line = if report.suggestions.is_empty() {
-                    format!("Checked at {when}")
+                    format!("Checked {when}")
                 } else {
-                    format!("{} to free · checked at {when}", human(total))
+                    format!("{} to free · checked {when}", human(total))
                 };
                 if let Some(why) = &report.stopped {
                     line = format!("{why} · {line}");
@@ -548,6 +689,7 @@ impl Seek {
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.cleanup.moved = None;
                                     this.file_action(super::daily::Action::UndoRename, None, window, cx);
+                                    this.refresh_recycle_bin(cx);
                                     cx.notify();
                                 })),
                         ),
@@ -975,5 +1117,23 @@ impl Seek {
                 .child(card)
                 .into_any_element(),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::format_checked_at;
+    use chrono::{Local, TimeZone};
+
+    #[test]
+    fn format_checked_at_includes_day_context() {
+        let now = Local.with_ymd_and_hms(2026, 11, 27, 14, 20, 0).unwrap();
+        let today = Local.with_ymd_and_hms(2026, 11, 27, 13, 15, 0).unwrap();
+        let yesterday = Local.with_ymd_and_hms(2026, 11, 26, 21, 5, 0).unwrap();
+        let earlier = Local.with_ymd_and_hms(2026, 11, 20, 9, 30, 0).unwrap();
+
+        assert_eq!(format_checked_at(today, now), "today at 13:15");
+        assert_eq!(format_checked_at(yesterday, now), "yesterday at 21:05");
+        assert_eq!(format_checked_at(earlier, now), "Nov 20 at 09:30");
     }
 }

@@ -690,7 +690,7 @@ pub fn disk_size(path: &Path, deadline: Instant, cancel: &AtomicBool) -> u64 {
 
 /// The index's size for a folder it covers, otherwise a walk of the disk.
 fn size(engine: Option<&Engine>, path: &Path, deadline: Instant, cancel: &AtomicBool) -> u64 {
-    let indexed = engine.map_or(0, |e| e.storage(path, 4096, deadline, cancel).bytes);
+    let indexed = engine.map_or(0, |e| e.subtree_bytes(path, deadline, cancel));
     if indexed > 0 {
         indexed
     } else {
@@ -1133,15 +1133,90 @@ pub fn delete(paths: &[PathBuf], cancel: &AtomicBool, progress: &Progress) {
 /// "Item Not Found" error dialogs.
 static RECYCLE_EMPTYING: AtomicBool = AtomicBool::new(false);
 
+/// Sums the exact original byte sizes recorded in `$I*` Recycle Bin metadata
+/// files across fixed/removable drives so newly recycled items show up
+/// immediately even before `SHQueryRecycleBinW` refreshes its shell cache.
+fn recycle_bin_metadata_bytes() -> u64 {
+    use windows_sys::Win32::Storage::FileSystem::{GetDriveTypeW, GetLogicalDrives};
+    let Ok(sid) = seek_engine::helper::user_sid() else {
+        return 0;
+    };
+    let mask = unsafe { GetLogicalDrives() };
+    let mut total = 0u64;
+    for i in 0..26u8 {
+        if mask & (1 << i) == 0 {
+            continue;
+        }
+        let root = format!("{}:\\", (b'A' + i) as char);
+        let wide: Vec<u16> = root.encode_utf16().chain(Some(0)).collect();
+        if !matches!(unsafe { GetDriveTypeW(wide.as_ptr()) }, 2 | 3) {
+            continue;
+        }
+        let bin = PathBuf::from(&root).join("$Recycle.Bin").join(&sid);
+        let Ok(entries) = std::fs::read_dir(&bin) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let lossy = name.to_string_lossy();
+            if !lossy.starts_with("$I") && !lossy.starts_with("$i") {
+                continue;
+            }
+            if let Ok(mut file) = std::fs::File::open(entry.path()) {
+                let mut hdr = [0u8; 16];
+                if std::io::Read::read_exact(&mut file, &mut hdr).is_ok() {
+                    let version = u64::from_le_bytes(hdr[0..8].try_into().unwrap());
+                    if version == 1 || version == 2 {
+                        let size = u64::from_le_bytes(hdr[8..16].try_into().unwrap());
+                        total = total.saturating_add(size);
+                    }
+                }
+            }
+        }
+    }
+    total
+}
+
 /// Bytes in the Recycle Bin on all drives.
 pub fn recycle_bin_bytes() -> Option<u64> {
     use windows::Win32::UI::Shell::{SHQUERYRBINFO, SHQueryRecycleBinW};
+    use windows_sys::Win32::Storage::FileSystem::{GetDriveTypeW, GetLogicalDrives};
+    let mask = unsafe { GetLogicalDrives() };
+    let mut drive_total = 0u64;
+    let mut any_ok = false;
+    for i in 0..26u8 {
+        if mask & (1 << i) == 0 {
+            continue;
+        }
+        let root = format!("{}:\\", (b'A' + i) as char);
+        let wide: Vec<u16> = root.encode_utf16().chain(Some(0)).collect();
+        if !matches!(unsafe { GetDriveTypeW(wide.as_ptr()) }, 2 | 3) {
+            continue;
+        }
+        let mut info = SHQUERYRBINFO {
+            cbSize: std::mem::size_of::<SHQUERYRBINFO>() as u32,
+            ..Default::default()
+        };
+        if unsafe { SHQueryRecycleBinW(windows::core::PCWSTR(wide.as_ptr()), &mut info) }.is_ok() {
+            any_ok = true;
+            drive_total = drive_total.saturating_add(info.i64Size.max(0) as u64);
+        }
+    }
+    let meta_total = recycle_bin_metadata_bytes();
+    if any_ok {
+        return Some(drive_total.max(meta_total));
+    }
     let mut info = SHQUERYRBINFO {
         cbSize: std::mem::size_of::<SHQUERYRBINFO>() as u32,
         ..Default::default()
     };
-    unsafe { SHQueryRecycleBinW(windows::core::PCWSTR::null(), &mut info) }.ok()?;
-    Some(info.i64Size.max(0) as u64)
+    if unsafe { SHQueryRecycleBinW(windows::core::PCWSTR::null(), &mut info) }.is_ok() {
+        Some((info.i64Size.max(0) as u64).max(meta_total))
+    } else if meta_total > 0 {
+        Some(meta_total)
+    } else {
+        None
+    }
 }
 
 /// Top-level items inside the current user's `$Recycle.Bin\<SID>` folders across

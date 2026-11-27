@@ -25,8 +25,8 @@ use std::{
 /// Hard safety limits so malformed/huge pictures never exhaust memory.
 pub const MAX_SIDE: u32 = 20_000;
 pub const MAX_PIXELS: u64 = 120_000_000;
-/// Longest edge of the interactive working preview bitmap.
-pub const WORK_MAX_EDGE: u32 = 2048;
+/// Longest edge of the interactive working preview bitmap (bounded for low VRAM).
+pub const WORK_MAX_EDGE: u32 = 1600;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tool {
@@ -39,6 +39,7 @@ pub enum Tool {
     Ellipse,
     Text,
     Redact,
+    Eraser,
 }
 
 impl Tool {
@@ -47,12 +48,13 @@ impl Tool {
             Tool::Select => "Select",
             Tool::Crop => "Crop",
             Tool::Pen => "Pen",
-            Tool::Highlighter => "Highlight",
+            Tool::Highlighter => "Highlighter",
             Tool::Arrow => "Arrow",
-            Tool::Rectangle => "Rect",
+            Tool::Rectangle => "Rectangle",
             Tool::Ellipse => "Ellipse",
             Tool::Text => "Text",
-            Tool::Redact => "Redact",
+            Tool::Redact => "Redact (permanent blackout)",
+            Tool::Eraser => "Eraser (click or drag to remove marks)",
         }
     }
 }
@@ -124,21 +126,11 @@ pub enum StrokeSize {
 }
 
 impl StrokeSize {
-    pub const ALL: [StrokeSize; 3] = [StrokeSize::Small, StrokeSize::Medium, StrokeSize::Large];
-
-    pub fn label(self) -> &'static str {
-        match self {
-            StrokeSize::Small => "S",
-            StrokeSize::Medium => "M",
-            StrokeSize::Large => "L",
-        }
-    }
-
     pub fn scale(self) -> f32 {
         match self {
-            StrokeSize::Small => 0.6,
+            StrokeSize::Small => 0.55,
             StrokeSize::Medium => 1.0,
-            StrokeSize::Large => 1.7,
+            StrokeSize::Large => 2.0,
         }
     }
 }
@@ -160,22 +152,6 @@ pub enum AspectPreset {
 }
 
 impl AspectPreset {
-    pub const ALL: [AspectPreset; 4] = [
-        AspectPreset::Free,
-        AspectPreset::Square,
-        AspectPreset::FourThree,
-        AspectPreset::SixteenNine,
-    ];
-
-    pub fn label(self) -> &'static str {
-        match self {
-            AspectPreset::Free => "Free",
-            AspectPreset::Square => "1:1",
-            AspectPreset::FourThree => "4:3",
-            AspectPreset::SixteenNine => "16:9",
-        }
-    }
-
     pub fn ratio(self) -> Option<f32> {
         match self {
             AspectPreset::Free => None,
@@ -446,7 +422,7 @@ pub fn text_bounds(at: PointF, text: &str, size: f32) -> RectF {
         .max()
         .unwrap_or(1)
         .max(1) as f32;
-    let w = (max_chars * size * 0.62 + size * 0.4).max(size * 1.4);
+    let w = (max_chars * size * 0.56 + size * 0.25).max(size * 1.2);
     let h = (lines.len() as f32 * line_height).max(line_height);
     RectF {
         x: at.x,
@@ -567,7 +543,10 @@ pub fn hit_test_mark(steps: &[Step], pt: PointF, tolerance: f32) -> Option<usize
             }
             Step::Arrow {
                 from, to, width, ..
-            } => dist_to_segment(pt, *from, *to) <= (*width * 0.8).max(tolerance),
+            } => {
+                let hit_r = (*width * 1.4).max(tolerance * 1.2);
+                dist_to_segment(pt, *from, *to) <= hit_r || dist(pt, *to) <= hit_r * 1.5
+            }
             Step::Rectangle {
                 rect,
                 width,
@@ -575,16 +554,11 @@ pub fn hit_test_mark(steps: &[Step], pt: PointF, tolerance: f32) -> Option<usize
                 ..
             } => {
                 let local = rotate_point(pt, rect.center(), -*rotation);
-                let pad = (*width * 0.6).max(tolerance);
-                let outer = local.x >= rect.x - pad
+                let pad = (*width * 0.8).max(tolerance);
+                local.x >= rect.x - pad
                     && local.x <= rect.x + rect.w + pad
                     && local.y >= rect.y - pad
-                    && local.y <= rect.y + rect.h + pad;
-                let inner = local.x >= rect.x + pad
-                    && local.x <= rect.x + rect.w - pad
-                    && local.y >= rect.y + pad
-                    && local.y <= rect.y + rect.h - pad;
-                outer && (!inner || rect.w < pad * 3.0 || rect.h < pad * 3.0)
+                    && local.y <= rect.y + rect.h + pad
             }
             Step::Ellipse {
                 rect,
@@ -596,22 +570,17 @@ pub fn hit_test_mark(steps: &[Step], pt: PointF, tolerance: f32) -> Option<usize
                 let local = rotate_point(pt, c, -*rotation);
                 let rx = (rect.w * 0.5).max(1.0);
                 let ry = (rect.h * 0.5).max(1.0);
-                let pad = (*width * 0.6).max(tolerance);
+                let pad = (*width * 0.8).max(tolerance);
                 let norm_outer = ((local.x - c.x) / (rx + pad)).powi(2)
                     + ((local.y - c.y) / (ry + pad)).powi(2);
-                let norm_inner = if rx > pad && ry > pad {
-                    ((local.x - c.x) / (rx - pad)).powi(2) + ((local.y - c.y) / (ry - pad)).powi(2)
-                } else {
-                    0.0
-                };
-                norm_outer <= 1.0 && norm_inner >= 0.65
+                norm_outer <= 1.0
             }
             Step::Redact { rect, rotation } => {
                 let local = rotate_point(pt, rect.center(), -*rotation);
-                local.x >= rect.x - tolerance * 0.5
-                    && local.x <= rect.x + rect.w + tolerance * 0.5
-                    && local.y >= rect.y - tolerance * 0.5
-                    && local.y <= rect.y + rect.h + tolerance * 0.5
+                local.x >= rect.x - tolerance * 0.75
+                    && local.x <= rect.x + rect.w + tolerance * 0.75
+                    && local.y >= rect.y - tolerance * 0.75
+                    && local.y <= rect.y + rect.h + tolerance * 0.75
             }
             Step::Text {
                 at,
@@ -622,10 +591,11 @@ pub fn hit_test_mark(steps: &[Step], pt: PointF, tolerance: f32) -> Option<usize
             } => {
                 let rect = text_bounds(*at, text, *size);
                 let local = rotate_point(pt, rect.center(), -*rotation);
-                local.x >= rect.x - tolerance
-                    && local.x <= rect.x + rect.w + tolerance
-                    && local.y >= rect.y - tolerance
-                    && local.y <= rect.y + rect.h + tolerance
+                let pad = tolerance * 1.25;
+                local.x >= rect.x - pad
+                    && local.x <= rect.x + rect.w + pad
+                    && local.y >= rect.y - pad
+                    && local.y <= rect.y + rect.h + pad
             }
             _ => false,
         };
@@ -744,13 +714,40 @@ pub fn resize_mark_handle(step: &mut Step, handle: Handle, pt: PointF) {
                 rotation,
                 ..
             },
-            Handle::Corner(_),
+            Handle::Corner(corner),
         ) => {
             let bounds = text_bounds(*at, text, *size);
             let local = rotate_point(pt, bounds.center(), -*rotation);
-            let new_h = (local.y - at.y).abs().max(16.0);
-            let lines = text.lines().count().max(1) as f32;
-            *size = (new_h / (lines * 1.25)).clamp(12.0, 240.0);
+            // Anchor the opposite corner so dragging any of the 4 corners scales
+            // proportionally in that corner's direction rather than shifting linearly.
+            let (anchor_x, anchor_y) = match corner {
+                0 => (bounds.x + bounds.w, bounds.y + bounds.h),
+                1 => (bounds.x, bounds.y + bounds.h),
+                2 => (bounds.x, bounds.y),
+                _ => (bounds.x + bounds.w, bounds.y),
+            };
+            let dx = match corner {
+                0 | 3 => (anchor_x - local.x).max(16.0),
+                _ => (local.x - anchor_x).max(16.0),
+            };
+            let dy = match corner {
+                0 | 1 => (anchor_y - local.y).max(16.0),
+                _ => (local.y - anchor_y).max(16.0),
+            };
+            let scale_x = dx / bounds.w.max(1.0);
+            let scale_y = dy / bounds.h.max(1.0);
+            let scale = scale_x.max(scale_y);
+            let new_size = (*size * scale).clamp(12.0, 240.0);
+            let new_bounds = text_bounds(*at, text, new_size);
+            at.x = match corner {
+                0 | 3 => anchor_x - new_bounds.w,
+                _ => anchor_x,
+            };
+            at.y = match corner {
+                0 | 1 => anchor_y - new_bounds.h,
+                _ => anchor_y,
+            };
+            *size = new_size;
         }
         (
             Step::Pen {
@@ -794,7 +791,6 @@ pub fn resize_mark_handle(step: &mut Step, handle: Handle, pt: PointF) {
                     | Step::Highlighter { rotation, .. }
                     | Step::Rectangle { rotation, .. }
                     | Step::Ellipse { rotation, .. }
-                    | Step::Text { rotation, .. }
                     | Step::Redact { rotation, .. } => *rotation = angle,
                     _ => {}
                 }

@@ -74,6 +74,7 @@ impl Seek {
         }
     }
     pub(super) fn finish_close_quick_look(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.close_video_edit_now(window, cx);
         self.quick_look_focus_back(window, cx);
         self.quick_look_close_task = Task::ready(());
         self.quick_look_closing = false;
@@ -108,6 +109,7 @@ impl Seek {
                     return;
                 }
                 // Do not drop the currently running close task from its own callback.
+                this.close_video_edit_now(window, cx);
                 this.quick_look_focus_back(window, cx);
                 this.quick_look_closing = false;
                 this.preview_enlarged = false;
@@ -490,7 +492,7 @@ impl Seek {
                 .p_0()
                 .overflow_hidden()
                 .child(self.quick_look_image(&row, p, window, cx));
-        } else if crate::video_edit::is_video(&row.file.path) {
+        } else if crate::video_edit::is_video(&row.file.path) && !self.quick_look_closing {
             content = content
                 .p_0()
                 .overflow_hidden()
@@ -727,7 +729,12 @@ impl Seek {
                                         .h(crate::tokens::BUTTON_HEIGHT)
                                         .px_3()
                                         .flex_shrink_0()
-                                        .when(fit_mode, |button| button.bg(p.control_selected))
+                                        .when(fit_mode, |button| {
+                                            button
+                                                .bg(p.accent.opacity(0.16))
+                                                .border_1()
+                                                .border_color(p.accent.opacity(0.45))
+                                        })
                                         .child(super::interface::button_text("Fit"))
                                         .on_click(cx.listener(|this, _, _, cx| {
                                             this.quick_look_zoom = None;
@@ -742,7 +749,12 @@ impl Seek {
                                         .h(crate::tokens::BUTTON_HEIGHT)
                                         .px_3()
                                         .flex_shrink_0()
-                                        .when(actual_mode, |button| button.bg(p.control_selected))
+                                        .when(actual_mode, |button| {
+                                            button
+                                                .bg(p.accent.opacity(0.16))
+                                                .border_1()
+                                                .border_color(p.accent.opacity(0.45))
+                                        })
                                         .child(super::interface::button_text("100%"))
                                         .on_click(cx.listener(|this, _, _, cx| {
                                             this.quick_look_zoom = Some(1.);
@@ -776,13 +788,11 @@ impl Seek {
                         )
                         .when(can_edit, |bar| {
                             bar.child(
-                                control("quick-look-edit-picture", "", p, cx)
+                                super::settings_view::control("quick-look-edit-picture", "Edit", p, cx)
                                     .accessibility_label("Edit picture")
                                     .tooltip("Edit picture (crop, rotate, flip, annotate, redact)")
                                     .h(crate::tokens::BUTTON_HEIGHT)
-                                    .px_3()
                                     .flex_shrink_0()
-                                    .child(super::interface::button_text("Edit"))
                                     .on_click(cx.listener(move |this, _, window, cx| {
                                         this.open_picture_edit(
                                             picture_edit_view::EditHost::QuickLook,

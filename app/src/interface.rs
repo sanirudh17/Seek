@@ -43,7 +43,28 @@ pub(super) fn file_image(
     };
     let key = media::Key::new(row, edge, false);
     let value = if thumbnails {
-        cache.lock().unwrap().get(&key)
+        let mut guard = cache.lock().unwrap();
+        let primary = guard.get(&key);
+        if primary.is_some() || edge != media::PREVIEW_EDGE {
+            primary
+        } else {
+            // While a 768px preview decodes (~10–25ms on first cold click), show any
+            // already-decoded smaller real thumbnail instead of flashing "Loading preview...".
+            let is_visual = matches!(
+                crate::icons::kind(&row.file.path, row.file.kind & 3 == seek_engine::walk::KIND_DIR),
+                crate::icons::Kind::Image | crate::icons::Kind::Video
+            );
+            if is_visual {
+                [128u16, 32u16].into_iter().find_map(|fallback_edge| {
+                    match guard.get(&media::Key::new(row, fallback_edge, false)) {
+                        Some(media::Value::Image(Some(img))) => Some(media::Value::Image(Some(img))),
+                        _ => None,
+                    }
+                })
+            } else {
+                None
+            }
+        }
     } else {
         None
     };
@@ -73,8 +94,19 @@ pub(super) fn file_image(
                 .unwrap_or_else(|| atlas.get(crate::icons::kind(&row.file.path, folder)))
         }
     };
+    let display_size = {
+        let px_size = image.size(0);
+        let max_native = px_size.width.0.max(px_size.height.0);
+        if size > 128. && max_native > 0 && max_native <= 96 {
+            // Keep small extracted .exe/.msi icons (32–48px) crisp and balanced
+            // rather than over-stretching them to 200px.
+            112.
+        } else {
+            size
+        }
+    };
     img(image)
-        .size(px(size))
+        .size(px(display_size))
         .object_fit(ObjectFit::Contain)
         .flex_shrink_0()
         .into_any_element()
@@ -157,15 +189,20 @@ fn toolbar_state(button: Button, active: bool, p: crate::appearance::Palette, cx
     button
         .custom(
             gpui_component::button::ButtonCustomVariant::new(cx)
+                .color(if active {
+                    p.accent.opacity(0.16)
+                } else {
+                    rgba(0).into()
+                })
                 .foreground(if active { p.text } else { p.muted })
-                .hover(p.hover)
-                .active(p.accent.opacity(0.14)),
+                .hover(p.accent.opacity(0.16))
+                .active(p.accent.opacity(0.24)),
         )
         .selected(active)
 }
 fn toolbar_group(p: crate::appearance::Palette) -> Div {
     let dark = p.text.l > 0.5;
-    // One faint fill groups related controls; no border or gradient.
+    // One faint fill groups related controls; no border or distracting contrast.
     div()
         .occlude()
         .flex()
@@ -173,7 +210,7 @@ fn toolbar_group(p: crate::appearance::Palette) -> Div {
         .gap_0()
         .flex_shrink_0()
         .h(px(32.))
-        .rounded(px(8.))
+        .rounded(crate::tokens::RADIUS_CONTROL)
         .bg(Hsla::from(if dark {
             rgba(0xffffff0a)
         } else {
@@ -257,6 +294,7 @@ pub(super) fn disclosure(
     row: &Row,
     depth: usize,
     expanded: bool,
+    toggle_anim: Option<u64>,
     owner: WeakEntity<Seek>,
 ) -> AnyElement {
     let mut gutter = div()
@@ -267,22 +305,43 @@ pub(super) fn disclosure(
         .items_center();
     if row.file.kind & 3 == seek_engine::walk::KIND_DIR {
         let path = row.file.path.clone();
+        let chevron = Icon::new(if expanded {
+            Glyph::ChevronDown
+        } else {
+            Glyph::ChevronRight
+        })
+        .size(px(13.));
+        let chevron_el: AnyElement = if let Some(generation) = toggle_anim {
+            div()
+                .flex()
+                .items_center()
+                .justify_center()
+                .child(chevron)
+                .with_animation(
+                    SharedString::from(format!("tree-chevron-{generation}-{}", path.display())),
+                    crate::motion::state(),
+                    move |d, t| {
+                        let dy = if expanded { (1. - t) * -2. } else { (1. - t) * 2. };
+                        d.opacity(0.45 + 0.55 * t).mt(px(dy))
+                    },
+                )
+                .into_any_element()
+        } else {
+            chevron.into_any_element()
+        };
         gutter = gutter.child(
             Button::new(format!("expand-{}", path.display()))
                 .ghost()
                 .with_size(px(22.))
                 .w(px(20.))
                 .h(px(24.))
+                .px_0()
                 .accessibility_label(format!(
                     "{} {}",
                     if expanded { "Collapse" } else { "Expand" },
                     row.name
                 ))
-                .icon(if expanded {
-                    Glyph::ChevronDown
-                } else {
-                    Glyph::ChevronRight
-                })
+                .child(chevron_el)
                 .on_click(move |_, window, cx| {
                     cx.stop_propagation();
                     let _ = owner.update(cx, |this, cx| {
@@ -298,13 +357,80 @@ pub(super) fn disclosure(
 impl Seek {
     pub(super) fn expand_folder(&mut self, path: PathBuf, expand: bool, cx: &mut Context<Self>) {
         let selected = self.selected(cx).map(|r| r.file.path);
+        let motion_on = self.motion_enabled;
+        if !expand && motion_on {
+            // Play a smooth collapse animation on visible descendant rows before
+            // removing them from the flattened tree.
+            let mut generation = 0u64;
+            let mut has_children = false;
+            self.table.update(cx, |table, cx| {
+                let data = table.delegate_mut();
+                has_children = data
+                    .rows
+                    .iter()
+                    .any(|r| r.file.path != path && r.file.path.starts_with(&path));
+                if has_children {
+                    data.tree_motion_gen = data.tree_motion_gen.wrapping_add(1);
+                    generation = data.tree_motion_gen;
+                    data.tree_motion = Some((path.clone(), false, generation));
+                    data.tree_collapsing = Some((path.clone(), generation));
+                    table.refresh(cx);
+                }
+            });
+            if has_children {
+                let path_done = path.clone();
+                self.tree_collapse_task = cx.spawn(async move |this, cx| {
+                    cx.background_executor().timer(crate::motion::EXIT).await;
+                    let _ = this.update(cx, |this, cx| {
+                        let selected = this.selected(cx).map(|r| r.file.path);
+                        this.table.update(cx, |table, cx| {
+                            let data = table.delegate_mut();
+                            if data
+                                .tree_collapsing
+                                .as_ref()
+                                .is_none_or(|(_, g)| *g != generation)
+                            {
+                                return;
+                            }
+                            data.tree_collapsing = None;
+                            data.expanded.retain(|p| !p.starts_with(&path_done));
+                            data.children.retain(|p, _| !p.starts_with(&path_done));
+                            data.sorted();
+                            let selection = selected
+                                .as_ref()
+                                .and_then(|p| data.rows.iter().position(|r| &r.file.path == p))
+                                .or_else(|| {
+                                    data.rows.iter().position(|r| r.file.path == path_done)
+                                });
+                            if let Some(i) = selection {
+                                table.set_selected_row(i, cx);
+                            }
+                            table.refresh(cx);
+                        });
+                        this.submit(cx);
+                        this.refresh_preview(cx);
+                        cx.notify();
+                    });
+                });
+                cx.notify();
+                return;
+            }
+        }
+        self.tree_collapse_task = Task::ready(());
         self.table.update(cx, |table, cx| {
             let data = table.delegate_mut();
+            data.tree_collapsing = None;
             if expand {
                 data.expanded.insert(path.clone());
             } else {
                 data.expanded.retain(|p| !p.starts_with(&path));
                 data.children.retain(|p, _| !p.starts_with(&path));
+            }
+            if motion_on {
+                data.tree_motion_gen = data.tree_motion_gen.wrapping_add(1);
+                data.tree_motion = Some((path.clone(), expand, data.tree_motion_gen));
+            } else {
+                data.tree_motion = None;
             }
             data.sorted();
             let selection = selected
@@ -331,11 +457,14 @@ impl Seek {
         if (self.panel || self.preview_enlarged || shows_preview)
             && let Some(row) = self.selected(cx)
         {
-            if self.inspector.rested {
-                keys.insert(media::Key::info(
-                    &row,
-                    self.preferences.automatic_previews || self.preview_enlarged,
-                ));
+            let info_key = media::Key::info(
+                &row,
+                self.preferences.automatic_previews || self.preview_enlarged,
+            );
+            // Keep already-cached details so the info panel never flashes back
+            // to "Loading..." during the brief selection-rest debounce.
+            if self.inspector.rested || self.cache.lock().unwrap().get(&info_key).is_some() {
+                keys.insert(info_key);
             }
             if (self.preferences.automatic_previews || self.preview_enlarged || shows_preview)
                 && needs_shell(&row)
@@ -352,6 +481,28 @@ impl Seek {
                         crate::document_preview::ENLARGED_EDGE,
                         false,
                     ));
+                }
+            }
+            // Prefetch & retain PREVIEW_EDGE thumbnails for neighboring visual rows
+            // so stepping across PNGs/JPEGs/MP4s renders in 0ms with zero loading flash.
+            if self.preferences.automatic_previews || shows_preview {
+                let table = self.table.read(cx);
+                if let Some(sel) = table.selected_row() {
+                    let rows = &table.delegate().rows;
+                    let start = sel.saturating_sub(2);
+                    let end = (sel + 4).min(rows.len());
+                    for neighbor in &rows[start..end] {
+                        if neighbor.file.path != row.file.path
+                            && neighbor.file.kind & 3 == seek_engine::walk::KIND_FILE
+                            && needs_shell(neighbor)
+                            && matches!(
+                                crate::icons::kind(&neighbor.file.path, false),
+                                crate::icons::Kind::Image | crate::icons::Kind::Video
+                            )
+                        {
+                            keys.insert(media::Key::new(neighbor, media::PREVIEW_EDGE, false));
+                        }
+                    }
                 }
             }
         }
@@ -425,6 +576,16 @@ impl Seek {
         if self.content_mode && view != View::List {
             return;
         }
+        let view_idx = |v: View| match v {
+            View::List => 0,
+            View::Icons => 1,
+            View::Gallery => 2,
+            View::Columns => 3,
+        };
+        if self.view != view {
+            self.slide_segment("view-switcher", view_idx(self.view), view_idx(view));
+            self.view_motion = self.view_motion.wrapping_add(1);
+        }
         let was_largest = self.largest.take().is_some();
         #[cfg(feature = "benchmarks")]
         crate::metrics::interaction("view", serde_json::json!({"view":format!("{view:?}")}));
@@ -462,6 +623,9 @@ impl Seek {
     }
     pub(super) fn toggle_hidden(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.show_hidden = !self.show_hidden;
+        if self.storage_page.is_none() && self.worktrees_page.is_none() {
+            self.view_motion = self.view_motion.wrapping_add(1);
+        }
         self.save_preferences(window, cx);
         self.submit(cx);
     }
@@ -683,7 +847,7 @@ impl Seek {
         scroll = scroll.child(
             div()
                 .mt_3()
-                .mb_2()
+                .mb_1()
                 .h(px(30.))
                 .flex_shrink_0()
                 .flex()
@@ -704,7 +868,7 @@ impl Seek {
                         .px_2()
                         .flex()
                         .items_center()
-                        .gap_1()
+                        .gap_2()
                         .rounded(crate::tokens::RADIUS_ROW)
                         .cursor_pointer()
                         .line_height(px(20.))
@@ -713,19 +877,33 @@ impl Seek {
                         .text_color(p.muted)
                         .hover(move |s| s.text_color(p.text).bg(p.hover))
                         .child(
-                            Icon::new(if locations_collapsed {
-                                Glyph::ChevronRight
-                            } else {
-                                Glyph::ChevronDown
-                            })
-                            .size(px(12.))
-                            .text_color(p.muted),
+                            div()
+                                .size(px(16.))
+                                .flex_shrink_0()
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .child(
+                                    Icon::new(if locations_collapsed {
+                                        Glyph::ChevronRight
+                                    } else {
+                                        Glyph::ChevronDown
+                                    })
+                                    .size(px(12.))
+                                    .text_color(p.muted),
+                                ),
                         )
                         .child("Locations")
                         .on_click(cx.listener(|this, _, window, cx| {
                             this.editing_locations = false;
                             this.preferences.locations_collapsed =
                                 !this.preferences.locations_collapsed;
+                            if this.motion_enabled {
+                                this.sidebar_state.trigger_section_motion(
+                                    false,
+                                    !this.preferences.locations_collapsed,
+                                );
+                            }
                             this.save_preferences(window, cx);
                         })),
                 )
@@ -771,7 +949,12 @@ impl Seek {
             .iter()
             .filter(|p| self.preferences.hidden_locations.contains(p))
             .count();
-        if !locations_collapsed {
+        let loc_motion = self
+            .sidebar_state
+            .locations_motion
+            .filter(|(_, at, _)| at.elapsed() < crate::motion::SPRING);
+        if !locations_collapsed || loc_motion.is_some() {
+            let mut loc_body = div().flex().flex_col().gap(px(4.));
             if !self.show_hidden_locations && !editing_locations {
                 roots.retain(|p| !self.preferences.hidden_locations.contains(p));
             }
@@ -796,7 +979,7 @@ impl Seek {
                 let down_path = path.clone();
                 let hide_path = path.clone();
                 let click_path = path.clone();
-                scroll = scroll.child(
+                loc_body = loc_body.child(
                     div()
                         .id(("drive", index))
                         .on_drag(
@@ -1034,7 +1217,7 @@ impl Seek {
             }
             if hidden_count > 0 && !editing_locations {
                 let showing = self.show_hidden_locations;
-                scroll = scroll.child(
+                loc_body = loc_body.child(
                     div()
                         .id("show-hidden-locations")
                         .role(Role::Button)
@@ -1058,12 +1241,73 @@ impl Seek {
                         })),
                 );
             }
+            let est_height = (total_roots.max(1) as f32) * 44.
+                + if hidden_count > 0 && !editing_locations {
+                    26.
+                } else {
+                    0.
+                };
+            let loc_el = match loc_motion {
+                Some((expanding, _, generation)) => loc_body
+                    .overflow_hidden()
+                    .with_animation(
+                        ("locations-fold", generation as usize),
+                        crate::motion::reversible(),
+                        move |d, t| {
+                            let shown = if expanding { t } else { 1. - t };
+                            d.h(px(est_height * shown)).opacity(shown)
+                        },
+                    )
+                    .into_any_element(),
+                None => loc_body.into_any_element(),
+            };
+            scroll = scroll.child(loc_el);
         }
         // Tools that look across locations, apart from the places you go.
-        scroll = scroll
-            .child(heading("Tools", p))
-            .child(self.storage_row(p, cx))
-            .child(self.worktrees_row(p, cx));
+        let active_tool = if self.storage_page.is_some() {
+            Some(0usize)
+        } else if self.worktrees_page.is_some() {
+            Some(1usize)
+        } else {
+            None
+        };
+        let mut tools_list = div().relative().flex().flex_col().gap(px(4.));
+        if let Some(active_idx) = active_tool {
+            // Multiple of 4 (32px row + 4px gap = 36px) so Windows 125%/150%/175%
+            // DPI scaling produces exact integer physical pixels with zero drift.
+            const TOOL_STRIDE: f32 = 36.;
+            let slide = self
+                .segment_motion
+                .get("sidebar-tools")
+                .copied()
+                .filter(|(from, _)| *from <= 1 && *from != active_idx);
+            let pill = div()
+                .absolute()
+                .left_0()
+                .right_0()
+                .h(px(32.))
+                .rounded(crate::tokens::RADIUS_ROW)
+                .bg(p.hover);
+            let pill: AnyElement = match slide {
+                Some((from, generation)) if self.motion_enabled => {
+                    let from_y = from as f32 * TOOL_STRIDE;
+                    let to_y = active_idx as f32 * TOOL_STRIDE;
+                    pill.with_animation(
+                        ("sidebar-tools-pill", generation as usize),
+                        crate::motion::reversible(),
+                        move |d, t| d.top(px(from_y + (to_y - from_y) * t)),
+                    )
+                    .into_any_element()
+                }
+                _ => pill.top(px(active_idx as f32 * TOOL_STRIDE)).into_any_element(),
+            };
+            tools_list = tools_list.child(pill);
+        }
+        scroll = scroll.child(heading("Tools", p)).child(
+            tools_list
+                .child(self.storage_row(p, cx))
+                .child(self.worktrees_row(p, cx)),
+        );
         let footer = div()
             .h(px(30.))
             .flex_shrink_0()
@@ -1264,54 +1508,116 @@ impl Seek {
             .text_color(p.muted)
             .selected(false)
             .on_click(cx.listener(|this, _, _, cx| this.toggle_sidebar(cx)));
+        let on_tool_page = self.storage_page.is_some() || self.worktrees_page.is_some();
         let nav = toolbar_group(p)
             .child(
                 tool("back", Glyph::ChevronLeft, "Back")
                     .text_color(p.muted)
-                    .disabled(self.history_position == 0)
+                    .disabled(self.history_position == 0 && !on_tool_page)
                     .on_click(cx.listener(|this, _, window, cx| this.history(-1, window, cx))),
             )
             .child(
                 tool("forward", Glyph::ChevronRight, "Forward")
                     .text_color(p.muted)
-                    .disabled(self.history_position + 1 >= self.history.len())
+                    .disabled(self.history_position + 1 >= self.history.len() || on_tool_page)
                     .on_click(cx.listener(|this, _, window, cx| this.history(1, window, cx))),
             );
-        let mut switcher = toolbar_group(p);
-        for (id, icon, v, label) in [
-            ("list-view", Glyph::List, View::List, "List · Ctrl+1"),
-            (
-                "icons-view",
-                Glyph::LayoutGrid,
-                View::Icons,
-                "Icons · Ctrl+2",
-            ),
-            (
-                "gallery-view",
-                Glyph::GalleryHorizontal,
-                View::Gallery,
-                "Gallery · Ctrl+3",
-            ),
-            (
-                "columns-view",
-                Glyph::Columns3,
-                View::Columns,
-                "Columns · Ctrl+4",
-            ),
-        ] {
-            let active = self.view == v;
-            switcher = switcher.child(
-                toolbar_state(tool(id, icon, label), active, p, cx)
-                    .disabled(self.content_mode && v != View::List)
-                    .toggled(active)
-                    .on_click(cx.listener(move |this, _, _, cx| this.set_view(v, cx))),
-            );
-        }
+            let selected_view = match self.view {
+                View::List => 0usize,
+                View::Icons => 1,
+                View::Gallery => 2,
+                View::Columns => 3,
+            };
+            let view_pill = div()
+                .absolute()
+                .top(px(2.))
+                .bottom(px(2.))
+                .w(px(30.))
+                .rounded(px(6.))
+                .bg(p.accent.opacity(0.22))
+                .border_1()
+                .border_color(p.accent.opacity(0.35));
+            let view_pill_el: AnyElement = match self
+                .segment_motion
+                .get("view-switcher")
+                .copied()
+                .filter(|(from, _)| self.motion_enabled && *from != selected_view)
+            {
+                Some((from, generation)) => view_pill
+                    .left(px(1. + selected_view as f32 * 32.))
+                    .with_animation(
+                        SharedString::from(format!("view-switcher-slide-{generation}")),
+                        crate::motion::reversible(),
+                        move |d, t| {
+                            let x = 1. + (from as f32 + (selected_view as f32 - from as f32) * t) * 32.;
+                            d.left(px(x))
+                        },
+                    )
+                    .into_any_element(),
+                None => view_pill
+                    .left(px(1. + selected_view as f32 * 32.))
+                    .into_any_element(),
+            };
+            let mut switcher = toolbar_group(p).relative().child(view_pill_el);
+            for (id, icon, v, label) in [
+                ("list-view", Glyph::List, View::List, "List · Ctrl+1"),
+                (
+                    "icons-view",
+                    Glyph::LayoutGrid,
+                    View::Icons,
+                    "Icons · Ctrl+2",
+                ),
+                (
+                    "gallery-view",
+                    Glyph::GalleryHorizontal,
+                    View::Gallery,
+                    "Gallery · Ctrl+3",
+                ),
+                (
+                    "columns-view",
+                    Glyph::Columns3,
+                    View::Columns,
+                    "Columns · Ctrl+4",
+                ),
+            ] {
+                let active = self.view == v;
+                switcher = switcher.child(
+                    tool(id, icon, label)
+                        .relative()
+                        .custom(
+                            gpui_component::button::ButtonCustomVariant::new(cx)
+                                .foreground(if active { p.text } else { p.muted })
+                                .hover(p.hover)
+                                .active(p.accent.opacity(0.14)),
+                        )
+                        .disabled(self.content_mode && v != View::List)
+                        .toggled(active)
+                        .on_click(cx.listener(move |this, _, _, cx| this.set_view(v, cx))),
+                );
+            }
         let panel_visible = self.panel && !self.info_closing && self.selected(cx).is_some();
         let sort_owner = cx.entity().downgrade();
         let sort_open_owner = sort_owner.clone();
+        let motion_on = self.motion_enabled;
+        let wrap_toggle = |key: &'static str, active: bool, btn: AnyElement| -> AnyElement {
+            if !motion_on {
+                return btn;
+            }
+            div()
+                .flex()
+                .items_center()
+                .child(btn)
+                .with_animation(
+                    (key, usize::from(active)),
+                    crate::motion::state(),
+                    |d, t| d.opacity(0.65 + 0.35 * t),
+                )
+                .into_any_element()
+        };
         let tools = toolbar_group(p)
-            .child(
+            .child(wrap_toggle(
+                "tb-hidden",
+                self.show_hidden,
                 toolbar_state(
                     tool(
                         "hidden",
@@ -1328,8 +1634,9 @@ impl Seek {
                     cx,
                 )
                 .toggled(self.show_hidden)
-                .on_click(cx.listener(|this, _, window, cx| this.toggle_hidden(window, cx))),
-            )
+                .on_click(cx.listener(|this, _, window, cx| this.toggle_hidden(window, cx)))
+                .into_any_element(),
+            ))
             .child(
                 toolbar_state(
                     tool("sort", Glyph::ArrowDownUp, "Sort results").w(px(30.)),
@@ -1364,7 +1671,9 @@ impl Seek {
                     });
                 }),
             )
-            .child(
+            .child(wrap_toggle(
+                "tb-info",
+                panel_visible,
                 toolbar_state(
                     tool("info", Glyph::Info, "Info panel (Ctrl+I)").w(px(30.)),
                     panel_visible,
@@ -1374,8 +1683,9 @@ impl Seek {
                 .toggled(panel_visible)
                 .on_click(cx.listener(|this, _, window, cx| {
                     this.toggle_info_panel(window, cx);
-                })),
-            )
+                }))
+                .into_any_element(),
+            ))
             .child(
                 toolbar_state(
                     tool("settings", Glyph::Settings, "Settings (Ctrl+,)").w(px(30.)),
@@ -2156,8 +2466,11 @@ impl Seek {
             .gap_3()
             .overflow_y_scroll();
         let selection = self.inspector_selection(cx);
-        if selection.len() > 1 {
-            panel = panel.child(self.inspector_totals(p, cx));
+        let multi = selection.len() > 1;
+        if multi {
+            panel = panel
+                .child(self.inspector_totals(p, cx))
+                .child(self.inspector_multi_list(p, cx));
         } else if let Some(row) = self.selected(cx) {
             // Quick Look, the document pane and the other file actions live
             // in one icon row at the foot of the panel.
@@ -2179,6 +2492,22 @@ impl Seek {
                             panel.child(self.compact_text_preview(&row, p, window, cx))
                         } else if crate::document_preview::Key::new(&row, 0).is_some() {
                             panel.child(self.document_view(p, window, cx))
+                        } else if row.file.kind & 3 == seek_engine::walk::KIND_FILE
+                            && crate::video_edit::is_video(&row.file.path)
+                        {
+                            // Pre-decode metadata, Frame 0, and filmstrip silently in the
+                            // background for instant Quick Look without swapping out the
+                            // stable shell thumbnail in the Info panel.
+                            self.prewarm_video_preview(row.file.path.clone(), window, cx);
+                            panel.child(
+                                div()
+                                    .h(px(210.))
+                                    .flex_shrink_0()
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .child(file_image(&row, 200., &self.atlas, &self.cache, true)),
+                            )
                         } else {
                             panel.child(
                                 div()
@@ -2388,10 +2717,12 @@ impl Seek {
             use super::daily::Action;
             let mut actions = div()
                 .flex()
+                .flex_shrink_0()
                 .items_center()
                 .justify_between()
                 .pt_3()
-                .mt_2()
+                .when(multi, |d| d.mt_auto())
+                .when(!multi, |d| d.mt_2())
                 .border_t_1()
                 .border_color(p.line);
             for (id, icon, label, action) in [
@@ -2483,20 +2814,26 @@ impl Seek {
 impl Render for Seek {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let _profile = crate::metrics::span("shell_render");
-        // Restore/programmatic selection changes must also request a preview.
-        self.sync_document_preview(cx);
+        let page = self.storage_page.is_some() || self.worktrees_page.is_some();
+        // Always release retired GPU textures promptly, even while viewing a tool page.
         for image in self.document_images_to_drop.drain(..) {
             let _ = window.drop_image(image);
         }
         let _ = &self.subscriptions;
-        self.sync_live_folders(cx);
+        // Skip hidden file-list preview/folder-watch sync while Storage or Worktrees
+        // fills the window so 120Hz trackpad scrolling stays completely lag-free.
+        if !page || self.preview_enlarged {
+            self.sync_document_preview(cx);
+        }
+        if !page {
+            self.sync_live_folders(cx);
+        }
         // Shortcuts (Ctrl+B, Ctrl+W…) reach Seek only through the focused
         // element. After a click on something that takes no focus, or when a
         // focused view closes (Settings, a dialog), nothing holds focus and
         // keys go nowhere; give it back to the file list (or Settings).
         // On Storage and Worktrees the file list isn't shown, so focus left on
         // it reaches nothing either; the page takes it (never from a field).
-        let page = self.storage_page.is_some() || self.worktrees_page.is_some();
         if page
             && !self.settings
             && window.is_window_active()
@@ -2508,7 +2845,7 @@ impl Render for Seek {
         if window.focused(cx).is_none() && window.is_window_active() {
             let fallback = if self.settings {
                 self.settings_focus.clone()
-            } else if self.storage_page.is_some() || self.worktrees_page.is_some() {
+            } else if page {
                 self.page_focus.clone()
             } else {
                 self.table.read(cx).focus_handle(cx)
@@ -2520,22 +2857,31 @@ impl Render for Seek {
             });
         }
         let p = crate::appearance::palette(&self.preferences, cx);
-        // Fill the results viewport rather than leaving a fixed-width table at its left.
-        // Only recalculate when the viewport or column set changes, preserving manual resizing.
-        let results_width = (self.results_viewport_width(window, cx) - 16.)
-            .max(0.)
-            .round() as u32;
-        super::panes::fit_columns(&self.table, results_width, cx);
-        let count = self.table.read(cx).delegate().rows.len();
-        let selected = self.selected(cx);
-        let selected_count = self
-            .table
-            .read(cx)
-            .delegate()
-            .selected_many
-            .len()
-            .max(usize::from(selected.is_some()));
-        let state = self.status.error.clone().unwrap_or_else(|| {
+        let split = self.split_mode();
+        // The Storage or Worktrees page takes the file list's place while open;
+        // skip building the hidden file list, breadcrumb, status bar, DataTable,
+        // and Info panel entirely so scrolling Storage/Worktrees stays silky smooth.
+        let main_body = if self.storage_page.is_some() {
+            self.storage_view(p, cx)
+        } else if self.worktrees_page.is_some() {
+            self.worktrees_view(p, cx)
+        } else {
+            // Fill the results viewport rather than leaving a fixed-width table at its left.
+            // Only recalculate when the viewport or column set changes, preserving manual resizing.
+            let results_width = (self.results_viewport_width(window, cx) - 16.)
+                .max(0.)
+                .round() as u32;
+            super::panes::fit_columns(&self.table, results_width, cx);
+            let count = self.table.read(cx).delegate().rows.len();
+            let selected = self.selected(cx);
+            let selected_count = self
+                .table
+                .read(cx)
+                .delegate()
+                .selected_many
+                .len()
+                .max(usize::from(selected.is_some()));
+            let state = self.status.error.clone().unwrap_or_else(|| {
             if !self.status.ready {
                 if self.status.progress.completed == 0 {
                     format!(
@@ -2785,7 +3131,6 @@ impl Render for Seek {
             .w_full()
             .overflow_hidden()
             .flex();
-        let split = self.split_mode();
         let focused_pane = div()
             .id("results-scroll-fallback")
             .flex_1()
@@ -2863,8 +3208,14 @@ impl Render for Seek {
         };
         if self.panel && selected.is_some() {
             results = results.child(self.info_panel(p, window, cx));
+        } else if let Some(row) = &selected
+            && row.file.kind & 3 == seek_engine::walk::KIND_FILE
+            && crate::video_edit::is_video(&row.file.path)
+        {
+            // Keep Quick Look warm for selected videos even when the Info panel is hidden.
+            self.prewarm_video_preview(row.file.path.clone(), window, cx);
         }
-        let main = div()
+        div()
             .flex_1()
             .bg(p.pane)
             .min_w_0()
@@ -2886,7 +3237,9 @@ impl Render for Seek {
                     .when(!self.content_failures.is_empty(), |d| d.child(Button::new("content-unreadable-files").accessibility_label(format!("Unreadable files ({})",self.content_failures.len())).child(button_text(format!("Unreadable files ({})",self.content_failures.len()))).small().on_click(cx.listener(|this,_,window,cx|this.show_content_failures(window,cx)))))
                     .child(Button::new("cancel-content").accessibility_label("Cancel").child(button_text("Cancel")).small().on_click(cx.listener(|this,_,_,cx| {this.pending_tab_restore=None;let cancel_generation=this.backend.generation.fetch_add(1,Ordering::Relaxed)+1;let _=this.backend.tx.send(Command::CancelContent(cancel_generation));this.message=Some("Cancelling content search...".into());cx.notify();}))))
             })
-            .child(results);
+            .child(results)
+            .into_any_element()
+        };
         let mut body = div()
             .flex()
             .size_full()
@@ -2917,13 +3270,23 @@ impl Render for Seek {
                 )
                 .into_any_element()
         };
-        // The Storage page takes the file list's place while it is open.
-        let main = if self.storage_page.is_some() {
-            self.storage_view(p, cx)
-        } else if self.worktrees_page.is_some() {
-            self.worktrees_view(p, cx)
+        // Every view, folder, tab, or sidebar switch glides in gently without
+        // delaying content load.
+        let main = if self.motion_enabled && self.view_motion > 0 {
+            div()
+                .flex_1()
+                .min_w_0()
+                .h_full()
+                .flex()
+                .child(main_body)
+                .with_animation(
+                    ("main-view-switch", self.view_motion as usize),
+                    crate::motion::enter(),
+                    |d, t| d.opacity(0.68 + 0.32 * t).mt(px((1. - t) * 5.)),
+                )
+                .into_any_element()
         } else {
-            main.into_any_element()
+            main_body
         };
         body = body.child(sidebar).child(main);
         let glass_layers = self.glass_layers(p, window, cx);
@@ -2976,6 +3339,22 @@ impl Render for Seek {
                 }))
                 .capture_action(cx.listener(|this, _: &PreviousTab, window, cx| {
                     if this.tabs_available(window,cx) { this.switch_tab(super::tabs::adjacent(this.active_tab,this.tabs.len(),true),window,cx); } cx.stop_propagation();
+                }))
+                .capture_action(cx.listener(|this, _: &gpui_base::input::IndentInline, window, cx| {
+                    if this.handle_search_tab(false, window, cx) {
+                        window.prevent_default();
+                        cx.stop_propagation();
+                    } else {
+                        cx.propagate();
+                    }
+                }))
+                .capture_action(cx.listener(|this, _: &gpui_base::input::OutdentInline, window, cx| {
+                    if this.handle_search_tab(true, window, cx) {
+                        window.prevent_default();
+                        cx.stop_propagation();
+                    } else {
+                        cx.propagate();
+                    }
                 }))
                 .capture_action(cx.listener(|this,_:&gpui_base::actions::Cancel,window,cx|{
                     if this.escape_action(window,cx){cx.stop_propagation();}else{cx.propagate();}

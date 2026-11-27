@@ -9,16 +9,15 @@ pub(super) fn control(
     Button::new(id)
         .custom(
             gpui_component::button::ButtonCustomVariant::new(cx)
-                .color(p.control)
+                .color(rgba(0).into())
                 .foreground(p.text)
-                .hover(p.control_hover)
-                .active(p.control_selected),
+                .hover(p.accent.opacity(0.16))
+                .active(p.accent.opacity(0.24)),
         )
-        .outline()
         .h(px(32.))
         .px_3()
         .py_0()
-        .rounded(px(6.))
+        .rounded(crate::tokens::RADIUS_CONTROL)
         .accessibility_label(label)
 }
 fn count(n: usize) -> String {
